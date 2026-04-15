@@ -94,6 +94,13 @@ class InferenceError extends ApiBridgeError {
   }
 }
 
+class CircuitBreakerError extends ApiBridgeError {
+  constructor(message, state, failures) {
+    super(message, 'CIRCUIT_BREAKER_ERROR', { state, failures });
+    this.name = 'CircuitBreakerError';
+  }
+}
+
 module.exports = {
   ApiBridgeError,
   ValidationError,
@@ -104,4 +111,5 @@ module.exports = {
   PluginError,
   RateLimitError,
   InferenceError,
+  CircuitBreakerError,
 };
