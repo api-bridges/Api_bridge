@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v2 — Middleware Pipeline
+ * APIBridge AI v3 — Middleware Pipeline
  *
  * Composable before/after hooks for request and response processing.
  *

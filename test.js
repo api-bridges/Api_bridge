@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v2 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2 features.
+ * APIBridge AI v3 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2 and v3 features.
  */
 
 const {
@@ -14,10 +14,21 @@ const {
   SchemaValidator,
   ResponseNormalizer,
   LearningEngine,
+  PluginManager,
+  SchemaInference,
+  FieldProjection,
+  DataMasker,
+  RateLimiter,
+  SchemaDiff,
+  TypeGenerator,
+  MetricsCollector,
   ApiBridgeError,
   ValidationError,
   TransformError,
   NetworkError,
+  PluginError,
+  RateLimitError,
+  InferenceError,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -61,7 +72,7 @@ const t = new APIBridgeTransformer({ logMismatches: false });
 
 // ─────────────────────────────────────────────────────────────
 console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-console.log('  APIBridge AI v2 \u2014 Test Suite');
+console.log('  APIBridge AI v3 \u2014 Test Suite');
 console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n');
 
 // ─── 1. BASIC TRANSFORMATION ──────────────────────────────────
@@ -355,7 +366,7 @@ test('JSON export generates valid file', () => {
   assert(fs.existsSync(filePath), 'JSON file should exist');
 
   const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  assertEqual(data.version, '2.0.0');
+  assertEqual(data.version, '3.0.0');
   assert(data.summary.total > 0, 'Should have mismatch count');
 });
 
@@ -702,6 +713,463 @@ test('resetSession clears stats and mismatches', () => {
   st.resetSession();
   assertEqual(st.getStats().totalFields, 0);
   assertEqual(st.mismatches.length, 0);
+});
+
+// ─── 21. v3: PLUGIN SYSTEM ───────────────────────────────────
+console.log('\n21. v3: Plugin system');
+
+test('register and list plugins', () => {
+  const pm = new PluginManager();
+  pm.register({
+    name: 'testPlugin',
+    hooks: {
+      beforeTransform: (data) => ({ ...data, injected: true }),
+    },
+  });
+  assertEqual(pm.size(), 1);
+  assert(pm.has('testPlugin'), 'Should have registered plugin');
+  assertEqual(pm.list().length, 1);
+});
+
+test('execute sync hook modifies data', () => {
+  const pm = new PluginManager();
+  pm.register({
+    name: 'uppercaser',
+    hooks: {
+      beforeTransform: (data) => {
+        const result = {};
+        for (const [k, v] of Object.entries(data)) {
+          result[k] = typeof v === 'string' ? v.toUpperCase() : v;
+        }
+        return result;
+      },
+    },
+  });
+  const result = pm.executeSync('beforeTransform', { name: 'john' });
+  assertEqual(result.name, 'JOHN');
+});
+
+test('execute async hook modifies data', async () => {
+  const pm = new PluginManager();
+  pm.register({
+    name: 'asyncPlugin',
+    hooks: {
+      afterTransform: async (data) => ({ ...data, processed: true }),
+    },
+  });
+  const result = await pm.execute('afterTransform', { id: 1 });
+  assertEqual(result.processed, true);
+});
+
+test('unregister removes plugin and hooks', () => {
+  const pm = new PluginManager();
+  pm.register({ name: 'temp', hooks: { beforeTransform: () => {} } });
+  assertEqual(pm.size(), 1);
+  pm.unregister('temp');
+  assertEqual(pm.size(), 0);
+  assert(!pm.has('temp'), 'Should no longer have plugin');
+});
+
+test('duplicate plugin registration throws PluginError', () => {
+  const pm = new PluginManager();
+  pm.register({ name: 'dup' });
+  let threw = false;
+  try {
+    pm.register({ name: 'dup' });
+  } catch (e) {
+    threw = true;
+    assert(e instanceof PluginError, 'Should be PluginError');
+  }
+  assert(threw, 'Should have thrown');
+});
+
+test('invalid hook name throws PluginError', () => {
+  const pm = new PluginManager();
+  let threw = false;
+  try {
+    pm.register({ name: 'bad', hooks: { nonExistentHook: () => {} } });
+  } catch (e) {
+    threw = true;
+    assert(e instanceof PluginError, 'Should be PluginError');
+  }
+  assert(threw, 'Should have thrown');
+});
+
+// ─── 22. v3: SCHEMA INFERENCE ────────────────────────────────
+console.log('\n22. v3: Schema inference');
+
+test('infer schema from single object', () => {
+  const si = new SchemaInference();
+  const schema = si.infer({
+    id: 1,
+    name: 'John',
+    email: 'john@example.com',
+    is_active: true,
+    age: 25,
+  });
+  assertEqual(schema.name.type, 'string');
+  assertEqual(schema.is_active.type, 'boolean');
+  assertEqual(schema.age.type, 'integer');
+  assert(schema.name.required === true, 'Single sample fields should be required');
+});
+
+test('infer schema from multiple samples', () => {
+  const si = new SchemaInference();
+  const schema = si.infer([
+    { id: 1, name: 'John', email: 'a@b.com' },
+    { id: 2, name: 'Jane', email: 'c@d.com' },
+    { id: 3, name: 'Bob' },
+  ]);
+  assertEqual(schema.id.type, 'integer');
+  assert(schema.email.required === false, 'email missing in one sample, should not be required');
+});
+
+test('detect email pattern', () => {
+  const si = new SchemaInference();
+  const schema = si.infer([
+    { email: 'a@b.com' },
+    { email: 'c@d.com' },
+  ]);
+  assertEqual(schema.email.pattern, 'email');
+});
+
+test('infer from empty array throws InferenceError', () => {
+  const si = new SchemaInference();
+  let threw = false;
+  try {
+    si.infer([]);
+  } catch (e) {
+    threw = true;
+    assert(e instanceof InferenceError, 'Should be InferenceError');
+  }
+  assert(threw, 'Should have thrown');
+});
+
+test('merge schemas widens types', () => {
+  const si = new SchemaInference();
+  const s1 = { name: { type: 'string', required: true } };
+  const s2 = { name: { type: 'number', required: true } };
+  const merged = si.merge([s1, s2]);
+  assertEqual(merged.name.type, 'any');
+});
+
+// ─── 23. v3: FIELD PROJECTION ────────────────────────────────
+console.log('\n23. v3: Field projection');
+
+test('pick selects only specified fields', () => {
+  const fp = new FieldProjection();
+  const r = fp.pick({ id: 1, name: 'John', secret: 'xxx' }, ['id', 'name']);
+  assertEqual(r.id, 1);
+  assertEqual(r.name, 'John');
+  assert(r.secret === undefined, 'secret should be omitted');
+});
+
+test('omit excludes specified fields', () => {
+  const fp = new FieldProjection();
+  const r = fp.omit({ id: 1, password: 'secret', name: 'John' }, ['password']);
+  assertEqual(r.id, 1);
+  assertEqual(r.name, 'John');
+  assert(r.password === undefined, 'password should be omitted');
+});
+
+test('rename renames fields', () => {
+  const fp = new FieldProjection();
+  const r = fp.rename({ first_name: 'John' }, { first_name: 'firstName' });
+  assertEqual(r.firstName, 'John');
+  assert(r.first_name === undefined, 'old key should be gone');
+});
+
+test('reshape maps nested paths', () => {
+  const fp = new FieldProjection();
+  const data = { user: { name: 'John', address: { city: 'NYC' } }, id: 1 };
+  const r = fp.reshape(data, { userName: 'user.name', city: 'user.address.city' });
+  assertEqual(r.userName, 'John');
+  assertEqual(r.city, 'NYC');
+});
+
+test('flatten converts nested to dot-notation', () => {
+  const fp = new FieldProjection();
+  const r = fp.flatten({ a: { b: { c: 1 } }, d: 2 });
+  assertEqual(r['a.b.c'], 1);
+  assertEqual(r.d, 2);
+});
+
+test('compact removes null/undefined', () => {
+  const fp = new FieldProjection();
+  const r = fp.compact({ a: 1, b: null, c: undefined, d: 'ok' });
+  assertEqual(r.a, 1);
+  assertEqual(r.d, 'ok');
+  assert(r.b === undefined, 'null should be removed');
+  assert(r.c === undefined, 'undefined should be removed');
+});
+
+test('pick on arrays', () => {
+  const fp = new FieldProjection();
+  const r = fp.pick([{ id: 1, name: 'A', secret: 'x' }, { id: 2, name: 'B', secret: 'y' }], ['id', 'name']);
+  assertEqual(r.length, 2);
+  assertEqual(r[0].id, 1);
+  assert(r[0].secret === undefined);
+});
+
+// ─── 24. v3: DATA MASKING ───────────────────────────────────
+console.log('\n24. v3: Data masking');
+
+test('auto-detect and redact sensitive fields', () => {
+  const dm = new DataMasker();
+  const r = dm.mask({ name: 'John', password: 'secret123', email: 'a@b.com' });
+  assertEqual(r.name, 'John');
+  assertEqual(r.password, '[REDACTED]');
+  assertEqual(r.email, 'a@b.com'); // email not in default sensitive list
+});
+
+test('mask with custom field rules', () => {
+  const dm = new DataMasker({
+    fieldRules: { email: 'mask', ssn: 'hash' },
+  });
+  const r = dm.mask({ email: 'john@example.com', ssn: '123-45-6789' });
+  assert(r.email.includes('*'), 'Email should be masked');
+  assert(r.ssn.length === 64, 'SSN should be SHA-256 hash (64 chars)');
+});
+
+test('mask nested objects', () => {
+  const dm = new DataMasker();
+  const r = dm.mask({ user: { password: 'secret', name: 'John' } });
+  assertEqual(r.user.password, '[REDACTED]');
+  assertEqual(r.user.name, 'John');
+});
+
+test('isSensitive detects common patterns', () => {
+  const dm = new DataMasker();
+  assert(dm.isSensitive('password') === true);
+  assert(dm.isSensitive('api_key') === true);
+  assert(dm.isSensitive('ssn') === true);
+  assert(dm.isSensitive('name') === false);
+});
+
+test('replace strategy uses custom value', () => {
+  const dm = new DataMasker({
+    fieldRules: { token: { strategy: 'replace', replaceWith: '***' } },
+  });
+  const r = dm.mask({ token: 'abc123' });
+  assertEqual(r.token, '***');
+});
+
+// ─── 25. v3: RATE LIMITER ───────────────────────────────────
+console.log('\n25. v3: Rate limiter');
+
+test('allows requests within limit', () => {
+  const rl = new RateLimiter({ maxRequests: 10, windowMs: 1000 });
+  assert(rl.tryAcquire() === true, 'Should allow first request');
+  assertEqual(rl.remaining() > 0, true);
+});
+
+test('throttles requests over limit', () => {
+  const rl = new RateLimiter({ maxRequests: 2, windowMs: 60000, burstLimit: 2 });
+  assert(rl.tryAcquire() === true);
+  assert(rl.tryAcquire() === true);
+  assert(rl.tryAcquire() === false, 'Third request should be throttled');
+  assertEqual(rl.getStats().throttled, 1);
+});
+
+test('reset clears state', () => {
+  const rl = new RateLimiter({ maxRequests: 1, windowMs: 60000, burstLimit: 1 });
+  rl.tryAcquire();
+  rl.tryAcquire(); // throttled
+  rl.reset();
+  assert(rl.tryAcquire() === true, 'After reset, should allow');
+  assertEqual(rl.getStats().totalRequests, 1);
+});
+
+test('getStats tracks totals', () => {
+  const rl = new RateLimiter({ maxRequests: 5, windowMs: 1000 });
+  rl.tryAcquire();
+  rl.tryAcquire();
+  const stats = rl.getStats();
+  assertEqual(stats.totalRequests, 2);
+  assertEqual(stats.allowed, 2);
+  assertEqual(stats.throttled, 0);
+});
+
+// ─── 26. v3: SCHEMA DIFF ───────────────────────────────────
+console.log('\n26. v3: Schema diff engine');
+
+test('detect added fields', () => {
+  const sd = new SchemaDiff();
+  const r = sd.diff({ id: 1, name: 'John' }, { id: 1, name: 'John', email: 'a@b.com' });
+  assertEqual(r.summary.added, 1);
+  assertEqual(r.added[0].field, 'email');
+});
+
+test('detect removed fields', () => {
+  const sd = new SchemaDiff();
+  const r = sd.diff({ id: 1, name: 'John', age: 25 }, { id: 1, name: 'John' });
+  assertEqual(r.summary.removed, 1);
+  assertEqual(r.removed[0].field, 'age');
+});
+
+test('detect type changes', () => {
+  const sd = new SchemaDiff();
+  const r = sd.diff({ age: 25 }, { age: 'twenty-five' });
+  assertEqual(r.summary.typeChanged, 1);
+  assertEqual(r.typeChanged[0].before, 'number');
+  assertEqual(r.typeChanged[0].after, 'string');
+});
+
+test('detect renamed fields', () => {
+  const sd = new SchemaDiff({ renameThreshold: 0.5 });
+  const r = sd.diff(
+    { first_name: 'John', last_name: 'Doe' },
+    { firstName: 'John', lastName: 'Doe' },
+  );
+  assert(r.summary.renamed >= 1, 'Should detect rename');
+});
+
+test('hasBreakingChanges flag', () => {
+  const sd = new SchemaDiff();
+  const r1 = sd.diff({ id: 1 }, { id: 1, extra: 2 });
+  assert(r1.summary.hasBreakingChanges === false, 'Adding is not breaking');
+
+  const r2 = sd.diff({ id: 1, name: 'x' }, { id: 1 });
+  assert(r2.summary.hasBreakingChanges === true, 'Removing is breaking');
+});
+
+test('diffSchemas compares schema definitions', () => {
+  const sd = new SchemaDiff();
+  const r = sd.diffSchemas(
+    { name: { type: 'string', required: true }, age: { type: 'number', required: false } },
+    { name: { type: 'string', required: true }, email: { type: 'string', required: true } },
+  );
+  assertEqual(r.added.length, 1);
+  assertEqual(r.removed.length, 1);
+  assertEqual(r.added[0], 'email');
+  assertEqual(r.removed[0], 'age');
+});
+
+// ─── 27. v3: TYPESCRIPT TYPE GENERATOR ──────────────────────
+console.log('\n27. v3: TypeScript type generator');
+
+test('generate interface from schema', () => {
+  const tg = new TypeGenerator();
+  const ts = tg.fromSchema('User', {
+    id:    { type: 'integer', required: true },
+    name:  { type: 'string',  required: true },
+    email: { type: 'string',  required: false },
+  });
+  assert(ts.includes('interface User'), 'Should have interface declaration');
+  assert(ts.includes('id: number'), 'Should map integer to number');
+  assert(ts.includes('email?:'), 'Optional fields should have ?');
+});
+
+test('generate interface from data', () => {
+  const tg = new TypeGenerator();
+  const ts = tg.fromData('Order', { id: 1, total: 99.99, active: true });
+  assert(ts.includes('interface Order'), 'Should have interface');
+  assert(ts.includes('id: number'), 'Should infer number');
+  assert(ts.includes('active: boolean'), 'Should infer boolean');
+});
+
+test('generate type guard', () => {
+  const tg = new TypeGenerator();
+  const ts = tg.generateTypeGuard('User', {
+    name: { type: 'string', required: true },
+    age:  { type: 'number', required: true },
+  });
+  assert(ts.includes('function isUser'), 'Should have type guard');
+  assert(ts.includes('value is User'), 'Should have type predicate');
+});
+
+test('generate nested interfaces', () => {
+  const tg = new TypeGenerator();
+  const ts = tg.fromNestedData('Order', {
+    id: 1,
+    address: { city: 'NYC', zip: '10001' },
+  });
+  assert(ts.includes('interface Order'), 'Should have root interface');
+  assert(ts.includes('interface OrderAddress'), 'Should have nested interface');
+});
+
+// ─── 28. v3: METRICS COLLECTOR ──────────────────────────────
+console.log('\n28. v3: Metrics collector');
+
+test('record and get summary', () => {
+  const mc = new MetricsCollector();
+  mc.record('transform.duration', 5);
+  mc.record('transform.duration', 10);
+  mc.record('transform.duration', 15);
+  const summary = mc.getSummary('transform.duration');
+  assertEqual(summary.count, 3);
+  assertEqual(summary.min, 5);
+  assertEqual(summary.max, 15);
+  assertEqual(summary.mean, 10);
+});
+
+test('increment and get counter', () => {
+  const mc = new MetricsCollector();
+  mc.increment('requests.total');
+  mc.increment('requests.total');
+  mc.increment('requests.total', 3);
+  assertEqual(mc.getCounter('requests.total'), 5);
+});
+
+test('measureSync tracks duration', () => {
+  const mc = new MetricsCollector();
+  const result = mc.measureSync('test.op', () => 42);
+  assertEqual(result, 42);
+  const summary = mc.getSummary('test.op');
+  assertEqual(summary.count, 1);
+  assert(summary.mean >= 0, 'Duration should be non-negative');
+});
+
+test('getReport returns full report', () => {
+  const mc = new MetricsCollector();
+  mc.record('a', 1);
+  mc.increment('b');
+  const report = mc.getReport();
+  assert(report.uptime >= 0, 'Should have uptime');
+  assert(report.counters.b === 1, 'Should have counter');
+  assert(report.metrics.a !== undefined, 'Should have metric summary');
+});
+
+test('reset clears all data', () => {
+  const mc = new MetricsCollector();
+  mc.record('x', 1);
+  mc.increment('y');
+  mc.reset();
+  assertEqual(mc.listMetrics().length, 0);
+  assertEqual(mc.listCounters().length, 0);
+});
+
+test('disabled collector skips recording', () => {
+  const mc = new MetricsCollector({ enabled: false });
+  mc.record('x', 1);
+  mc.increment('y');
+  assertEqual(mc.getSummary('x').count, 0);
+  assertEqual(mc.getCounter('y'), 0);
+});
+
+// ─── 29. v3: NEW ERROR CLASSES ──────────────────────────────
+console.log('\n29. v3: New error classes');
+
+test('PluginError has plugin info', () => {
+  const err = new PluginError('Plugin failed', 'myPlugin');
+  assertEqual(err.name, 'PluginError');
+  assertEqual(err.code, 'PLUGIN_ERROR');
+  assertEqual(err.details.plugin, 'myPlugin');
+});
+
+test('RateLimitError has limit info', () => {
+  const err = new RateLimitError('Too many requests', 60, 1000);
+  assertEqual(err.name, 'RateLimitError');
+  assertEqual(err.code, 'RATE_LIMIT_ERROR');
+  assertEqual(err.details.limit, 60);
+  assertEqual(err.details.retryAfterMs, 1000);
+});
+
+test('InferenceError has reason', () => {
+  const err = new InferenceError('Cannot infer', 'empty_data');
+  assertEqual(err.name, 'InferenceError');
+  assertEqual(err.code, 'INFERENCE_ERROR');
+  assertEqual(err.details.reason, 'empty_data');
 });
 
 // ─── SUMMARY ──────────────────────────────────────────────────

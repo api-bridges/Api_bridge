@@ -1,8 +1,9 @@
 /**
- * APIBridge AI v2 — Developer Vocabulary Synonym Dictionary
+ * APIBridge AI v3 — Developer Vocabulary Synonym Dictionary
  *
  * Expanded for v2 with more domain-specific groups,
  * abbreviation handling, and internationalised variants.
+ * v3: additional healthcare, analytics, and infrastructure groups.
  */
 
 const SYNONYM_GROUPS = [
@@ -151,6 +152,33 @@ const SYNONYM_GROUPS = [
   ["language", "lang", "locale", "i18n", "l10n"],
   ["platform", "os", "device", "client_type", "user_agent"],
   ["ip_address", "ip", "ip_addr", "remote_addr", "client_ip", "source_ip"],
+
+  // ── Healthcare (v3) ─────────────────────────────────────────
+  ["patient", "patient_id", "patientid", "mrn", "medical_record_number"],
+  ["diagnosis", "dx", "condition", "icd_code", "icd"],
+  ["prescription", "rx", "medication", "med", "drug", "treatment"],
+  ["provider", "doctor", "physician", "practitioner", "clinician", "npi"],
+  ["appointment", "visit", "encounter", "booking", "slot", "schedule"],
+
+  // ── Analytics / Metrics (v3) ────────────────────────────────
+  ["metric", "measure", "kpi", "indicator", "stat", "statistic"],
+  ["dimension", "attribute", "property", "facet", "segment"],
+  ["conversion", "conversion_rate", "cvr", "goal_completion"],
+  ["impression", "view", "pageview", "hit", "visit"],
+  ["click", "tap", "interaction", "engagement", "action"],
+  ["bounce_rate", "exit_rate", "abandonment_rate"],
+  ["session_duration", "time_on_page", "dwell_time", "engagement_time"],
+
+  // ── Infrastructure / DevOps (v3) ────────────────────────────
+  ["host", "hostname", "server", "node", "instance", "machine"],
+  ["container", "pod", "service", "replica", "task"],
+  ["cluster", "group", "pool", "fleet", "farm"],
+  ["region", "zone", "datacenter", "dc", "availability_zone", "az"],
+  ["cpu", "cpu_usage", "processor", "compute", "vcpu"],
+  ["memory", "ram", "mem", "memory_usage", "heap"],
+  ["disk", "storage", "volume", "disk_usage", "fs"],
+  ["network", "bandwidth", "throughput", "traffic", "io"],
+  ["log", "log_entry", "log_line", "trace", "span", "event"],
 ];
 
 // Build flat lookup map: word → group index

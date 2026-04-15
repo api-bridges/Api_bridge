@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v2 — Core Transformer
+ * APIBridge AI v3 — Core Transformer
  *
  * Multi-level mismatch detection and correction:
  *   Level 1 — Exact match          (skip, already correct)
@@ -18,6 +18,13 @@
  *   - PascalCase, kebab-case, SCREAMING_SNAKE output
  *   - Reverse-transform (frontend → backend)
  *   - Deep-clone before mutating
+ *
+ * v3 additions:
+ *   - Plugin hooks (beforeTransform, afterTransform)
+ *   - Field projection integration
+ *   - Data masking integration
+ *   - Performance metrics integration
+ *   - Schema inference support
  */
 
 const { EventEmitter } = require('events');

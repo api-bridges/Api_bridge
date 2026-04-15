@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v2 — Custom Error Classes
+ * APIBridge AI v3 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
  *  - ValidationError   — schema or type mismatch
@@ -7,6 +7,9 @@
  *  - CacheError        — cache read/write issues
  *  - MiddlewareError   — pipeline failure
  *  - NetworkError      — retry-related fetch failures
+ *  - PluginError       — plugin registration / execution failure  (v3)
+ *  - RateLimitError    — rate limit exceeded                      (v3)
+ *  - InferenceError    — schema inference failure                 (v3)
  */
 
 class ApiBridgeError extends Error {
@@ -67,6 +70,30 @@ class NetworkError extends ApiBridgeError {
   }
 }
 
+class PluginError extends ApiBridgeError {
+  constructor(message, pluginName, originalError) {
+    super(message, 'PLUGIN_ERROR', {
+      plugin: pluginName,
+      originalMessage: originalError ? originalError.message : null,
+    });
+    this.name = 'PluginError';
+  }
+}
+
+class RateLimitError extends ApiBridgeError {
+  constructor(message, limit, retryAfterMs) {
+    super(message, 'RATE_LIMIT_ERROR', { limit, retryAfterMs });
+    this.name = 'RateLimitError';
+  }
+}
+
+class InferenceError extends ApiBridgeError {
+  constructor(message, reason) {
+    super(message, 'INFERENCE_ERROR', { reason });
+    this.name = 'InferenceError';
+  }
+}
+
 module.exports = {
   ApiBridgeError,
   ValidationError,
@@ -74,4 +101,7 @@ module.exports = {
   CacheError,
   MiddlewareError,
   NetworkError,
+  PluginError,
+  RateLimitError,
+  InferenceError,
 };
