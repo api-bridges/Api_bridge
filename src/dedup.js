@@ -21,6 +21,7 @@ class RequestDeduplicator {
    * @param {number}  options.maxSize   Max concurrent dedup entries (default 1000)
    */
   constructor(options = {}) {
+    /** @type {function} Hash function used to derive keys from arbitrary data */
     this.hashFn = options.hashFn || JSON.stringify;
     this.ttl = options.ttl || 5000;
     this.maxSize = options.maxSize || 1000;
@@ -39,17 +40,22 @@ class RequestDeduplicator {
    * Deduplicate a request by key. If a request with the same key is
    * already in-flight, return its promise. Otherwise execute fn() and
    * share the result with all waiters.
-   * @param {string} key  Deduplication key
+   *
+   * The key can be any value — it is passed through `hashFn` to produce
+   * a string used for dedup lookups.
+   *
+   * @param {*} key       Deduplication key (hashed via hashFn)
    * @param {function} fn Async function to execute if no in-flight request exists
    * @returns {Promise<any>}
    */
   async dedupe(key, fn) {
+    const hashedKey = this.hashFn(key);
     this.stats.totalRequests++;
 
     // Return existing in-flight promise
-    if (this._pending.has(key)) {
+    if (this._pending.has(hashedKey)) {
       this.stats.deduped++;
-      return this._pending.get(key).promise;
+      return this._pending.get(hashedKey).promise;
     }
 
     // Reject if at capacity
@@ -63,26 +69,26 @@ class RequestDeduplicator {
 
     // Execute and store the promise
     const promise = fn().finally(() => {
-      this._remove(key);
+      this._remove(hashedKey);
     });
 
     // Auto-cleanup after TTL
     const timer = setTimeout(() => {
-      this._remove(key);
+      this._remove(hashedKey);
     }, this.ttl);
 
-    this._pending.set(key, { promise, createdAt: Date.now(), timer });
+    this._pending.set(hashedKey, { promise, createdAt: Date.now(), timer });
 
     return promise;
   }
 
   /**
    * Check if a key is currently in-flight.
-   * @param {string} key
+   * @param {*} key
    * @returns {boolean}
    */
   has(key) {
-    return this._pending.has(key);
+    return this._pending.has(this.hashFn(key));
   }
 
   /**
