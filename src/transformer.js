@@ -32,9 +32,11 @@ const { TransformError } = require('./errors');
  * Normalize any key to lowercase words array.
  */
 function tokenize(key) {
-  return key
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
-    .replace(/([a-z])([A-Z])/g, '$1_$2')
+  // Limit input length to prevent ReDoS on untrusted input
+  const safeKey = key.length > 200 ? key.slice(0, 200) : key;
+  return safeKey
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
     .toLowerCase()
     .replace(/[-.\s]+/g, '_')
     .replace(/[^a-z0-9_]/g, '')
