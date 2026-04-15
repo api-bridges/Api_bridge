@@ -1,15 +1,19 @@
 /**
- * APIBridge AI v3 — Custom Error Classes
+ * APIBridge AI v4 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
- *  - ValidationError   — schema or type mismatch
- *  - TransformError    — key resolution / coercion failure
- *  - CacheError        — cache read/write issues
- *  - MiddlewareError   — pipeline failure
- *  - NetworkError      — retry-related fetch failures
- *  - PluginError       — plugin registration / execution failure  (v3)
- *  - RateLimitError    — rate limit exceeded                      (v3)
- *  - InferenceError    — schema inference failure                 (v3)
+ *  - ValidationError        — schema or type mismatch
+ *  - TransformError         — key resolution / coercion failure
+ *  - CacheError             — cache read/write issues
+ *  - MiddlewareError        — pipeline failure
+ *  - NetworkError           — retry-related fetch failures
+ *  - PluginError            — plugin registration / execution failure  (v3)
+ *  - RateLimitError         — rate limit exceeded                      (v3)
+ *  - InferenceError         — schema inference failure                 (v3)
+ *  - CircuitBreakerError    — circuit breaker tripped                  (v4)
+ *  - PipelineError          — composable pipeline stage failure        (v4)
+ *  - WebhookError           — webhook processing failure               (v4)
+ *  - VersioningError        — API version management failure           (v4)
  */
 
 class ApiBridgeError extends Error {
@@ -101,6 +105,30 @@ class CircuitBreakerError extends ApiBridgeError {
   }
 }
 
+class PipelineError extends ApiBridgeError {
+  constructor(message, stageName, originalError) {
+    super(message, 'PIPELINE_ERROR', {
+      stage: stageName,
+      originalMessage: originalError ? originalError.message : null,
+    });
+    this.name = 'PipelineError';
+  }
+}
+
+class WebhookError extends ApiBridgeError {
+  constructor(message, provider, reason) {
+    super(message, 'WEBHOOK_ERROR', { provider, reason });
+    this.name = 'WebhookError';
+  }
+}
+
+class VersioningError extends ApiBridgeError {
+  constructor(message, version, reason) {
+    super(message, 'VERSIONING_ERROR', { version, reason });
+    this.name = 'VersioningError';
+  }
+}
+
 module.exports = {
   ApiBridgeError,
   ValidationError,
@@ -112,4 +140,7 @@ module.exports = {
   RateLimitError,
   InferenceError,
   CircuitBreakerError,
+  PipelineError,
+  WebhookError,
+  VersioningError,
 };
