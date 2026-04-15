@@ -32,7 +32,9 @@ const { TransformError } = require('./errors');
  * Normalize any key to lowercase words array.
  */
 function tokenize(key) {
-  // Limit input length to prevent ReDoS on untrusted input
+  // Truncate extremely long keys to prevent ReDoS on untrusted input.
+  // API field names longer than 200 characters are not expected in practice;
+  // if truncated, the resulting tokens are derived from the first 200 chars.
   const safeKey = key.length > 200 ? key.slice(0, 200) : key;
   return safeKey
     .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')

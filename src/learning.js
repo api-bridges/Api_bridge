@@ -229,8 +229,8 @@ class LearningEngine {
       };
 
       fs.writeFileSync(this.storePath, JSON.stringify(data, null, 2));
-    } catch {
-      // Silent fail — learning is non-critical
+    } catch (e) {
+      console.error(`[APIBridge] Failed to save learned data: ${e.message}`);
     }
   }
 
@@ -268,8 +268,8 @@ class LearningEngine {
       this.rejected = new Map(
         Object.entries(data.rejected || {}).map(([k, v]) => [k, new Set(v)])
       );
-    } catch {
-      // Silent fail — start fresh
+    } catch (e) {
+      console.error(`[APIBridge] Failed to load learned data: ${e.message}`);
     }
   }
 
