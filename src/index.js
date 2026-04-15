@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v2
+ * APIBridge AI v3
  * Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -12,6 +12,16 @@
  *  - Event-driven monitoring
  *  - Batch transformation
  *  - Bulk learning import/export
+ *
+ * v3 features:
+ *  - Plugin system (extensible architecture)
+ *  - Schema inference (auto-generate schemas from data)
+ *  - Field projection (pick, omit, rename, reshape, flatten, compact)
+ *  - Data masking (PII protection: redact, mask, hash)
+ *  - Rate limiting (token bucket, burst, queue)
+ *  - Schema diff engine (detect API drift & breaking changes)
+ *  - TypeScript type generator (interfaces, type guards)
+ *  - Metrics collector (timing, counters, percentiles)
  *
  * Usage:
  *   const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
@@ -27,6 +37,14 @@
  *   // Direct transform
  *   const result = transform({ first_name: 'John' });
  *   // → { firstName: 'John' }
+ *
+ *   // v3: Infer schema
+ *   const { SchemaInference } = require('api-bridge-ai');
+ *   const schema = new SchemaInference().infer(apiResponse);
+ *
+ *   // v3: Mask sensitive data
+ *   const { DataMasker } = require('api-bridge-ai');
+ *   const masked = new DataMasker().mask(data);
  */
 
 const { APIBridgeTransformer } = require('./transformer');
@@ -36,6 +54,14 @@ const { MiddlewarePipeline } = require('./middleware');
 const { SchemaValidator } = require('./validator');
 const { ResponseNormalizer } = require('./normalizer');
 const { LearningEngine } = require('./learning');
+const { PluginManager } = require('./plugins');
+const { SchemaInference } = require('./inference');
+const { FieldProjection } = require('./projection');
+const { DataMasker } = require('./masking');
+const { RateLimiter } = require('./rate-limiter');
+const { SchemaDiff } = require('./diff');
+const { TypeGenerator } = require('./typegen');
+const { MetricsCollector } = require('./metrics');
 const {
   ApiBridgeError,
   ValidationError,
@@ -43,12 +69,15 @@ const {
   CacheError,
   MiddlewareError,
   NetworkError,
+  PluginError,
+  RateLimitError,
+  InferenceError,
 } = require('./errors');
 
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap an axios instance with APIBridge v2.
+ * Wrap an axios instance with APIBridge v3.
  *
  * @param {object} axiosInstance
  * @param {object} options
@@ -108,7 +137,7 @@ function bridge(axiosInstance, options = {}) {
     );
   }
 
-  // Attach v2 utilities
+  // Attach v3 utilities
   axiosInstance.__bridge    = transformer;
   axiosInstance.__cache     = cache;
   axiosInstance.__middleware = middleware;
@@ -139,7 +168,7 @@ function bridge(axiosInstance, options = {}) {
 // ─── FETCH BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap native fetch with APIBridge v2.
+ * Wrap native fetch with APIBridge v3.
  * Supports all HTTP methods, retry logic, caching, middleware, and normalization.
  *
  * @param {object} options
@@ -324,6 +353,16 @@ module.exports = {
   SchemaValidator,
   ResponseNormalizer,
 
+  // v3 classes
+  PluginManager,
+  SchemaInference,
+  FieldProjection,
+  DataMasker,
+  RateLimiter,
+  SchemaDiff,
+  TypeGenerator,
+  MetricsCollector,
+
   // Exporters
   exportMismatchCSV,
   exportMismatchJSON,
@@ -336,4 +375,7 @@ module.exports = {
   CacheError,
   MiddlewareError,
   NetworkError,
+  PluginError,
+  RateLimitError,
+  InferenceError,
 };

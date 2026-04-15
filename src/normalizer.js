@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v2 — Response Normalizer
+ * APIBridge AI v3 — Response Normalizer
  *
  * Standardises common API response shapes so your frontend
  * always gets a predictable structure, regardless of the backend.

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v2 — Learning Engine
+ * APIBridge AI v3 — Learning Engine
  *
  * Persistent, session-aware learning with:
  *  - Confidence decay over time
@@ -7,6 +7,7 @@
  *  - Bulk import / export
  *  - Auto-learn from high-confidence transforms
  *  - Schema suggestion generation
+ *  - v3: persistence format version 3
  */
 
 const fs   = require('fs');
@@ -212,7 +213,7 @@ class LearningEngine {
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
       const data = {
-        version: 2,
+        version: 3,
         lastUpdated: new Date().toISOString(),
         approved: Object.fromEntries(
           [...this.approved.entries()].map(([k, v]) => [k, {
@@ -242,8 +243,8 @@ class LearningEngine {
       if (!fs.existsSync(this.storePath)) return;
       const data = JSON.parse(fs.readFileSync(this.storePath, 'utf8'));
 
-      if (data.version === 2) {
-        // v2 format: entries are { target, confidence, lastUsed, learnedAt }
+      if (data.version === 3 || data.version === 2) {
+        // v2/v3 format: entries are { target, confidence, lastUsed, learnedAt }
         this.approved = new Map(
           Object.entries(data.approved || {}).map(([k, v]) => [k, {
             target: v.target,

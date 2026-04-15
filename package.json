@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "2.0.0",
-  "description": "Intelligent API mismatch detector, transformer, and learner — automatically bridges the gap between backend and frontend naming conventions with AI-powered semantic matching",
+  "version": "3.0.0",
+  "description": "The most powerful API mismatch detector, transformer, and learner — automatically bridges backend/frontend naming conventions with AI-powered semantic matching, plugin system, schema inference, data masking, rate limiting, and more",
   "main": "src/index.js",
   "scripts": {
     "test": "node test.js",
@@ -18,7 +18,15 @@
     "ai",
     "learning",
     "axios",
-    "fetch"
+    "fetch",
+    "plugin",
+    "inference",
+    "masking",
+    "rate-limiter",
+    "typescript",
+    "metrics",
+    "projection",
+    "diff"
   ],
   "author": "",
   "license": "MIT",
