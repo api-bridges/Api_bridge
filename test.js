@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v3 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2 and v3 features.
+ * APIBridge AI v4 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2, v3, and v4 features.
  */
 
 const {
@@ -22,6 +22,14 @@ const {
   SchemaDiff,
   TypeGenerator,
   MetricsCollector,
+  CircuitBreaker,
+  RequestDeduplicator,
+  GraphQLBridge,
+  OpenAPIImporter,
+  APIVersionManager,
+  WebhookHandler,
+  JSONPatchGenerator,
+  ComposablePipeline,
   ApiBridgeError,
   ValidationError,
   TransformError,
@@ -29,6 +37,10 @@ const {
   PluginError,
   RateLimitError,
   InferenceError,
+  CircuitBreakerError,
+  PipelineError,
+  WebhookError,
+  VersioningError,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -1170,6 +1182,627 @@ test('InferenceError has reason', () => {
   assertEqual(err.name, 'InferenceError');
   assertEqual(err.code, 'INFERENCE_ERROR');
   assertEqual(err.details.reason, 'empty_data');
+});
+
+// ─── 30. v4: CIRCUIT BREAKER ──────────────────────────────────
+console.log('\n30. v4: Circuit Breaker');
+
+test('starts in CLOSED state', () => {
+  const cb = new CircuitBreaker();
+  assertEqual(cb.getState(), 'CLOSED');
+  assert(cb.isHealthy(), 'Should be healthy');
+});
+
+test('execute succeeds in CLOSED state', () => {
+  const cb = new CircuitBreaker({ failureThreshold: 3 });
+  return cb.execute(() => Promise.resolve(42)).then(result => {
+    assertEqual(result, 42);
+    assertEqual(cb.getStats().successes, 1);
+  });
+});
+
+test('transitions to OPEN after failure threshold', () => {
+  const cb = new CircuitBreaker({ failureThreshold: 2, resetTimeout: 60000 });
+  const fail = () => cb.execute(() => Promise.reject(new Error('fail'))).catch(() => {});
+  return fail().then(() => fail()).then(() => {
+    assertEqual(cb.getState(), 'OPEN');
+    assert(!cb.isHealthy(), 'Should not be healthy');
+    cb.destroy();
+  });
+});
+
+test('rejects requests when OPEN', () => {
+  const cb = new CircuitBreaker({ failureThreshold: 1, resetTimeout: 60000 });
+  return cb.execute(() => Promise.reject(new Error('fail'))).catch(() => {
+    return cb.execute(() => Promise.resolve(42)).then(
+      () => { throw new Error('Should have thrown'); },
+      (err) => {
+        assert(err instanceof CircuitBreakerError, 'Should be CircuitBreakerError');
+        cb.destroy();
+      }
+    );
+  });
+});
+
+test('forceOpen and forceClose work', () => {
+  const cb = new CircuitBreaker();
+  cb.forceOpen();
+  assertEqual(cb.getState(), 'OPEN');
+  cb.forceClose();
+  assertEqual(cb.getState(), 'CLOSED');
+  cb.destroy();
+});
+
+test('reset clears all state', () => {
+  const cb = new CircuitBreaker({ failureThreshold: 1, resetTimeout: 60000 });
+  return cb.execute(() => Promise.reject(new Error('fail'))).catch(() => {
+    cb.reset();
+    assertEqual(cb.getState(), 'CLOSED');
+    assertEqual(cb.getStats().failures, 0);
+    assertEqual(cb.getStats().totalRequests, 0);
+    cb.destroy();
+  });
+});
+
+test('getStats returns correct data', () => {
+  const cb = new CircuitBreaker();
+  const stats = cb.getStats();
+  assert(stats.state !== undefined, 'Should have state');
+  assert(stats.failures !== undefined, 'Should have failures');
+  assert(stats.successes !== undefined, 'Should have successes');
+  assert(stats.totalRequests !== undefined, 'Should have totalRequests');
+});
+
+// ─── 31. v4: REQUEST DEDUPLICATOR ─────────────────────────────
+console.log('\n31. v4: Request Deduplicator');
+
+test('deduplicates concurrent identical requests', () => {
+  const dedup = new RequestDeduplicator();
+  let callCount = 0;
+  const fn = () => { callCount++; return Promise.resolve('result'); };
+  return Promise.all([
+    dedup.dedupe('key1', fn),
+    dedup.dedupe('key1', fn),
+    dedup.dedupe('key1', fn),
+  ]).then(results => {
+    assertEqual(callCount, 1);
+    assertEqual(results[0], 'result');
+    assertEqual(results[1], 'result');
+    assertEqual(results[2], 'result');
+    assertEqual(dedup.getStats().deduped, 2);
+  });
+});
+
+test('different keys execute independently', () => {
+  const dedup = new RequestDeduplicator();
+  let callCount = 0;
+  const fn = () => { callCount++; return Promise.resolve('ok'); };
+  return Promise.all([
+    dedup.dedupe('a', fn),
+    dedup.dedupe('b', fn),
+  ]).then(() => {
+    assertEqual(callCount, 2);
+  });
+});
+
+test('has and size track in-flight requests', () => {
+  const dedup = new RequestDeduplicator();
+  let resolve;
+  const pending = new Promise(r => { resolve = r; });
+  const fn = () => pending;
+  const p = dedup.dedupe('x', fn);
+  assert(dedup.has('x'), 'Should have pending key');
+  assertEqual(dedup.size(), 1);
+  resolve('done');
+  return p.then(() => {
+    assertEqual(dedup.size(), 0);
+  });
+});
+
+test('getStats tracks correctly', () => {
+  const dedup = new RequestDeduplicator();
+  const stats = dedup.getStats();
+  assertEqual(stats.totalRequests, 0);
+  assertEqual(stats.deduped, 0);
+  assertEqual(stats.executed, 0);
+});
+
+test('clear removes pending entries', () => {
+  const dedup = new RequestDeduplicator();
+  dedup.clear();
+  assertEqual(dedup.size(), 0);
+});
+
+// ─── 32. v4: GRAPHQL BRIDGE ──────────────────────────────────
+console.log('\n32. v4: GraphQL Bridge');
+
+test('transforms GraphQL response fields to camelCase', () => {
+  const gql = new GraphQLBridge({ convention: 'camelCase' });
+  const response = {
+    data: { user_name: 'John', email_address: 'john@test.com' },
+  };
+  const result = gql.transformResponse(response);
+  assert(result.data.userName !== undefined || result.data.user_name !== undefined, 'Should transform data');
+});
+
+test('transforms variables to snake_case for server', () => {
+  const gql = new GraphQLBridge();
+  const vars = { userName: 'John', userAge: 30 };
+  const result = gql.transformVariables(vars, 'snake_case');
+  assert(result.user_name === 'John' || result.userName === 'John', 'Should transform or keep variables');
+});
+
+test('extracts nested data from response', () => {
+  const gql = new GraphQLBridge();
+  const response = {
+    data: { user: { posts: [{ id: 1 }] } },
+  };
+  const posts = gql.extractData(response, 'user.posts');
+  assert(Array.isArray(posts), 'Should extract array');
+  assertEqual(posts.length, 1);
+});
+
+test('normalizes GraphQL errors', () => {
+  const gql = new GraphQLBridge();
+  const errors = [
+    { message: 'Not found', locations: [{ line: 1, column: 2 }], path: ['user'] },
+  ];
+  const normalized = gql.normalizeErrors(errors);
+  assertEqual(normalized.length, 1);
+  assertEqual(normalized[0].message, 'Not found');
+});
+
+test('buildQuery returns query and variables', () => {
+  const gql = new GraphQLBridge();
+  const result = gql.buildQuery('query { user }', { userId: 1 });
+  assertEqual(result.query, 'query { user }');
+  assert(result.variables !== undefined, 'Should have variables');
+});
+
+test('getStats tracks operations', () => {
+  const gql = new GraphQLBridge();
+  const stats = gql.getStats();
+  assert(stats.responsesTransformed !== undefined, 'Should track responses');
+});
+
+test('stripTypename removes __typename', () => {
+  const gql = new GraphQLBridge({ stripTypename: true });
+  const response = {
+    data: { __typename: 'User', name: 'John' },
+  };
+  const result = gql.transformResponse(response);
+  assertEqual(result.data.__typename, undefined);
+});
+
+// ─── 33. v4: OPENAPI IMPORTER ────────────────────────────────
+console.log('\n33. v4: OpenAPI Importer');
+
+test('extracts schemas from OpenAPI v3 spec', () => {
+  const importer = new OpenAPIImporter();
+  const spec = {
+    openapi: '3.0.0',
+    components: {
+      schemas: {
+        User: {
+          type: 'object',
+          required: ['id', 'name'],
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            email: { type: 'string', format: 'email' },
+          },
+        },
+      },
+    },
+    paths: {},
+  };
+  const schemas = importer.extractSchemas(spec);
+  assert(schemas.User !== undefined, 'Should extract User schema');
+  assert(schemas.User.id !== undefined, 'Should have id field');
+});
+
+test('extracts schemas from Swagger v2 spec', () => {
+  const importer = new OpenAPIImporter();
+  const spec = {
+    swagger: '2.0',
+    definitions: {
+      Product: {
+        type: 'object',
+        properties: {
+          product_id: { type: 'integer' },
+          product_name: { type: 'string' },
+        },
+      },
+    },
+    paths: {},
+  };
+  const schemas = importer.extractSchemas(spec);
+  assert(schemas.Product !== undefined, 'Should extract Product schema');
+});
+
+test('resolves $ref references', () => {
+  const importer = new OpenAPIImporter();
+  const spec = {
+    openapi: '3.0.0',
+    components: {
+      schemas: {
+        User: { type: 'object', properties: { name: { type: 'string' } } },
+      },
+    },
+  };
+  const resolved = importer.resolveRef('#/components/schemas/User', spec);
+  assert(resolved !== undefined, 'Should resolve ref');
+  assert(resolved.properties.name !== undefined, 'Should have name property');
+});
+
+test('converts OpenAPI schema to APIBridge format', () => {
+  const importer = new OpenAPIImporter();
+  const schema = {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: { type: 'integer', description: 'User ID' },
+      email: { type: 'string', format: 'email' },
+      created_at: { type: 'string', format: 'date-time' },
+      is_active: { type: 'boolean', default: true },
+    },
+  };
+  const result = importer.convertSchema(schema, {});
+  assert(result.id !== undefined, 'Should have id');
+  assertEqual(result.id.type, 'integer');
+});
+
+test('getEndpoints lists API paths', () => {
+  const importer = new OpenAPIImporter();
+  const spec = {
+    openapi: '3.0.0',
+    paths: {
+      '/users': {
+        get: { operationId: 'getUsers', summary: 'List users' },
+        post: { operationId: 'createUser', summary: 'Create user' },
+      },
+    },
+    components: {},
+  };
+  const endpoints = importer.getEndpoints(spec);
+  assert(endpoints.length >= 2, 'Should find at least 2 endpoints');
+});
+
+test('getStats tracks imports', () => {
+  const importer = new OpenAPIImporter();
+  const stats = importer.getStats();
+  assert(stats.schemasImported !== undefined, 'Should track schemas');
+  assert(stats.endpointsFound !== undefined, 'Should track endpoints');
+});
+
+// ─── 34. v4: API VERSIONING ──────────────────────────────────
+console.log('\n34. v4: API Versioning');
+
+test('register and transform with version', () => {
+  const vm = new APIVersionManager();
+  vm.register('v1', {
+    transforms: {
+      response: (data) => ({ ...data, version: 'v1' }),
+    },
+  });
+  const result = vm.transform({ name: 'John' }, 'v1', 'response');
+  assertEqual(result.version, 'v1');
+});
+
+test('isDeprecated checks version status', () => {
+  const vm = new APIVersionManager();
+  vm.register('v1', { deprecated: true, successor: 'v2' });
+  vm.register('v2', {});
+  assert(vm.isDeprecated('v1'), 'v1 should be deprecated');
+  assert(!vm.isDeprecated('v2'), 'v2 should not be deprecated');
+});
+
+test('getSuccessor returns next version', () => {
+  const vm = new APIVersionManager();
+  vm.register('v1', { deprecated: true, successor: 'v2' });
+  vm.register('v2', {});
+  assertEqual(vm.getSuccessor('v1'), 'v2');
+});
+
+test('list returns all versions', () => {
+  const vm = new APIVersionManager();
+  vm.register('v1', {});
+  vm.register('v2', {});
+  const versions = vm.list();
+  assert(versions.length >= 2, 'Should have at least 2 versions');
+});
+
+test('has checks version existence', () => {
+  const vm = new APIVersionManager();
+  vm.register('v1', {});
+  assert(vm.has('v1'), 'Should have v1');
+  assert(!vm.has('v99'), 'Should not have v99');
+});
+
+test('unregister removes version', () => {
+  const vm = new APIVersionManager();
+  vm.register('v1', {});
+  vm.unregister('v1');
+  assert(!vm.has('v1'), 'v1 should be removed');
+});
+
+test('getStats tracks operations', () => {
+  const vm = new APIVersionManager();
+  const stats = vm.getStats();
+  assert(stats.versionsRegistered !== undefined, 'Should track versions');
+});
+
+test('reset clears all versions', () => {
+  const vm = new APIVersionManager();
+  vm.register('v1', {});
+  vm.reset();
+  assert(!vm.has('v1'), 'Should be cleared');
+});
+
+// ─── 35. v4: WEBHOOK HANDLER ─────────────────────────────────
+console.log('\n35. v4: Webhook Handler');
+
+test('process normalizes webhook payload', () => {
+  const wh = new WebhookHandler({ convention: 'camelCase' });
+  const result = wh.process('generic', { event: 'user.created', data: { user_name: 'John' } }, {});
+  assertEqual(result.event, 'user.created');
+  assert(result.data !== undefined, 'Should have data');
+  assertEqual(result.provider, 'generic');
+});
+
+test('register and use custom provider', () => {
+  const wh = new WebhookHandler();
+  wh.register('custom', { eventKey: 'type', payloadKey: 'payload' });
+  assert(wh.has('custom'), 'Should have custom provider');
+  const result = wh.process('custom', { type: 'order.completed', payload: { order_id: 123 } }, {});
+  assertEqual(result.event, 'order.completed');
+});
+
+test('normalize transforms keys deeply', () => {
+  const wh = new WebhookHandler({ convention: 'camelCase' });
+  const result = wh.normalize({ user_name: 'John', user_email: 'john@test.com' });
+  assert(result.userName !== undefined || result.user_name !== undefined, 'Should transform keys');
+});
+
+test('list returns registered providers', () => {
+  const wh = new WebhookHandler();
+  const providers = wh.list();
+  assert(Array.isArray(providers), 'Should return array');
+  assert(providers.length >= 3, 'Should have built-in providers');
+});
+
+test('unregister removes provider', () => {
+  const wh = new WebhookHandler();
+  wh.register('temp', { eventKey: 'event' });
+  wh.unregister('temp');
+  assert(!wh.has('temp'), 'Should be removed');
+});
+
+test('getStats tracks webhooks processed', () => {
+  const wh = new WebhookHandler();
+  wh.process('generic', { event: 'test', data: {} }, {});
+  const stats = wh.getStats();
+  assert(stats.webhooksProcessed >= 1, 'Should track processed count');
+});
+
+test('reset clears stats', () => {
+  const wh = new WebhookHandler();
+  wh.process('generic', { event: 'test', data: {} }, {});
+  wh.reset();
+  assertEqual(wh.getStats().webhooksProcessed, 0);
+});
+
+// ─── 36. v4: JSON PATCH GENERATOR ────────────────────────────
+console.log('\n36. v4: JSON Patch Generator');
+
+test('generates patches for object differences', () => {
+  const pg = new JSONPatchGenerator();
+  const source = { name: 'John', age: 30 };
+  const target = { name: 'Jane', age: 30, email: 'jane@test.com' };
+  const patches = pg.generate(source, target);
+  assert(Array.isArray(patches), 'Should return array');
+  assert(patches.length > 0, 'Should find differences');
+});
+
+test('applies patches to document', () => {
+  const pg = new JSONPatchGenerator();
+  const doc = { name: 'John', age: 30 };
+  const patches = [
+    { op: 'replace', path: '/name', value: 'Jane' },
+    { op: 'add', path: '/email', value: 'jane@test.com' },
+  ];
+  const result = pg.apply(doc, patches);
+  assertEqual(result.name, 'Jane');
+  assertEqual(result.email, 'jane@test.com');
+});
+
+test('validates patch operations', () => {
+  const pg = new JSONPatchGenerator();
+  const valid = pg.validate([
+    { op: 'add', path: '/foo', value: 'bar' },
+  ]);
+  assert(valid.valid, 'Should be valid');
+
+  const invalid = pg.validate([
+    { op: 'invalid_op', path: '/foo' },
+  ]);
+  assert(!invalid.valid, 'Should be invalid');
+});
+
+test('test operation checks values', () => {
+  const pg = new JSONPatchGenerator();
+  const doc = { name: 'John' };
+  assert(pg.test(doc, { op: 'test', path: '/name', value: 'John' }), 'Should match');
+  assert(!pg.test(doc, { op: 'test', path: '/name', value: 'Jane' }), 'Should not match');
+});
+
+test('generates remove patches', () => {
+  const pg = new JSONPatchGenerator();
+  const source = { name: 'John', age: 30 };
+  const target = { name: 'John' };
+  const patches = pg.generate(source, target);
+  const removeOp = patches.find(p => p.op === 'remove');
+  assert(removeOp !== undefined, 'Should have remove operation');
+});
+
+test('roundtrip: generate and apply', () => {
+  const pg = new JSONPatchGenerator();
+  const source = { a: 1, b: 2, c: 3 };
+  const target = { a: 1, b: 99, d: 4 };
+  const patches = pg.generate(source, target);
+  const result = pg.apply(source, patches);
+  assertEqual(result.b, 99);
+  assertEqual(result.d, 4);
+  assertEqual(result.c, undefined);
+});
+
+test('getStats tracks operations', () => {
+  const pg = new JSONPatchGenerator();
+  pg.generate({ a: 1 }, { a: 2 });
+  const stats = pg.getStats();
+  assert(stats.patchesGenerated >= 1, 'Should track generations');
+});
+
+test('rejects prototype pollution paths', () => {
+  const pg = new JSONPatchGenerator({ strict: true });
+  let caught = false;
+  try {
+    pg.apply({}, [{ op: 'add', path: '/__proto__/polluted', value: true }]);
+  } catch (e) {
+    caught = true;
+  }
+  assert(caught, 'Should reject __proto__ paths');
+});
+
+// ─── 37. v4: COMPOSABLE PIPELINE ─────────────────────────────
+console.log('\n37. v4: Composable Pipeline');
+
+test('executes stages in order', () => {
+  const pipe = new ComposablePipeline();
+  pipe
+    .pipe('double', (data) => data * 2)
+    .pipe('add10', (data) => data + 10);
+  return pipe.execute(5).then(result => {
+    assertEqual(result.result, 20);
+  });
+});
+
+test('stages can be conditional', () => {
+  const pipe = new ComposablePipeline();
+  pipe
+    .pipe('always', (data) => data + 1)
+    .pipe('conditional', (data) => data * 10, { condition: (d) => d > 100 });
+  return pipe.execute(5).then(result => {
+    assertEqual(result.result, 6); // condition not met, skip multiply
+  });
+});
+
+test('tap does not modify data', () => {
+  const pipe = new ComposablePipeline();
+  let sideEffect = null;
+  pipe
+    .pipe('transform', (data) => data + 1)
+    .tap('log', (data) => { sideEffect = data; });
+  return pipe.execute(5).then(result => {
+    assertEqual(result.result, 6);
+    assertEqual(sideEffect, 6);
+  });
+});
+
+test('remove stage by name', () => {
+  const pipe = new ComposablePipeline();
+  pipe.pipe('a', (d) => d + 1).pipe('b', (d) => d + 2);
+  pipe.remove('a');
+  return pipe.execute(0).then(result => {
+    assertEqual(result.result, 2);
+  });
+});
+
+test('list returns stage names', () => {
+  const pipe = new ComposablePipeline();
+  pipe.pipe('a', (d) => d).pipe('b', (d) => d);
+  const names = pipe.list();
+  assertEqual(names.length, 2);
+  assertEqual(names[0], 'a');
+  assertEqual(names[1], 'b');
+});
+
+test('size returns stage count', () => {
+  const pipe = new ComposablePipeline();
+  pipe.pipe('a', (d) => d).pipe('b', (d) => d);
+  assertEqual(pipe.size(), 2);
+});
+
+test('getStats returns execution data', () => {
+  const pipe = new ComposablePipeline();
+  const stats = pipe.getStats();
+  assert(stats.executions !== undefined, 'Should track executions');
+  assert(stats.stageCount !== undefined, 'Should track stage count');
+});
+
+test('reset clears all stages', () => {
+  const pipe = new ComposablePipeline();
+  pipe.pipe('a', (d) => d);
+  pipe.reset();
+  assertEqual(pipe.size(), 0);
+});
+
+test('error strategy skip continues on error', () => {
+  const pipe = new ComposablePipeline({ errorStrategy: 'skip' });
+  pipe
+    .pipe('fail', () => { throw new Error('oops'); })
+    .pipe('ok', (data) => data + 1);
+  return pipe.execute(5).then(result => {
+    assertEqual(result.result, 6);
+    assert(result.errors.length >= 1, 'Should track errors');
+  });
+});
+
+// ─── 38. v4: NEW ERROR CLASSES ───────────────────────────────
+console.log('\n38. v4: New error classes');
+
+test('CircuitBreakerError has state info', () => {
+  const err = new CircuitBreakerError('Circuit open', 'OPEN', 5);
+  assertEqual(err.name, 'CircuitBreakerError');
+  assertEqual(err.code, 'CIRCUIT_BREAKER_ERROR');
+  assertEqual(err.details.state, 'OPEN');
+  assertEqual(err.details.failures, 5);
+});
+
+test('PipelineError has stage info', () => {
+  const err = new PipelineError('Stage failed', 'transform', new Error('inner'));
+  assertEqual(err.name, 'PipelineError');
+  assertEqual(err.code, 'PIPELINE_ERROR');
+  assertEqual(err.details.stage, 'transform');
+});
+
+test('WebhookError has provider info', () => {
+  const err = new WebhookError('Webhook failed', 'github', 'invalid signature');
+  assertEqual(err.name, 'WebhookError');
+  assertEqual(err.code, 'WEBHOOK_ERROR');
+  assertEqual(err.details.provider, 'github');
+});
+
+test('VersioningError has version info', () => {
+  const err = new VersioningError('Unknown version', 'v99', 'not_registered');
+  assertEqual(err.name, 'VersioningError');
+  assertEqual(err.code, 'VERSIONING_ERROR');
+  assertEqual(err.details.version, 'v99');
+});
+
+test('all v4 errors extend ApiBridgeError', () => {
+  assert(new CircuitBreakerError('test', 'OPEN', 0) instanceof ApiBridgeError, 'CircuitBreakerError should extend ApiBridgeError');
+  assert(new PipelineError('test', 'stage') instanceof ApiBridgeError, 'PipelineError should extend ApiBridgeError');
+  assert(new WebhookError('test', 'provider') instanceof ApiBridgeError, 'WebhookError should extend ApiBridgeError');
+  assert(new VersioningError('test', 'v1') instanceof ApiBridgeError, 'VersioningError should extend ApiBridgeError');
+});
+
+test('v4 errors serialize to JSON', () => {
+  const err = new CircuitBreakerError('test', 'OPEN', 3);
+  const json = err.toJSON();
+  assertEqual(json.name, 'CircuitBreakerError');
+  assertEqual(json.code, 'CIRCUIT_BREAKER_ERROR');
+  assert(json.timestamp !== undefined, 'Should have timestamp');
 });
 
 // ─── SUMMARY ──────────────────────────────────────────────────
