@@ -161,12 +161,22 @@ class FieldProjection {
     const keys = path.split('.');
     let current = obj;
     for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]] || typeof current[keys[i]] !== 'object') {
-        current[keys[i]] = {};
+      const key = keys[i];
+      // Guard against prototype pollution
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        return;
       }
-      current = current[keys[i]];
+      if (!current[key] || typeof current[key] !== 'object') {
+        current[key] = {};
+      }
+      current = current[key];
     }
-    current[keys[keys.length - 1]] = value;
+    const finalKey = keys[keys.length - 1];
+    // Guard against prototype pollution
+    if (finalKey === '__proto__' || finalKey === 'constructor' || finalKey === 'prototype') {
+      return;
+    }
+    current[finalKey] = value;
   }
 }
 
