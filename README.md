@@ -16,15 +16,6 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
   - [bridgeFetch() — Native Fetch Integration](#bridgefetch--native-fetch-integration)
   - [transform() — Direct Transform](#transform--direct-transform)
   - [createTransformer() — Reusable Instance](#createtransformer--reusable-instance)
-- [V4 Features](#v4-features)
-  - [Circuit Breaker](#circuit-breaker)
-  - [Request Deduplication](#request-deduplication)
-  - [GraphQL Bridge](#graphql-bridge)
-  - [OpenAPI Schema Importer](#openapi-schema-importer)
-  - [API Versioning](#api-versioning)
-  - [Webhook Handler](#webhook-handler)
-  - [JSON Patch Generator](#json-patch-generator)
-  - [Composable Pipeline](#composable-pipeline)
 - [V6 Features](#v6-features)
   - [Enhanced Fuzzy Matcher](#enhanced-fuzzy-matcher)
   - [Cryptic Name Resolver](#cryptic-name-resolver)
@@ -38,6 +29,15 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
   - [Mock Server](#mock-server)
   - [Health Check](#health-check)
   - [Event Bus](#event-bus)
+- [V4 Features](#v4-features)
+  - [Circuit Breaker](#circuit-breaker)
+  - [Request Deduplication](#request-deduplication)
+  - [GraphQL Bridge](#graphql-bridge)
+  - [OpenAPI Schema Importer](#openapi-schema-importer)
+  - [API Versioning](#api-versioning)
+  - [Webhook Handler](#webhook-handler)
+  - [JSON Patch Generator](#json-patch-generator)
+  - [Composable Pipeline](#composable-pipeline)
 - [V3 Features](#v3-features)
   - [Plugin System](#plugin-system)
   - [Schema Inference](#schema-inference)
@@ -462,391 +462,6 @@ const r1 = t.transform({ first_name: 'John' });
 const r2 = t.transform({ last_name: 'Doe' });
 
 console.log(t.getStats()); // Stats accumulate across calls
-```
-
----
-
-## V4 Features
-
-### Circuit Breaker
-
-Fault-tolerant API calls with automatic failure detection and recovery:
-
-```js
-const { CircuitBreaker } = require('api-bridge-ai');
-
-const breaker = new CircuitBreaker({
-  failureThreshold: 5,    // Open after 5 consecutive failures
-  resetTimeout: 30000,    // Try half-open after 30 seconds
-  halfOpenMax: 1,          // Allow 1 probe request in half-open
-  onStateChange: ({ from, to }) => console.log(`Circuit: ${from} → ${to}`),
-});
-
-// Execute through the breaker
-try {
-  const data = await breaker.execute(async () => {
-    const res = await fetch('https://api.example.com/users');
-    return res.json();
-  });
-} catch (err) {
-  if (err instanceof CircuitBreakerError) {
-    console.log('Circuit is open, service unavailable');
-    console.log(err.details); // { state: 'OPEN', failures: 5 }
-  }
-}
-
-// Manual control
-breaker.forceOpen();      // Force open for maintenance
-breaker.forceClose();     // Force close to resume
-breaker.reset();          // Reset all state
-
-// Stats
-console.log(breaker.getStats());
-// { state: 'CLOSED', failures: 0, successes: 10, totalRequests: 10, ... }
-
-// Cleanup
-breaker.destroy();        // Clear timers
-```
-
-**States:**
-| State | Behavior |
-|-------|----------|
-| `CLOSED` | Requests flow normally. Failures counted. |
-| `OPEN` | All requests rejected instantly with `CircuitBreakerError`. |
-| `HALF_OPEN` | Limited probe requests allowed. Success → CLOSED, failure → OPEN. |
-
----
-
-### Request Deduplication
-
-Coalesce concurrent identical requests — only one network call is made:
-
-```js
-const { RequestDeduplicator } = require('api-bridge-ai');
-
-const dedup = new RequestDeduplicator({
-  ttl: 5000,      // Max time to keep a pending entry
-  maxSize: 1000,   // Max concurrent dedup entries
-});
-
-// Three concurrent calls with the same key → only ONE fetch executes
-const [a, b, c] = await Promise.all([
-  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
-  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
-  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
-]);
-// a === b === c (same result, single HTTP call)
-
-// Check if a request is in-flight
-dedup.has('/api/users'); // false (completed)
-
-// Stats
-console.log(dedup.getStats());
-// { totalRequests: 3, deduped: 2, executed: 1, pending: 0 }
-```
-
----
-
-### GraphQL Bridge
-
-Transform GraphQL responses and variables between naming conventions:
-
-```js
-const { GraphQLBridge } = require('api-bridge-ai');
-
-const gql = new GraphQLBridge({
-  convention: 'camelCase',      // Target convention for response fields
-  transformVariables: true,      // Transform query variable names
-  transformFields: true,         // Transform response field names
-  stripTypename: true,           // Remove __typename from responses
-});
-
-// Transform a full GraphQL response
-const result = gql.transformResponse({
-  data: {
-    user_profile: {
-      first_name: 'John',
-      email_address: 'john@test.com',
-      __typename: 'User',
-    },
-  },
-  errors: [],
-});
-// { data: { userProfile: { firstName: 'John', emailAddress: 'john@test.com' } }, errors: [] }
-
-// Transform variables for the server (camelCase → snake_case)
-const vars = gql.transformVariables({ userId: 1, sortOrder: 'asc' }, 'snake_case');
-// { user_id: 1, sort_order: 'asc' }
-
-// Extract nested data from response
-const posts = gql.extractData(response, 'user.posts');
-
-// Normalize GraphQL errors
-const errors = gql.normalizeErrors(response.errors);
-// [{ message: '...', path: [...], code: '...', locations: [...] }]
-
-// Build query with transformed variables
-const query = gql.buildQuery('query GetUser($userId: ID!) { ... }', { userId: 1 });
-```
-
----
-
-### OpenAPI Schema Importer
-
-Auto-generate APIBridge schemas from OpenAPI/Swagger specifications:
-
-```js
-const { OpenAPIImporter } = require('api-bridge-ai');
-
-const importer = new OpenAPIImporter({
-  convention: 'camelCase',       // Target naming convention
-  includeDescriptions: true,     // Include field descriptions
-});
-
-// Parse a full OpenAPI v3 spec
-const endpoints = importer.import({
-  openapi: '3.0.0',
-  paths: {
-    '/users': {
-      get: { /* ... */ },
-      post: {
-        requestBody: {
-          content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } },
-        },
-      },
-    },
-  },
-  components: {
-    schemas: {
-      User: {
-        type: 'object',
-        required: ['id', 'name'],
-        properties: {
-          id: { type: 'integer', description: 'Unique identifier' },
-          name: { type: 'string' },
-          email: { type: 'string', format: 'email' },
-          created_at: { type: 'string', format: 'date-time' },
-        },
-      },
-    },
-  },
-});
-// Returns: [{ path: '/users', method: 'get', ... }, { path: '/users', method: 'post', requestSchema: {...} }]
-
-// Extract all named schemas
-const schemas = importer.extractSchemas(spec);
-// { User: { id: { type: 'integer', required: true, description: '...' }, ... } }
-
-// Resolve $ref references
-const resolved = importer.resolveRef('#/components/schemas/User', spec);
-
-// List all endpoints
-const endpoints = importer.getEndpoints(spec);
-// [{ path: '/users', method: 'get', operationId: 'getUsers', summary: '...' }]
-```
-
-**Supports:** OpenAPI 3.x and Swagger 2.0 specifications.
-
----
-
-### API Versioning
-
-Version-specific transforms with migration support:
-
-```js
-const { APIVersionManager } = require('api-bridge-ai');
-
-const versions = new APIVersionManager({ defaultVersion: 'v1' });
-
-// Register version-specific configurations
-versions.register('v1', {
-  schema: { userName: { column: 'user_name' } },
-  transforms: {
-    response: (data) => ({ ...data, apiVersion: 'v1' }),
-  },
-});
-
-versions.register('v2', {
-  schema: { fullName: { column: 'full_name' } },
-  transforms: {
-    response: (data) => ({ ...data, apiVersion: 'v2' }),
-    request: (data) => ({ ...data, version: 2 }),
-  },
-});
-
-versions.register('v1', {
-  deprecated: true,
-  successor: 'v2',
-  // ...other config
-});
-
-// Transform with version
-const result = versions.transform(data, 'v2', 'response');
-
-// Check deprecation
-if (versions.isDeprecated('v1')) {
-  const next = versions.getSuccessor('v1'); // 'v2'
-  console.warn(`v1 is deprecated, migrate to ${next}`);
-}
-
-// Migrate data between versions
-const migrated = versions.migrate(data, 'v1', 'v3');
-// Chains through: v1 → v2 → v3
-
-// List all versions
-const all = versions.list();
-// [{ version: 'v1', deprecated: true, successor: 'v2' }, { version: 'v2', deprecated: false }]
-```
-
----
-
-### Webhook Handler
-
-Normalize incoming webhook payloads from any provider:
-
-```js
-const { WebhookHandler } = require('api-bridge-ai');
-
-const webhooks = new WebhookHandler({
-  convention: 'camelCase',      // Normalize payload keys
-  verifySignatures: true,        // Enable signature verification
-});
-
-// Built-in providers: 'github', 'stripe', 'generic'
-
-// Process a GitHub webhook
-const event = webhooks.process('github', payload, headers);
-// { event: 'push', data: { ... }, provider: 'github', timestamp: '...', raw: { ... } }
-
-// Register a custom provider
-webhooks.register('slack', {
-  eventKey: 'type',
-  payloadKey: 'event',
-  signatureHeader: 'x-slack-signature',
-  signatureAlgorithm: 'sha256',
-});
-
-// Process custom webhook
-const slackEvent = webhooks.process('slack', payload, headers);
-
-// Verify webhook signature
-const isValid = webhooks.verifySignature('github', rawBody, signature, secret);
-
-// Normalize any payload to target convention
-const normalized = webhooks.normalize({ user_name: 'John', created_at: '2024-01-15' });
-// { userName: 'John', createdAt: '2024-01-15' }
-
-// Stats
-console.log(webhooks.getStats());
-// { webhooksProcessed: 42, byProvider: { github: 30, stripe: 12 }, ... }
-```
-
----
-
-### JSON Patch Generator
-
-Generate and apply RFC 6902 JSON Patch operations:
-
-```js
-const { JSONPatchGenerator } = require('api-bridge-ai');
-
-const patcher = new JSONPatchGenerator({ deepClone: true });
-
-// Generate patches (diff two objects)
-const patches = patcher.generate(
-  { name: 'John', age: 30, email: 'john@test.com' },
-  { name: 'Jane', age: 30, phone: '555-1234' },
-);
-// [
-//   { op: 'replace', path: '/name', value: 'Jane' },
-//   { op: 'remove', path: '/email' },
-//   { op: 'add', path: '/phone', value: '555-1234' },
-// ]
-
-// Apply patches to a document
-const result = patcher.apply(
-  { name: 'John', age: 30 },
-  [
-    { op: 'replace', path: '/name', value: 'Jane' },
-    { op: 'add', path: '/email', value: 'jane@test.com' },
-  ],
-);
-// { name: 'Jane', age: 30, email: 'jane@test.com' }
-
-// Validate patches
-const { valid, errors } = patcher.validate(patches);
-
-// Test a value at a path
-patcher.test(document, { op: 'test', path: '/name', value: 'John' }); // true
-
-// Generate reverse patches (undo)
-const undoPatches = patcher.revert(document, patches);
-
-// Merge patch arrays
-const merged = patcher.merge(patchesA, patchesB);
-```
-
-**Security:** Automatically rejects paths containing `__proto__`, `constructor`, or `prototype` to prevent prototype pollution.
-
----
-
-### Composable Pipeline
-
-Build functional, stage-based data transformation pipelines:
-
-```js
-const { ComposablePipeline } = require('api-bridge-ai');
-
-const pipe = new ComposablePipeline({
-  name: 'userPipeline',
-  errorStrategy: 'skip',      // 'throw' | 'skip' | 'fallback'
-});
-
-// Chain stages with pipe()
-pipe
-  .pipe('validate', (data) => {
-    if (!data.name) throw new Error('Name required');
-    return data;
-  })
-  .pipe('normalize', (data) => ({
-    ...data,
-    name: data.name.trim().toLowerCase(),
-  }))
-  .pipe('enrich', async (data) => ({
-    ...data,
-    enrichedAt: new Date().toISOString(),
-  }))
-  .pipe('expensive', (data) => data, {
-    condition: (data) => data.premium,  // Only run for premium users
-    timeout: 5000,                       // 5s timeout
-  });
-
-// Side-effect stage (doesn't modify data)
-pipe.tap('audit', (data) => auditLog.write(data));
-
-// Execute the pipeline
-const { result, stages, duration, errors } = await pipe.execute({ name: '  John  ', premium: false });
-// result: { name: 'john', enrichedAt: '...', premium: false }
-// stages: [{ name: 'validate', duration: 0.5, skipped: false }, ...]
-
-// Dynamic pipeline modification
-pipe.insertBefore('enrich', 'uppercase', (data) => ({ ...data, name: data.name.toUpperCase() }));
-pipe.insertAfter('validate', 'sanitize', (data) => ({ ...data, name: data.name.replace(/[<>]/g, '') }));
-pipe.replace('normalize', (data) => ({ ...data, name: data.name.toUpperCase() }));
-pipe.remove('expensive');
-
-// Branch: conditional pipeline execution
-const branchFn = pipe.branch(
-  (data) => data.type === 'admin',
-  adminPipeline,
-  userPipeline,
-);
-
-// Parallel execution: run pipelines concurrently and merge results
-pipe.parallel('enrichAll', [enrichPipeA, enrichPipeB]);
-
-// Clone for reuse
-const pipe2 = pipe.clone();
 ```
 
 ---
@@ -1362,6 +977,391 @@ unsub(); // Remove listener
 
 // Statistics
 bus.getStats(); // { totalEmits, totalListeners, totalDeliveries, eventsWithListeners, historySize }
+```
+
+---
+
+## V4 Features
+
+### Circuit Breaker
+
+Fault-tolerant API calls with automatic failure detection and recovery:
+
+```js
+const { CircuitBreaker } = require('api-bridge-ai');
+
+const breaker = new CircuitBreaker({
+  failureThreshold: 5,    // Open after 5 consecutive failures
+  resetTimeout: 30000,    // Try half-open after 30 seconds
+  halfOpenMax: 1,          // Allow 1 probe request in half-open
+  onStateChange: ({ from, to }) => console.log(`Circuit: ${from} → ${to}`),
+});
+
+// Execute through the breaker
+try {
+  const data = await breaker.execute(async () => {
+    const res = await fetch('https://api.example.com/users');
+    return res.json();
+  });
+} catch (err) {
+  if (err instanceof CircuitBreakerError) {
+    console.log('Circuit is open, service unavailable');
+    console.log(err.details); // { state: 'OPEN', failures: 5 }
+  }
+}
+
+// Manual control
+breaker.forceOpen();      // Force open for maintenance
+breaker.forceClose();     // Force close to resume
+breaker.reset();          // Reset all state
+
+// Stats
+console.log(breaker.getStats());
+// { state: 'CLOSED', failures: 0, successes: 10, totalRequests: 10, ... }
+
+// Cleanup
+breaker.destroy();        // Clear timers
+```
+
+**States:**
+| State | Behavior |
+|-------|----------|
+| `CLOSED` | Requests flow normally. Failures counted. |
+| `OPEN` | All requests rejected instantly with `CircuitBreakerError`. |
+| `HALF_OPEN` | Limited probe requests allowed. Success → CLOSED, failure → OPEN. |
+
+---
+
+### Request Deduplication
+
+Coalesce concurrent identical requests — only one network call is made:
+
+```js
+const { RequestDeduplicator } = require('api-bridge-ai');
+
+const dedup = new RequestDeduplicator({
+  ttl: 5000,      // Max time to keep a pending entry
+  maxSize: 1000,   // Max concurrent dedup entries
+});
+
+// Three concurrent calls with the same key → only ONE fetch executes
+const [a, b, c] = await Promise.all([
+  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
+  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
+  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
+]);
+// a === b === c (same result, single HTTP call)
+
+// Check if a request is in-flight
+dedup.has('/api/users'); // false (completed)
+
+// Stats
+console.log(dedup.getStats());
+// { totalRequests: 3, deduped: 2, executed: 1, pending: 0 }
+```
+
+---
+
+### GraphQL Bridge
+
+Transform GraphQL responses and variables between naming conventions:
+
+```js
+const { GraphQLBridge } = require('api-bridge-ai');
+
+const gql = new GraphQLBridge({
+  convention: 'camelCase',      // Target convention for response fields
+  transformVariables: true,      // Transform query variable names
+  transformFields: true,         // Transform response field names
+  stripTypename: true,           // Remove __typename from responses
+});
+
+// Transform a full GraphQL response
+const result = gql.transformResponse({
+  data: {
+    user_profile: {
+      first_name: 'John',
+      email_address: 'john@test.com',
+      __typename: 'User',
+    },
+  },
+  errors: [],
+});
+// { data: { userProfile: { firstName: 'John', emailAddress: 'john@test.com' } }, errors: [] }
+
+// Transform variables for the server (camelCase → snake_case)
+const vars = gql.transformVariables({ userId: 1, sortOrder: 'asc' }, 'snake_case');
+// { user_id: 1, sort_order: 'asc' }
+
+// Extract nested data from response
+const posts = gql.extractData(response, 'user.posts');
+
+// Normalize GraphQL errors
+const errors = gql.normalizeErrors(response.errors);
+// [{ message: '...', path: [...], code: '...', locations: [...] }]
+
+// Build query with transformed variables
+const query = gql.buildQuery('query GetUser($userId: ID!) { ... }', { userId: 1 });
+```
+
+---
+
+### OpenAPI Schema Importer
+
+Auto-generate APIBridge schemas from OpenAPI/Swagger specifications:
+
+```js
+const { OpenAPIImporter } = require('api-bridge-ai');
+
+const importer = new OpenAPIImporter({
+  convention: 'camelCase',       // Target naming convention
+  includeDescriptions: true,     // Include field descriptions
+});
+
+// Parse a full OpenAPI v3 spec
+const endpoints = importer.import({
+  openapi: '3.0.0',
+  paths: {
+    '/users': {
+      get: { /* ... */ },
+      post: {
+        requestBody: {
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } },
+        },
+      },
+    },
+  },
+  components: {
+    schemas: {
+      User: {
+        type: 'object',
+        required: ['id', 'name'],
+        properties: {
+          id: { type: 'integer', description: 'Unique identifier' },
+          name: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  },
+});
+// Returns: [{ path: '/users', method: 'get', ... }, { path: '/users', method: 'post', requestSchema: {...} }]
+
+// Extract all named schemas
+const schemas = importer.extractSchemas(spec);
+// { User: { id: { type: 'integer', required: true, description: '...' }, ... } }
+
+// Resolve $ref references
+const resolved = importer.resolveRef('#/components/schemas/User', spec);
+
+// List all endpoints
+const endpoints = importer.getEndpoints(spec);
+// [{ path: '/users', method: 'get', operationId: 'getUsers', summary: '...' }]
+```
+
+**Supports:** OpenAPI 3.x and Swagger 2.0 specifications.
+
+---
+
+### API Versioning
+
+Version-specific transforms with migration support:
+
+```js
+const { APIVersionManager } = require('api-bridge-ai');
+
+const versions = new APIVersionManager({ defaultVersion: 'v1' });
+
+// Register version-specific configurations
+versions.register('v1', {
+  schema: { userName: { column: 'user_name' } },
+  transforms: {
+    response: (data) => ({ ...data, apiVersion: 'v1' }),
+  },
+});
+
+versions.register('v2', {
+  schema: { fullName: { column: 'full_name' } },
+  transforms: {
+    response: (data) => ({ ...data, apiVersion: 'v2' }),
+    request: (data) => ({ ...data, version: 2 }),
+  },
+});
+
+versions.register('v1', {
+  deprecated: true,
+  successor: 'v2',
+  // ...other config
+});
+
+// Transform with version
+const result = versions.transform(data, 'v2', 'response');
+
+// Check deprecation
+if (versions.isDeprecated('v1')) {
+  const next = versions.getSuccessor('v1'); // 'v2'
+  console.warn(`v1 is deprecated, migrate to ${next}`);
+}
+
+// Migrate data between versions
+const migrated = versions.migrate(data, 'v1', 'v3');
+// Chains through: v1 → v2 → v3
+
+// List all versions
+const all = versions.list();
+// [{ version: 'v1', deprecated: true, successor: 'v2' }, { version: 'v2', deprecated: false }]
+```
+
+---
+
+### Webhook Handler
+
+Normalize incoming webhook payloads from any provider:
+
+```js
+const { WebhookHandler } = require('api-bridge-ai');
+
+const webhooks = new WebhookHandler({
+  convention: 'camelCase',      // Normalize payload keys
+  verifySignatures: true,        // Enable signature verification
+});
+
+// Built-in providers: 'github', 'stripe', 'generic'
+
+// Process a GitHub webhook
+const event = webhooks.process('github', payload, headers);
+// { event: 'push', data: { ... }, provider: 'github', timestamp: '...', raw: { ... } }
+
+// Register a custom provider
+webhooks.register('slack', {
+  eventKey: 'type',
+  payloadKey: 'event',
+  signatureHeader: 'x-slack-signature',
+  signatureAlgorithm: 'sha256',
+});
+
+// Process custom webhook
+const slackEvent = webhooks.process('slack', payload, headers);
+
+// Verify webhook signature
+const isValid = webhooks.verifySignature('github', rawBody, signature, secret);
+
+// Normalize any payload to target convention
+const normalized = webhooks.normalize({ user_name: 'John', created_at: '2024-01-15' });
+// { userName: 'John', createdAt: '2024-01-15' }
+
+// Stats
+console.log(webhooks.getStats());
+// { webhooksProcessed: 42, byProvider: { github: 30, stripe: 12 }, ... }
+```
+
+---
+
+### JSON Patch Generator
+
+Generate and apply RFC 6902 JSON Patch operations:
+
+```js
+const { JSONPatchGenerator } = require('api-bridge-ai');
+
+const patcher = new JSONPatchGenerator({ deepClone: true });
+
+// Generate patches (diff two objects)
+const patches = patcher.generate(
+  { name: 'John', age: 30, email: 'john@test.com' },
+  { name: 'Jane', age: 30, phone: '555-1234' },
+);
+// [
+//   { op: 'replace', path: '/name', value: 'Jane' },
+//   { op: 'remove', path: '/email' },
+//   { op: 'add', path: '/phone', value: '555-1234' },
+// ]
+
+// Apply patches to a document
+const result = patcher.apply(
+  { name: 'John', age: 30 },
+  [
+    { op: 'replace', path: '/name', value: 'Jane' },
+    { op: 'add', path: '/email', value: 'jane@test.com' },
+  ],
+);
+// { name: 'Jane', age: 30, email: 'jane@test.com' }
+
+// Validate patches
+const { valid, errors } = patcher.validate(patches);
+
+// Test a value at a path
+patcher.test(document, { op: 'test', path: '/name', value: 'John' }); // true
+
+// Generate reverse patches (undo)
+const undoPatches = patcher.revert(document, patches);
+
+// Merge patch arrays
+const merged = patcher.merge(patchesA, patchesB);
+```
+
+**Security:** Automatically rejects paths containing `__proto__`, `constructor`, or `prototype` to prevent prototype pollution.
+
+---
+
+### Composable Pipeline
+
+Build functional, stage-based data transformation pipelines:
+
+```js
+const { ComposablePipeline } = require('api-bridge-ai');
+
+const pipe = new ComposablePipeline({
+  name: 'userPipeline',
+  errorStrategy: 'skip',      // 'throw' | 'skip' | 'fallback'
+});
+
+// Chain stages with pipe()
+pipe
+  .pipe('validate', (data) => {
+    if (!data.name) throw new Error('Name required');
+    return data;
+  })
+  .pipe('normalize', (data) => ({
+    ...data,
+    name: data.name.trim().toLowerCase(),
+  }))
+  .pipe('enrich', async (data) => ({
+    ...data,
+    enrichedAt: new Date().toISOString(),
+  }))
+  .pipe('expensive', (data) => data, {
+    condition: (data) => data.premium,  // Only run for premium users
+    timeout: 5000,                       // 5s timeout
+  });
+
+// Side-effect stage (doesn't modify data)
+pipe.tap('audit', (data) => auditLog.write(data));
+
+// Execute the pipeline
+const { result, stages, duration, errors } = await pipe.execute({ name: '  John  ', premium: false });
+// result: { name: 'john', enrichedAt: '...', premium: false }
+// stages: [{ name: 'validate', duration: 0.5, skipped: false }, ...]
+
+// Dynamic pipeline modification
+pipe.insertBefore('enrich', 'uppercase', (data) => ({ ...data, name: data.name.toUpperCase() }));
+pipe.insertAfter('validate', 'sanitize', (data) => ({ ...data, name: data.name.replace(/[<>]/g, '') }));
+pipe.replace('normalize', (data) => ({ ...data, name: data.name.toUpperCase() }));
+pipe.remove('expensive');
+
+// Branch: conditional pipeline execution
+const branchFn = pipe.branch(
+  (data) => data.type === 'admin',
+  adminPipeline,
+  userPipeline,
+);
+
+// Parallel execution: run pipelines concurrently and merge results
+pipe.parallel('enrichAll', [enrichPipeA, enrichPipeB]);
+
+// Clone for reuse
+const pipe2 = pipe.clone();
 ```
 
 ---
