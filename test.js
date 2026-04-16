@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v7 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, v6, and v7 features.
+ * APIBridge AI v8 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, v6, v7, and v8 features.
  */
 
 const {
@@ -61,6 +61,19 @@ const {
   FuzzyMatchError,
   TypeCoercionError,
   CrypticResolverError,
+  FieldAliaser,
+  SchemaMigrator,
+  BatchOrchestrator,
+  FieldStats,
+  ConditionalTransform,
+  DeepMerge,
+  OutputFormatter,
+  RequestInterceptor,
+  FieldAliaserError,
+  SchemaMigrationError,
+  BatchOrchestratorError,
+  DeepMergeError,
+  InterceptorError,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -3617,7 +3630,878 @@ test('v7 Transformer handles nested objects with accuracy', () => {
   assertEqual(result.userData.contactInfo.emailAddress, 'john@test.com');
 });
 
-// ─── SUMMARY ──────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: FIELD ALIASER
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 FieldAliaser register and resolve alias', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['user_id', 'uid', 'member_id']);
+  const result = aliaser.resolve('uid');
+  assertEqual(result.canonical, 'userId');
+  assertEqual(result.matched, true);
+  assertEqual(result.source, 'alias');
+});
+
+test('v8 FieldAliaser resolve canonical directly', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['user_id', 'uid']);
+  const result = aliaser.resolve('userId');
+  assertEqual(result.canonical, 'userId');
+  assertEqual(result.source, 'canonical');
+});
+
+test('v8 FieldAliaser resolve unregistered returns null', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['uid']);
+  const result = aliaser.resolve('unknown_field');
+  assertEqual(result.canonical, null);
+  assertEqual(result.matched, false);
+});
+
+test('v8 FieldAliaser API-specific aliases', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['user_id'], { api: 'serviceA' });
+  aliaser.register('userId', ['member_id'], { api: 'serviceB' });
+  const resultA = aliaser.resolve('user_id', 'serviceA');
+  assertEqual(resultA.canonical, 'userId');
+  assertEqual(resultA.source, 'api:serviceA');
+  const resultB = aliaser.resolve('member_id', 'serviceB');
+  assertEqual(resultB.canonical, 'userId');
+});
+
+test('v8 FieldAliaser getAliasFor returns API-specific alias', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['user_id'], { api: 'legacy' });
+  const alias = aliaser.getAliasFor('userId', 'legacy');
+  assertEqual(alias, 'user_id');
+});
+
+test('v8 FieldAliaser getAliases returns all aliases', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('email', ['email_address', 'mail']);
+  const aliases = aliaser.getAliases('email');
+  assertEqual(aliases.global.length, 2);
+  assert(aliases.global.includes('email_address'), 'Should include email_address');
+  assert(aliases.global.includes('mail'), 'Should include mail');
+});
+
+test('v8 FieldAliaser hasAliases detects registered fields', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('name', ['full_name']);
+  assert(aliaser.hasAliases('name'), 'Should have aliases for canonical');
+  assert(aliaser.hasAliases('full_name'), 'Should have aliases for alias');
+  assert(!aliaser.hasAliases('unknown'), 'Should not have aliases for unknown');
+});
+
+test('v8 FieldAliaser bulkImport and bulkExport', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.bulkImport({
+    userId: ['uid', 'user_id'],
+    email: ['mail', 'email_address'],
+  });
+  const exported = aliaser.bulkExport();
+  assert(exported.userId, 'Should export userId');
+  assert(exported.email, 'Should export email');
+  assertEqual(exported.userId.global.length, 2);
+});
+
+test('v8 FieldAliaser unregister removes canonical and aliases', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['uid']);
+  assertEqual(aliaser.resolve('uid').matched, true);
+  aliaser.unregister('userId');
+  assertEqual(aliaser.resolve('uid').matched, false);
+});
+
+test('v8 FieldAliaser stats tracking', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['uid']);
+  aliaser.resolve('uid');
+  aliaser.resolve('unknown');
+  const stats = aliaser.getStats();
+  assertEqual(stats.lookups, 2);
+  assertEqual(stats.hits, 1);
+  assertEqual(stats.misses, 1);
+});
+
+test('v8 FieldAliaser detectConflicts', () => {
+  const aliaser = new FieldAliaser({ allowOverlap: true });
+  aliaser.register('userId', ['uid']);
+  aliaser.register('memberId', ['uid']);
+  const conflicts = aliaser.detectConflicts();
+  assert(conflicts.length > 0, 'Should detect alias conflict');
+  assertEqual(conflicts[0].alias, 'uid');
+});
+
+test('v8 FieldAliaser clear resets everything', () => {
+  const aliaser = new FieldAliaser();
+  aliaser.register('userId', ['uid']);
+  aliaser.clear();
+  assertEqual(aliaser.resolve('uid').matched, false);
+  assertEqual(aliaser.getStats().totalGroups, 0);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: SCHEMA MIGRATOR
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 SchemaMigrator define and migrate forward', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', {
+    rename: { user_name: 'username' },
+    add: { version: '2.0' },
+    remove: ['legacy_field'],
+  });
+  const result = migrator.migrate(
+    { user_name: 'John', legacy_field: 'old', email: 'john@test.com' },
+    '1.0', '2.0'
+  );
+  assert(result.success, 'Migration should succeed');
+  assertEqual(result.data.username, 'John');
+  assertEqual(result.data.version, '2.0');
+  assert(!result.data.user_name, 'Old field name should be removed');
+  assert(!result.data.legacy_field, 'Removed field should be gone');
+  assertEqual(result.data.email, 'john@test.com');
+});
+
+test('v8 SchemaMigrator migrate backward (auto-reverse)', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', {
+    rename: { user_name: 'username' },
+  });
+  const result = migrator.migrate({ username: 'John', email: 'john@test.com' }, '2.0', '1.0');
+  assert(result.success, 'Backward migration should succeed');
+  assertEqual(result.data.user_name, 'John');
+  assert(!result.data.username, 'New field name should be reversed');
+});
+
+test('v8 SchemaMigrator chained migration', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', { rename: { name: 'full_name' } });
+  migrator.define('2.0', '3.0', { rename: { full_name: 'displayName' } });
+  const result = migrator.migrate({ name: 'John' }, '1.0', '3.0');
+  assert(result.success, 'Chained migration should succeed');
+  assertEqual(result.data.displayName, 'John');
+  assertEqual(result.steps.length, 2);
+});
+
+test('v8 SchemaMigrator transform rules', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', {
+    transform: { price: (v) => v * 100 }, // dollars to cents
+  });
+  const result = migrator.migrate({ price: 9.99 }, '1.0', '2.0');
+  assertEqual(result.data.price, 999);
+});
+
+test('v8 SchemaMigrator dryRun previews changes', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', {
+    rename: { old_name: 'new_name' },
+    add: { added_field: 'default' },
+  });
+  const preview = migrator.dryRun({ old_name: 'val', other: 'data' }, '1.0', '2.0');
+  assert(preview.possible, 'Should be possible');
+  assert(preview.changes.length > 0, 'Should have changes');
+});
+
+test('v8 SchemaMigrator same version returns data unchanged', () => {
+  const migrator = new SchemaMigrator();
+  const result = migrator.migrate({ a: 1 }, '1.0', '1.0');
+  assert(result.success, 'Same version migration should succeed');
+  assertEqual(result.data.a, 1);
+  assertEqual(result.steps.length, 0);
+});
+
+test('v8 SchemaMigrator no path returns failure (non-strict)', () => {
+  const migrator = new SchemaMigrator();
+  const result = migrator.migrate({ a: 1 }, '1.0', '99.0');
+  assertEqual(result.success, false);
+});
+
+test('v8 SchemaMigrator getVersions lists all versions', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', { rename: {} });
+  migrator.define('2.0', '3.0', { rename: {} });
+  const versions = migrator.getVersions();
+  assert(versions.includes('1.0'), 'Should include 1.0');
+  assert(versions.includes('2.0'), 'Should include 2.0');
+  assert(versions.includes('3.0'), 'Should include 3.0');
+});
+
+test('v8 SchemaMigrator history tracking', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', { rename: { a: 'b' } });
+  migrator.migrate({ a: 1 }, '1.0', '2.0');
+  const history = migrator.getHistory();
+  assertEqual(history.length, 1);
+  assertEqual(history[0].from, '1.0');
+  assertEqual(history[0].to, '2.0');
+});
+
+test('v8 SchemaMigrator rollback', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', { rename: { a: 'b' } });
+  migrator.migrate({ a: 1 }, '1.0', '2.0');
+  const result = migrator.rollback({ b: 1 });
+  assert(result.success, 'Rollback should succeed');
+  assertEqual(result.data.a, 1);
+});
+
+test('v8 SchemaMigrator registerDetector', () => {
+  const migrator = new SchemaMigrator();
+  migrator.registerDetector((data) => data._version || null);
+  assertEqual(migrator.detectVersion({ _version: '2.0' }), '2.0');
+  assertEqual(migrator.detectVersion({ name: 'test' }), null);
+});
+
+test('v8 SchemaMigrator getStats', () => {
+  const migrator = new SchemaMigrator();
+  migrator.define('1.0', '2.0', { rename: {} });
+  const stats = migrator.getStats();
+  assert(stats.totalMigrations > 0, 'Should have migrations');
+  assert(stats.versions.length > 0, 'Should have versions');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: BATCH ORCHESTRATOR
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 BatchOrchestrator executeParallel basic', async () => {
+  const batch = new BatchOrchestrator({ concurrency: 2 });
+  const result = await batch.executeParallel([
+    { id: 'r1', execute: () => Promise.resolve({ name: 'John' }) },
+    { id: 'r2', execute: () => Promise.resolve({ name: 'Jane' }) },
+    { id: 'r3', execute: () => Promise.resolve({ name: 'Bob' }) },
+  ]);
+  assertEqual(result.successful, 3);
+  assertEqual(result.failed, 0);
+  assertEqual(result.results.length, 3);
+});
+
+test('v8 BatchOrchestrator handles failures with continue strategy', async () => {
+  const batch = new BatchOrchestrator({ failureStrategy: 'continue', maxRetries: 0 });
+  const result = await batch.executeParallel([
+    { id: 'r1', execute: () => Promise.resolve('ok') },
+    { id: 'r2', execute: () => Promise.reject(new Error('fail')) },
+    { id: 'r3', execute: () => Promise.resolve('ok') },
+  ]);
+  assertEqual(result.successful, 2);
+  assertEqual(result.failed, 1);
+});
+
+test('v8 BatchOrchestrator executeSequential passes previous results', async () => {
+  const batch = new BatchOrchestrator();
+  const result = await batch.executeSequential([
+    { id: 'step1', execute: () => Promise.resolve(10) },
+    { id: 'step2', execute: (prev) => Promise.resolve(prev.step1 + 5) },
+  ]);
+  assertEqual(result.successful, 2);
+  assertEqual(result.results[1].data, 15);
+});
+
+test('v8 BatchOrchestrator aggregate merge strategy', () => {
+  const batch = new BatchOrchestrator();
+  const results = [
+    { id: 'a', success: true, data: { name: 'John' } },
+    { id: 'b', success: true, data: { age: 30 } },
+    { id: 'c', success: false, error: 'fail' },
+  ];
+  const merged = batch.aggregate(results, 'merge');
+  assertEqual(merged.name, 'John');
+  assertEqual(merged.age, 30);
+});
+
+test('v8 BatchOrchestrator aggregate collect strategy', () => {
+  const batch = new BatchOrchestrator();
+  const results = [
+    { id: 'a', success: true, data: 1 },
+    { id: 'b', success: true, data: 2 },
+  ];
+  const collected = batch.aggregate(results, 'collect');
+  assertEqual(collected.length, 2);
+  assertEqual(collected[0], 1);
+  assertEqual(collected[1], 2);
+});
+
+test('v8 BatchOrchestrator stats tracking', async () => {
+  const batch = new BatchOrchestrator();
+  await batch.executeParallel([
+    { id: 'r1', execute: () => Promise.resolve('ok') },
+  ]);
+  const stats = batch.getStats();
+  assertEqual(stats.totalBatches, 1);
+  assertEqual(stats.totalRequests, 1);
+  assertEqual(stats.successfulRequests, 1);
+});
+
+test('v8 BatchOrchestrator progress callback', async () => {
+  let progressCalls = 0;
+  const batch = new BatchOrchestrator({
+    onProgress: () => { progressCalls++; },
+  });
+  await batch.executeParallel([
+    { id: 'r1', execute: () => Promise.resolve('ok') },
+    { id: 'r2', execute: () => Promise.resolve('ok') },
+  ]);
+  assertEqual(progressCalls, 2);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: FIELD STATS
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 FieldStats record and retrieve field stats', () => {
+  const stats = new FieldStats();
+  stats.record('user_name', { targetKey: 'userName', confidence: 0.95, method: 'pattern_conversion' });
+  stats.record('user_name', { targetKey: 'userName', confidence: 0.97, method: 'pattern_conversion' });
+  const fieldStats = stats.getFieldStats('user_name');
+  assertEqual(fieldStats.count, 2);
+  assert(fieldStats.avgConfidence > 0.9, 'Avg confidence should be high');
+  assertEqual(fieldStats.methods.pattern_conversion, 2);
+});
+
+test('v8 FieldStats getTopFields returns sorted by frequency', () => {
+  const stats = new FieldStats();
+  stats.record('email', { confidence: 0.9, method: 'exact' });
+  stats.record('email', { confidence: 0.9, method: 'exact' });
+  stats.record('name', { confidence: 0.8, method: 'pattern' });
+  const top = stats.getTopFields(5);
+  assertEqual(top[0].field, 'email');
+  assertEqual(top[0].count, 2);
+});
+
+test('v8 FieldStats getLowConfidenceFields', () => {
+  const stats = new FieldStats();
+  stats.record('good_field', { confidence: 0.95, method: 'exact' });
+  stats.record('bad_field', { confidence: 0.4, method: 'best_effort' });
+  const lowConf = stats.getLowConfidenceFields(0.75);
+  assertEqual(lowConf.length, 1);
+  assertEqual(lowConf[0].field, 'bad_field');
+  assertEqual(lowConf[0].suggestedAction, 'add_to_schema');
+});
+
+test('v8 FieldStats getCoverageReport', () => {
+  const stats = new FieldStats();
+  stats.record('a', { confidence: 0.95, method: 'exact' });
+  stats.record('b', { confidence: 0.65, method: 'fuzzy' });
+  stats.record('c', { confidence: 0.3, method: 'best_effort' });
+  const report = stats.getCoverageReport();
+  assertEqual(report.totalTransformations, 3);
+  assertEqual(report.uniqueFields, 3);
+  assertEqual(report.confidenceDistribution.high.count, 1);
+  assertEqual(report.confidenceDistribution.medium.count, 1);
+  assertEqual(report.confidenceDistribution.low.count, 1);
+});
+
+test('v8 FieldStats export returns comprehensive analytics', () => {
+  const stats = new FieldStats();
+  stats.record('a', { confidence: 0.9, method: 'exact' });
+  const exported = stats.export();
+  assert(exported.global, 'Should have global stats');
+  assert(exported.fields, 'Should have field details');
+  assert(exported.coverage, 'Should have coverage');
+  assert(exported.timestamp, 'Should have timestamp');
+});
+
+test('v8 FieldStats clear resets everything', () => {
+  const stats = new FieldStats();
+  stats.record('a', { confidence: 0.9 });
+  stats.clear();
+  assertEqual(stats.getFieldStats('a'), null);
+  assertEqual(stats.getCoverageReport().totalTransformations, 0);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: CONDITIONAL TRANSFORM
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 ConditionalTransform basic rule application', () => {
+  const ct = new ConditionalTransform();
+  ct.when('nullToNA', (v) => v === null, () => 'N/A');
+  const result = ct.apply(null, 'status');
+  assertEqual(result.value, 'N/A');
+  assertEqual(result.rule, 'nullToNA');
+  assertEqual(result.applied, true);
+});
+
+test('v8 ConditionalTransform no matching rule', () => {
+  const ct = new ConditionalTransform();
+  ct.when('nullCheck', (v) => v === null, () => 'N/A');
+  const result = ct.apply('hello', 'name');
+  assertEqual(result.applied, false);
+  assertEqual(result.rule, null);
+});
+
+test('v8 ConditionalTransform field-restricted rules', () => {
+  const ct = new ConditionalTransform();
+  ct.when('uppercase', () => true, (v) => String(v).toUpperCase(), { fields: ['name'] });
+  const r1 = ct.apply('john', 'name');
+  assertEqual(r1.value, 'JOHN');
+  const r2 = ct.apply('john', 'email');
+  assertEqual(r2.applied, false);
+});
+
+test('v8 ConditionalTransform priority ordering', () => {
+  const ct = new ConditionalTransform();
+  ct.when('low', () => true, () => 'low', { priority: 1 });
+  ct.when('high', () => true, () => 'high', { priority: 10 });
+  const result = ct.apply('test', 'field');
+  assertEqual(result.value, 'high');
+  assertEqual(result.rule, 'high');
+});
+
+test('v8 ConditionalTransform otherwise default', () => {
+  const ct = new ConditionalTransform();
+  ct.when('isNull', (v) => v === null, () => 'N/A');
+  ct.otherwise('status', (v) => String(v).toUpperCase());
+  const result = ct.apply('active', 'status');
+  assertEqual(result.value, 'ACTIVE');
+  assertEqual(result.rule, 'default');
+});
+
+test('v8 ConditionalTransform applyAll transforms object', () => {
+  const ct = new ConditionalTransform();
+  ct.when('nullToDefault', (v) => v === null, () => 'N/A');
+  ct.when('trimStrings', (v) => typeof v === 'string' && v !== v.trim(), (v) => v.trim());
+  const result = ct.applyAll({ name: '  John  ', status: null, age: 30 });
+  assertEqual(result.data.name, 'John');
+  assertEqual(result.data.status, 'N/A');
+  assertEqual(result.data.age, 30);
+  assert(result.applied.length >= 2, 'Should have applied at least 2 rules');
+});
+
+test('v8 ConditionalTransform context-aware rules', () => {
+  const ct = new ConditionalTransform();
+  ct.when('vipDiscount',
+    (v, field, ctx) => ctx.isVip === true,
+    (v) => v * 0.8, // 20% discount
+    { fields: ['price'] }
+  );
+  const result = ct.apply(100, 'price', { isVip: true });
+  assertEqual(result.value, 80);
+});
+
+test('v8 ConditionalTransform removeRule', () => {
+  const ct = new ConditionalTransform();
+  ct.when('rule1', () => true, () => 'match');
+  assertEqual(ct.getRules().length, 1);
+  ct.removeRule('rule1');
+  assertEqual(ct.getRules().length, 0);
+});
+
+test('v8 ConditionalTransform stats tracking', () => {
+  const ct = new ConditionalTransform();
+  ct.when('testRule', () => true, (v) => v);
+  ct.apply('a', 'x');
+  ct.apply('b', 'y');
+  const stats = ct.getStats();
+  assertEqual(stats.totalEvaluations, 2);
+  assertEqual(stats.ruleHits.testRule, 2);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: DEEP MERGE
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 DeepMerge basic object merge', () => {
+  const merger = new DeepMerge();
+  const result = merger.merge({ a: 1, b: 2 }, { b: 3, c: 4 });
+  assertEqual(result.a, 1);
+  assertEqual(result.b, 3); // latest wins
+  assertEqual(result.c, 4);
+});
+
+test('v8 DeepMerge nested objects', () => {
+  const merger = new DeepMerge();
+  const result = merger.merge(
+    { user: { name: 'John', age: 30 } },
+    { user: { age: 31, email: 'john@test.com' } }
+  );
+  assertEqual(result.user.name, 'John');
+  assertEqual(result.user.age, 31);
+  assertEqual(result.user.email, 'john@test.com');
+});
+
+test('v8 DeepMerge array concat strategy', () => {
+  const merger = new DeepMerge({ arrayStrategy: 'concat' });
+  const result = merger.merge({ tags: ['a', 'b'] }, { tags: ['c', 'd'] });
+  assertEqual(result.tags.length, 4);
+});
+
+test('v8 DeepMerge array replace strategy', () => {
+  const merger = new DeepMerge({ arrayStrategy: 'replace' });
+  const result = merger.merge({ tags: ['a', 'b'] }, { tags: ['c', 'd'] });
+  assertEqual(result.tags.length, 2);
+  assertEqual(result.tags[0], 'c');
+});
+
+test('v8 DeepMerge array union strategy', () => {
+  const merger = new DeepMerge({ arrayStrategy: 'union' });
+  const result = merger.merge({ tags: ['a', 'b'] }, { tags: ['b', 'c'] });
+  assertEqual(result.tags.length, 3);
+});
+
+test('v8 DeepMerge first conflict strategy', () => {
+  const merger = new DeepMerge({ conflictStrategy: 'first' });
+  const result = merger.merge({ a: 'first' }, { a: 'second' });
+  assertEqual(result.a, 'first');
+});
+
+test('v8 DeepMerge custom conflict resolver', () => {
+  const merger = new DeepMerge({
+    conflictStrategy: 'custom',
+    conflictResolver: (key, a, b) => `${a}+${b}`,
+  });
+  const result = merger.merge({ name: 'John' }, { name: 'Jane' });
+  assertEqual(result.name, 'John+Jane');
+});
+
+test('v8 DeepMerge prototype pollution protection', () => {
+  const merger = new DeepMerge();
+  const malicious = JSON.parse('{"__proto__": {"polluted": true}, "safe": "value"}');
+  const result = merger.merge({}, malicious);
+  assertEqual(result.safe, 'value');
+  assert(!({}).polluted, 'Prototype should not be polluted');
+});
+
+test('v8 DeepMerge skipNull option', () => {
+  const merger = new DeepMerge({ skipNull: true });
+  const result = merger.merge({ a: 1, b: 2 }, { a: null, b: 3 });
+  assertEqual(result.a, 1); // null skipped
+  assertEqual(result.b, 3);
+});
+
+test('v8 DeepMerge mergeLabeled with source tracking', () => {
+  const merger = new DeepMerge({ trackSources: true });
+  const { result, sources } = merger.mergeLabeled([
+    { label: 'api1', data: { name: 'John' } },
+    { label: 'api2', data: { email: 'john@test.com' } },
+  ]);
+  assertEqual(result.name, 'John');
+  assertEqual(result.email, 'john@test.com');
+  assertEqual(sources.name, 'api1');
+  assertEqual(sources.email, 'api2');
+});
+
+test('v8 DeepMerge stats tracking', () => {
+  const merger = new DeepMerge();
+  merger.merge({ a: 1 }, { a: 2, b: 3 });
+  const stats = merger.getStats();
+  assertEqual(stats.totalMerges, 1);
+  assert(stats.fieldsProcessed > 0, 'Should have processed fields');
+  assert(stats.conflicts > 0, 'Should have conflicts');
+});
+
+test('v8 DeepMerge multiple sources', () => {
+  const merger = new DeepMerge();
+  const result = merger.merge({ a: 1 }, { b: 2 }, { c: 3 });
+  assertEqual(result.a, 1);
+  assertEqual(result.b, 2);
+  assertEqual(result.c, 3);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: OUTPUT FORMATTER
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 OutputFormatter toJSON', () => {
+  const fmt = new OutputFormatter();
+  const json = fmt.toJSON({ name: 'John', age: 30 });
+  const parsed = JSON.parse(json);
+  assertEqual(parsed.name, 'John');
+  assertEqual(parsed.age, 30);
+});
+
+test('v8 OutputFormatter toXML simple object', () => {
+  const fmt = new OutputFormatter();
+  const xml = fmt.toXML({ name: 'John', age: 30 });
+  assert(xml.includes('<?xml'), 'Should have XML header');
+  assert(xml.includes('<name>John</name>'), 'Should contain name element');
+  assert(xml.includes('<age>30</age>'), 'Should contain age element');
+});
+
+test('v8 OutputFormatter toXML array of objects', () => {
+  const fmt = new OutputFormatter();
+  const xml = fmt.toXML([{ name: 'John' }, { name: 'Jane' }]);
+  assert(xml.includes('<item>'), 'Should have item elements');
+  assert(xml.includes('John'), 'Should contain John');
+  assert(xml.includes('Jane'), 'Should contain Jane');
+});
+
+test('v8 OutputFormatter toXML escapes special characters', () => {
+  const fmt = new OutputFormatter();
+  const xml = fmt.toXML({ note: 'a < b & c > d' });
+  assert(xml.includes('&lt;'), 'Should escape <');
+  assert(xml.includes('&amp;'), 'Should escape &');
+  assert(xml.includes('&gt;'), 'Should escape >');
+});
+
+test('v8 OutputFormatter toCSV', () => {
+  const fmt = new OutputFormatter();
+  const csv = fmt.toCSV([
+    { name: 'John', age: 30 },
+    { name: 'Jane', age: 25 },
+  ]);
+  const lines = csv.split('\n');
+  assertEqual(lines.length, 3); // header + 2 data rows
+  assert(lines[0].includes('name'), 'Should have header');
+  assert(lines[1].includes('John'), 'Should have John');
+});
+
+test('v8 OutputFormatter toCSV without headers', () => {
+  const fmt = new OutputFormatter({ csvHeaders: false });
+  const csv = fmt.toCSV([{ name: 'John' }]);
+  const lines = csv.split('\n');
+  assertEqual(lines.length, 1);
+  assert(lines[0].includes('John'), 'Should have data');
+});
+
+test('v8 OutputFormatter toKeyValue', () => {
+  const fmt = new OutputFormatter();
+  const kv = fmt.toKeyValue({ name: 'John', age: 30 });
+  assert(kv.includes('name: John'), 'Should have name');
+  assert(kv.includes('age: 30'), 'Should have age');
+});
+
+test('v8 OutputFormatter toKeyValue nested', () => {
+  const fmt = new OutputFormatter();
+  const kv = fmt.toKeyValue({ user: { name: 'John' } });
+  assert(kv.includes('user.name: John'), 'Should flatten nested keys');
+});
+
+test('v8 OutputFormatter toTable', () => {
+  const fmt = new OutputFormatter();
+  const table = fmt.toTable([
+    { name: 'John', age: 30 },
+    { name: 'Jane', age: 25 },
+  ]);
+  assert(table.includes('name'), 'Should have header');
+  assert(table.includes('John'), 'Should have data');
+  assert(table.includes('---'), 'Should have divider');
+});
+
+test('v8 OutputFormatter fromTemplate', () => {
+  const fmt = new OutputFormatter();
+  const result = fmt.fromTemplate(
+    { name: 'John', age: 30 },
+    'Hello {{name}}, you are {{age}} years old'
+  );
+  assertEqual(result, 'Hello John, you are 30 years old');
+});
+
+test('v8 OutputFormatter fromTemplate with nested paths', () => {
+  const fmt = new OutputFormatter();
+  const result = fmt.fromTemplate(
+    { user: { name: 'John' } },
+    'User: {{user.name}}'
+  );
+  assertEqual(result, 'User: John');
+});
+
+test('v8 OutputFormatter stats tracking', () => {
+  const fmt = new OutputFormatter();
+  fmt.toJSON({});
+  fmt.toXML({});
+  fmt.toCSV([]);
+  const stats = fmt.getStats();
+  assertEqual(stats.json, 1);
+  assertEqual(stats.xml, 1);
+  assertEqual(stats.csv, 1);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: REQUEST INTERCEPTOR
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 RequestInterceptor basic request interception', async () => {
+  const interceptor = new RequestInterceptor();
+  interceptor.useRequest('addAuth', (ctx) => ({
+    ...ctx,
+    headers: { ...ctx.headers, Authorization: 'Bearer token' },
+  }));
+  const { context } = await interceptor.interceptRequest({ url: '/api', headers: {} });
+  assertEqual(context.headers.Authorization, 'Bearer token');
+});
+
+test('v8 RequestInterceptor response interception', async () => {
+  const interceptor = new RequestInterceptor();
+  interceptor.useResponse('addMeta', (ctx) => ({
+    ...ctx,
+    meta: { processed: true },
+  }));
+  const { context } = await interceptor.interceptResponse({ data: { a: 1 } });
+  assertEqual(context.meta.processed, true);
+});
+
+test('v8 RequestInterceptor priority ordering', async () => {
+  const interceptor = new RequestInterceptor();
+  const order = [];
+  interceptor.useRequest('low', (ctx) => { order.push('low'); return ctx; }, { priority: 1 });
+  interceptor.useRequest('high', (ctx) => { order.push('high'); return ctx; }, { priority: 10 });
+  await interceptor.interceptRequest({});
+  assertEqual(order[0], 'high');
+  assertEqual(order[1], 'low');
+});
+
+test('v8 RequestInterceptor short circuit', async () => {
+  const interceptor = new RequestInterceptor();
+  interceptor.useRequest('blocker', () => ({ blocked: true, _shortCircuit: true }));
+  interceptor.useRequest('afterBlocker', (ctx) => ({ ...ctx, afterCalled: true }), { priority: -1 });
+  const { context, shortCircuited } = await interceptor.interceptRequest({});
+  assertEqual(shortCircuited, true);
+  assertEqual(context.blocked, true);
+  assert(!context.afterCalled, 'After interceptor should not run');
+});
+
+test('v8 RequestInterceptor group enable/disable', async () => {
+  const interceptor = new RequestInterceptor();
+  let called = false;
+  interceptor.useRequest('grouped', (ctx) => { called = true; return ctx; }, { group: 'auth' });
+  interceptor.setGroupEnabled('auth', false);
+  await interceptor.interceptRequest({});
+  assert(!called, 'Disabled group interceptor should not run');
+  interceptor.setGroupEnabled('auth', true);
+  await interceptor.interceptRequest({});
+  assert(called, 'Enabled group interceptor should run');
+});
+
+test('v8 RequestInterceptor individual enable/disable', async () => {
+  const interceptor = new RequestInterceptor();
+  let called = false;
+  interceptor.useRequest('test', (ctx) => { called = true; return ctx; });
+  interceptor.setEnabled('test', false);
+  await interceptor.interceptRequest({});
+  assert(!called, 'Disabled interceptor should not run');
+});
+
+test('v8 RequestInterceptor error handling with continueOnError', async () => {
+  const interceptor = new RequestInterceptor({ continueOnError: true });
+  let secondCalled = false;
+  interceptor.useRequest('failing', () => { throw new Error('fail'); }, { priority: 10 });
+  interceptor.useRequest('passing', (ctx) => { secondCalled = true; return ctx; }, { priority: 1 });
+  await interceptor.interceptRequest({});
+  assert(secondCalled, 'Second interceptor should still run');
+});
+
+test('v8 RequestInterceptor per-interceptor error handler', async () => {
+  const interceptor = new RequestInterceptor();
+  let errorHandled = false;
+  interceptor.useRequest('failing', () => { throw new Error('fail'); }, {
+    onError: (err, ctx) => { errorHandled = true; return ctx; },
+  });
+  await interceptor.interceptRequest({});
+  assert(errorHandled, 'Error handler should be called');
+});
+
+test('v8 RequestInterceptor list shows all interceptors', () => {
+  const interceptor = new RequestInterceptor();
+  interceptor.useRequest('reqInt', (ctx) => ctx, { priority: 5, group: 'g1' });
+  interceptor.useResponse('resInt', (ctx) => ctx);
+  const list = interceptor.list();
+  assertEqual(list.request.length, 1);
+  assertEqual(list.response.length, 1);
+  assertEqual(list.request[0].name, 'reqInt');
+  assertEqual(list.request[0].priority, 5);
+});
+
+test('v8 RequestInterceptor remove', () => {
+  const interceptor = new RequestInterceptor();
+  interceptor.useRequest('test', (ctx) => ctx);
+  assertEqual(interceptor.list().request.length, 1);
+  interceptor.remove('test');
+  assertEqual(interceptor.list().request.length, 0);
+});
+
+test('v8 RequestInterceptor stats', async () => {
+  const interceptor = new RequestInterceptor();
+  interceptor.useRequest('test', (ctx) => ctx);
+  await interceptor.interceptRequest({});
+  await interceptor.interceptRequest({});
+  const stats = interceptor.getStats();
+  assertEqual(stats.requestInterceptions, 2);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: ERROR CLASSES
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 FieldAliaserError has correct properties', () => {
+  const err = new FieldAliaserError('Alias conflict', 'userId', 'duplicate');
+  assertEqual(err.name, 'FieldAliaserError');
+  assertEqual(err.code, 'FIELD_ALIASER_ERROR');
+  assertEqual(err.details.field, 'userId');
+  assertEqual(err.details.reason, 'duplicate');
+  assert(err instanceof ApiBridgeError, 'Should extend ApiBridgeError');
+});
+
+test('v8 SchemaMigrationError has correct properties', () => {
+  const err = new SchemaMigrationError('No path found', '1.0', '3.0', 'no_path');
+  assertEqual(err.name, 'SchemaMigrationError');
+  assertEqual(err.code, 'SCHEMA_MIGRATION_ERROR');
+  assertEqual(err.details.fromVersion, '1.0');
+  assertEqual(err.details.toVersion, '3.0');
+});
+
+test('v8 BatchOrchestratorError has correct properties', () => {
+  const err = new BatchOrchestratorError('Batch failed', 'batch-1', 'timeout');
+  assertEqual(err.name, 'BatchOrchestratorError');
+  assertEqual(err.code, 'BATCH_ORCHESTRATOR_ERROR');
+  assertEqual(err.details.batchId, 'batch-1');
+});
+
+test('v8 DeepMergeError has correct properties', () => {
+  const err = new DeepMergeError('Merge conflict', 'user.name', 'unresolvable');
+  assertEqual(err.name, 'DeepMergeError');
+  assertEqual(err.code, 'DEEP_MERGE_ERROR');
+  assertEqual(err.details.path, 'user.name');
+});
+
+test('v8 InterceptorError has correct properties', () => {
+  const err = new InterceptorError('Interceptor failed', 'authInterceptor', 'timeout');
+  assertEqual(err.name, 'InterceptorError');
+  assertEqual(err.code, 'INTERCEPTOR_ERROR');
+  assertEqual(err.details.interceptorName, 'authInterceptor');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  V8 TESTS: BACKWARD COMPATIBILITY
+// ═══════════════════════════════════════════════════════════════
+
+test('v8 backward compatibility — all v7 exports still available', () => {
+  assert(typeof APIBridgeTransformer === 'function', 'APIBridgeTransformer');
+  assert(typeof transform === 'function', 'transform');
+  assert(typeof createTransformer === 'function', 'createTransformer');
+  assert(typeof FuzzyMatcher === 'function', 'FuzzyMatcher');
+  assert(typeof CrypticResolver === 'function', 'CrypticResolver');
+  assert(typeof TypeCoercer === 'function', 'TypeCoercer');
+  assert(typeof CircuitBreaker === 'function', 'CircuitBreaker');
+  assert(typeof EventBus === 'function', 'EventBus');
+  assert(typeof MockServer === 'function', 'MockServer');
+});
+
+test('v8 backward compatibility — all v8 exports available', () => {
+  assert(typeof FieldAliaser === 'function', 'FieldAliaser');
+  assert(typeof SchemaMigrator === 'function', 'SchemaMigrator');
+  assert(typeof BatchOrchestrator === 'function', 'BatchOrchestrator');
+  assert(typeof FieldStats === 'function', 'FieldStats');
+  assert(typeof ConditionalTransform === 'function', 'ConditionalTransform');
+  assert(typeof DeepMerge === 'function', 'DeepMerge');
+  assert(typeof OutputFormatter === 'function', 'OutputFormatter');
+  assert(typeof RequestInterceptor === 'function', 'RequestInterceptor');
+});
+
+test('v8 backward compatibility — transform still works', () => {
+  const result = transform({
+    first_name: 'John',
+    last_name: 'Doe',
+    is_active: true,
+  });
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+  assertEqual(result.isActive, true);
+});
 // Wait a tick for async tests
 setTimeout(() => {
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
