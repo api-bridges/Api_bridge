@@ -17,6 +17,9 @@
 
 // ─── TYPE DETECTION ──────────────────────────────────────────────────────────
 
+// Maximum string length to consider as a parseable integer (avoids precision loss for very large numbers)
+const MAX_SAFE_INTEGER_STRING_LENGTH = 16;
+
 /**
  * Infer the most specific type from a value.
  */
@@ -41,7 +44,7 @@ function inferType(value) {
     }
 
     // Integer strings
-    if (/^-?\d+$/.test(value) && value.length < 16) return 'integer_string';
+    if (/^-?\d+$/.test(value) && value.length < MAX_SAFE_INTEGER_STRING_LENGTH) return 'integer_string';
 
     // Float strings
     if (/^-?\d+\.\d+$/.test(value)) return 'float_string';
