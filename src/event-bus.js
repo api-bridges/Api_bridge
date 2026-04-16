@@ -355,7 +355,7 @@ class EventBus {
    */
   _matchWildcard(pattern, event) {
     if (!pattern.includes('*')) return false;
-    const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$');
+    const regex = new RegExp('^' + pattern.replace(/\\/g, '\\\\').replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$');
     return regex.test(event);
   }
 
@@ -382,4 +382,4 @@ class EventBus {
   }
 }
 
-module.exports = { EventBus, HEALTH_STATES: undefined };
+module.exports = { EventBus };
