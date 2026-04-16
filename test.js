@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v6 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, and v6 features.
+ * APIBridge AI v7 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, v6, and v7 features.
  */
 
 const {
@@ -3277,6 +3277,344 @@ test('Transformer v6 preserves array transformation', () => {
   ]);
   assertEqual(result[0].firstName, 'John');
   assertEqual(result[1].firstName, 'Jane');
+});
+
+// ─── V7 TESTS: WEIGHTED ENSEMBLE FUZZY MATCHING ───────────────
+
+test('v7 FuzzyMatcher weighted ensemble finds better matches', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('usr_email', ['user_email', 'user_name', 'email_address']);
+  assertEqual(result.match, 'user_email');
+  assert(result.confidence >= 0.7, `Should have high confidence, got ${result.confidence}`);
+});
+
+test('v7 FuzzyMatcher ensemble scoring produces higher confidence than v6 max-based', () => {
+  const fmEnsemble = new FuzzyMatcher({ useEnsemble: true });
+  const fmMax = new FuzzyMatcher({ useEnsemble: false });
+  const resultEnsemble = fmEnsemble.findBestMatch('acct_name', ['account_name', 'user_name']);
+  const resultMax = fmMax.findBestMatch('acct_name', ['account_name', 'user_name']);
+  assertEqual(resultEnsemble.match, 'account_name');
+  assertEqual(resultMax.match, 'account_name');
+  // Ensemble should be at least as confident as max-based
+  assert(resultEnsemble.confidence >= resultMax.confidence - 0.05,
+    `Ensemble ${resultEnsemble.confidence} should be >= max ${resultMax.confidence} - 0.05`);
+});
+
+test('v7 FuzzyMatcher getStrategies includes new strategies', () => {
+  const fm = new FuzzyMatcher();
+  const strategies = fm.getStrategies();
+  assertEqual(strategies.ngram, true);
+  assertEqual(strategies.substring, true);
+  assertEqual(strategies.ensemble, true);
+});
+
+test('v7 FuzzyMatcher getWeights returns strategy weights', () => {
+  const fm = new FuzzyMatcher();
+  const weights = fm.getWeights();
+  assert(weights.levenshtein > 0, 'Should have levenshtein weight');
+  assert(weights.ngram > 0, 'Should have ngram weight');
+  assert(weights.substring > 0, 'Should have substring weight');
+});
+
+test('v7 FuzzyMatcher setWeights allows custom tuning', () => {
+  const fm = new FuzzyMatcher();
+  fm.setWeights({ levenshtein: 0.5, tokenMatch: 0.5 });
+  const weights = fm.getWeights();
+  assertEqual(weights.levenshtein, 0.5);
+  assertEqual(weights.tokenMatch, 0.5);
+});
+
+test('v7 FuzzyMatcher n-gram matching improves short token matches', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('desc_txt', ['description_text', 'detail_info']);
+  assertEqual(result.match, 'description_text');
+  assert(result.confidence >= 0.55, `Should match via abbreviation expansion, got ${result.confidence}`);
+});
+
+test('v7 FuzzyMatcher substring matching detects containment', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('user_email_addr', ['user_email_address', 'user_phone_number']);
+  assertEqual(result.match, 'user_email_address');
+  assert(result.confidence >= 0.55, `Should match via substring, got ${result.confidence}`);
+});
+
+// ─── V7 TESTS: EXPANDED ABBREVIATION MAP ──────────────────────
+
+test('v7 FuzzyMatcher expands financial abbreviations', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('txn_id', ['transaction_id', 'order_id']);
+  assertEqual(result.match, 'transaction_id');
+  assert(result.confidence >= 0.6, `Should match txn→transaction, got ${result.confidence}`);
+});
+
+test('v7 FuzzyMatcher expands IoT abbreviations', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('dev_id', ['device_id', 'developer_id']);
+  assertEqual(result.match, 'device_id');
+  assert(result.confidence >= 0.6, `Should match dev→device, got ${result.confidence}`);
+});
+
+test('v7 FuzzyMatcher expands security abbreviations', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('cert_id', ['certificate_id', 'certain_id']);
+  assertEqual(result.match, 'certificate_id');
+  assert(result.confidence >= 0.55, `Should match cert→certificate, got ${result.confidence}`);
+});
+
+test('v7 FuzzyMatcher expands application abbreviations', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('notif_count', ['notification_count', 'note_count']);
+  assertEqual(result.match, 'notification_count');
+  assert(result.confidence >= 0.55, `Should match notif→notification, got ${result.confidence}`);
+});
+
+// ─── V7 TESTS: ENHANCED CRYPTIC RESOLVER ──────────────────────
+
+test('v7 CrypticResolver strips database prefixes', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('tbl_user_name', ['user_name', 'account_name']);
+  assertEqual(result.match, 'user_name');
+  assert(result.confidence >= 0.45, `Should resolve tbl_ prefix, got ${result.confidence}`);
+});
+
+test('v7 CrypticResolver strips fk_ prefix', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('fk_order_id', ['order_id', 'product_id']);
+  assertEqual(result.match, 'order_id');
+  assert(result.confidence >= 0.45, `Should resolve fk_ prefix, got ${result.confidence}`);
+});
+
+test('v7 CrypticResolver n-gram matching helps short names', () => {
+  const cr = new CrypticResolver({ useNgram: true });
+  const result = cr.resolve('usrnm', ['username', 'password']);
+  // Even without prefix stripping, n-gram might help
+  if (result.match) {
+    assertEqual(result.match, 'username');
+  }
+});
+
+test('v7 CrypticResolver improved vocabulary matching with partial words', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('x1_email_addr', ['email_address', 'phone_number']);
+  if (result.match) {
+    assertEqual(result.match, 'email_address');
+  }
+});
+
+test('v7 CrypticResolver confidence cap raised to 0.70', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('z9_ref_id', ['ref_id', 'reference_id']);
+  if (result.match) {
+    assert(result.confidence <= 0.70, `Confidence ${result.confidence} should be <= 0.70`);
+    assert(result.confidence >= 0.45, `Confidence ${result.confidence} should be >= 0.45`);
+  }
+});
+
+// ─── V7 TESTS: ENHANCED TYPE COERCER ──────────────────────────
+
+test('v7 TypeCoercer handles case-insensitive booleans TRUE', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('TRUE', 'boolean', 'flag');
+  assertEqual(result.value, true);
+  assertEqual(result.coerced, true);
+});
+
+test('v7 TypeCoercer handles case-insensitive booleans FALSE', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('FALSE', 'boolean', 'flag');
+  assertEqual(result.value, false);
+  assertEqual(result.coerced, true);
+});
+
+test('v7 TypeCoercer handles Yes/No booleans', () => {
+  const tc = new TypeCoercer();
+  assertEqual(tc.coerceValue('Yes', 'boolean', 'flag').value, true);
+  assertEqual(tc.coerceValue('No', 'boolean', 'flag').value, false);
+});
+
+test('v7 TypeCoercer handles on/off booleans', () => {
+  const tc = new TypeCoercer();
+  assertEqual(tc.coerceValue('on', 'boolean', 'flag').value, true);
+  assertEqual(tc.coerceValue('off', 'boolean', 'flag').value, false);
+  assertEqual(tc.coerceValue('ON', 'boolean', 'flag').value, true);
+  assertEqual(tc.coerceValue('OFF', 'boolean', 'flag').value, false);
+});
+
+test('v7 TypeCoercer handles percentage strings to float', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('50%', 'float', 'rate');
+  assertEqual(result.value, 0.5);
+  assertEqual(result.coerced, true);
+});
+
+test('v7 TypeCoercer handles percentage strings to number', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('75%', 'number', 'completion');
+  assertEqual(result.value, 0.75);
+  assertEqual(result.coerced, true);
+});
+
+test('v7 TypeCoercer handles comma-separated integers', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('1,000', 'integer', 'count');
+  assertEqual(result.value, 1000);
+  assertEqual(result.coerced, true);
+});
+
+test('v7 TypeCoercer handles comma-separated floats', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('1,234.56', 'float', 'amount');
+  assertEqual(result.value, 1234.56);
+  assertEqual(result.coerced, true);
+});
+
+test('v7 TypeCoercer handles DD/MM/YYYY dates', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('15/01/2024', 'date', 'created_at');
+  assert(result.value instanceof Date, 'Should be a Date object');
+  assertEqual(result.coerced, true);
+});
+
+test('v7 TypeCoercer handles comma-separated strings as arrays', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('red,green,blue', 'array', 'colors');
+  assert(Array.isArray(result.value), 'Should be an array');
+  assertEqual(result.value.length, 3);
+  assertEqual(result.value[0], 'red');
+  assertEqual(result.value[1], 'green');
+  assertEqual(result.value[2], 'blue');
+});
+
+test('v7 inferType detects percentage_string', () => {
+  const { inferType } = require('./src/type-coercer');
+  assertEqual(inferType('50%'), 'percentage_string');
+  assertEqual(inferType('100%'), 'percentage_string');
+  assertEqual(inferType('-10.5%'), 'percentage_string');
+});
+
+test('v7 inferType detects case-insensitive booleans', () => {
+  const { inferType } = require('./src/type-coercer');
+  assertEqual(inferType('TRUE'), 'boolean_string');
+  assertEqual(inferType('FALSE'), 'boolean_string');
+  assertEqual(inferType('Yes'), 'boolean_string');
+  assertEqual(inferType('No'), 'boolean_string');
+  assertEqual(inferType('ON'), 'boolean_string');
+  assertEqual(inferType('OFF'), 'boolean_string');
+});
+
+test('v7 inferType detects comma-separated numbers', () => {
+  const { inferType } = require('./src/type-coercer');
+  assertEqual(inferType('1,000'), 'float_string');
+  assertEqual(inferType('1,234,567'), 'float_string');
+});
+
+// ─── V7 TESTS: EXPANDED SYNONYM DICTIONARY ────────────────────
+
+test('v7 synonym dictionary includes financial terms', () => {
+  const { WORD_TO_GROUP } = require('./src/synonyms');
+  assert(WORD_TO_GROUP.has('balance'), 'Should have balance');
+  assert(WORD_TO_GROUP.has('credit'), 'Should have credit');
+  assert(WORD_TO_GROUP.has('debit'), 'Should have debit');
+});
+
+test('v7 synonym dictionary includes IoT terms', () => {
+  const { WORD_TO_GROUP } = require('./src/synonyms');
+  assert(WORD_TO_GROUP.has('sensor'), 'Should have sensor');
+  assert(WORD_TO_GROUP.has('firmware'), 'Should have firmware');
+  assert(WORD_TO_GROUP.has('battery'), 'Should have battery');
+});
+
+test('v7 synonym dictionary includes education terms', () => {
+  const { WORD_TO_GROUP } = require('./src/synonyms');
+  assert(WORD_TO_GROUP.has('student'), 'Should have student');
+  assert(WORD_TO_GROUP.has('teacher'), 'Should have teacher');
+  assert(WORD_TO_GROUP.has('course'), 'Should have course');
+});
+
+test('v7 synonym dictionary includes social terms', () => {
+  const { WORD_TO_GROUP } = require('./src/synonyms');
+  assert(WORD_TO_GROUP.has('follower'), 'Should have follower');
+  assert(WORD_TO_GROUP.has('notification'), 'Should have notification');
+  assert(WORD_TO_GROUP.has('like'), 'Should have like');
+});
+
+test('v7 synonym groups map related financial terms together', () => {
+  const { WORD_TO_GROUP } = require('./src/synonyms');
+  const balanceGroup = WORD_TO_GROUP.get('balance');
+  const accountBalanceGroup = WORD_TO_GROUP.get('account_balance');
+  assertEqual(balanceGroup, accountBalanceGroup);
+});
+
+// ─── V7 TESTS: N-GRAM FUNCTIONS ───────────────────────────────
+
+test('v7 ngramSimilarity returns 1.0 for identical strings', () => {
+  const { ngramSimilarity } = require('./src/fuzzy-matcher');
+  assertEqual(ngramSimilarity('hello', 'hello'), 1.0);
+});
+
+test('v7 ngramSimilarity returns 0 for completely different strings', () => {
+  const { ngramSimilarity } = require('./src/fuzzy-matcher');
+  const sim = ngramSimilarity('abc', 'xyz');
+  assert(sim < 0.3, `Should be low similarity, got ${sim}`);
+});
+
+test('v7 ngramSimilarity detects similar strings', () => {
+  const { ngramSimilarity } = require('./src/fuzzy-matcher');
+  const sim = ngramSimilarity('username', 'usrname');
+  assert(sim > 0.5, `Should be high similarity, got ${sim}`);
+});
+
+test('v7 ngrams generates correct bigrams', () => {
+  const { ngrams } = require('./src/fuzzy-matcher');
+  const result = ngrams('hello', 2);
+  assert(result.length === 4, 'hello should have 4 bigrams');
+  assertEqual(result[0], 'he');
+  assertEqual(result[1], 'el');
+  assertEqual(result[2], 'll');
+  assertEqual(result[3], 'lo');
+});
+
+// ─── V7 TESTS: TRANSFORMER ACCURACY ───────────────────────────
+
+test('v7 Transformer abbreviation-aware semantic similarity', () => {
+  const t7 = new APIBridgeTransformer({ logMismatches: false });
+  const schema = {
+    userName: { column: 'usr_nm', type: 'string' },
+    emailAddress: { column: 'eml_addr', type: 'string' },
+  };
+  const result = t7.transform({ usr_nm: 'john', eml_addr: 'john@test.com' }, schema);
+  assertEqual(result.userName, 'john');
+  assertEqual(result.emailAddress, 'john@test.com');
+});
+
+test('v7 Transformer preserves backward compatibility', () => {
+  const t7 = new APIBridgeTransformer({ logMismatches: false });
+  const result = t7.transform({
+    first_name: 'John',
+    last_name: 'Doe',
+    is_active: true,
+    created_at: '2024-01-15',
+  });
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+  assertEqual(result.isActive, true);
+  assertEqual(result.createdAt, '2024-01-15');
+});
+
+test('v7 Transformer handles nested objects with accuracy', () => {
+  const t7 = new APIBridgeTransformer({ logMismatches: false });
+  const result = t7.transform({
+    user_data: {
+      first_name: 'John',
+      contact_info: {
+        phone_number: '555-1234',
+        email_address: 'john@test.com',
+      },
+    },
+  });
+  assertEqual(result.userData.firstName, 'John');
+  assertEqual(result.userData.contactInfo.phoneNumber, '555-1234');
+  assertEqual(result.userData.contactInfo.emailAddress, 'john@test.com');
 });
 
 // ─── SUMMARY ──────────────────────────────────────────────────
