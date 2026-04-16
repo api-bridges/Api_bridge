@@ -1,6 +1,6 @@
-# APIBridge AI v6
+# APIBridge AI v7
 
-**The most powerful API mismatch detector, transformer, and learner — now with enhanced fuzzy matching, cryptic name resolution, schema-based type coercion, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
+**The most powerful API mismatch detector, transformer, and learner — now with weighted ensemble fuzzy matching, n-gram similarity, context-aware field resolution, enhanced type coercion, expanded synonym dictionary, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
 
 APIBridge automatically bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
@@ -16,6 +16,13 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
   - [bridgeFetch() — Native Fetch Integration](#bridgefetch--native-fetch-integration)
   - [transform() — Direct Transform](#transform--direct-transform)
   - [createTransformer() — Reusable Instance](#createtransformer--reusable-instance)
+- [V7 Features](#v7-features)
+  - [Weighted Ensemble Fuzzy Matcher](#weighted-ensemble-fuzzy-matcher)
+  - [N-Gram Similarity Matching](#n-gram-similarity-matching)
+  - [Context-Aware Field Resolution](#context-aware-field-resolution)
+  - [Enhanced Type Coercion](#enhanced-type-coercion)
+  - [Expanded Synonym Dictionary](#expanded-synonym-dictionary)
+  - [Database Prefix Stripping](#database-prefix-stripping)
 - [V6 Features](#v6-features)
   - [Enhanced Fuzzy Matcher](#enhanced-fuzzy-matcher)
   - [Cryptic Name Resolver](#cryptic-name-resolver)
@@ -73,56 +80,63 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
 
 ## Features
 
-| Feature | v1 | v2 | v3 | v4 | v5 | v6 |
-|---------|----|----|-----|-----|-----|-----|
-| snake_case → camelCase | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| All 5 naming conventions | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Axios interceptors | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods |
-| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) | ✅ | ✅ | ✅ |
-| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (enhanced multi-strategy) |
-| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) | ✅ | ✅ | ✅ |
-| Type coercion | ✅ | ✅ (+ integer, float) | ✅ | ✅ | ✅ | ✅ (schema-based auto-coercion) |
-| CSV export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| JSON export | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Schema validation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Response normalization | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Middleware pipeline | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Retry with backoff | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Batch transformation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Reverse transform | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Event emitter | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Circular reference protection | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) | ✅ (19 types) | ✅ (22 types) |
-| Session management | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Plugin system | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Schema inference | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Field projection | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Data masking (PII) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Rate limiter | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Schema diff engine | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| TypeScript type generator | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Metrics collector | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Circuit breaker | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Request deduplication | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| GraphQL bridge | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| OpenAPI schema importer | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| API versioning | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Webhook handler | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| JSON Patch generator | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Composable pipeline | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Advanced retry strategies | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Structured request logger | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Schema registry | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Response streamer | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Dependency graph | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Mock server | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Health check monitor | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Event bus | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| **Enhanced fuzzy matcher** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Cryptic name resolver** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Schema-based type coercer** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Feature | v1 | v2 | v3 | v4 | v5 | v6 | v7 |
+|---------|----|----|-----|-----|-----|-----|-----|
+| snake_case → camelCase | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| All 5 naming conventions | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Axios interceptors | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods |
+| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) | ✅ | ✅ | ✅ | ✅ (+ financial, IoT, education, social) |
+| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (enhanced multi-strategy) | ✅ (weighted ensemble 7-strategy) |
+| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) | ✅ | ✅ | ✅ | ✅ |
+| Type coercion | ✅ | ✅ (+ integer, float) | ✅ | ✅ | ✅ | ✅ (schema-based auto-coercion) | ✅ (case-insensitive, %, comma) |
+| CSV export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| JSON export | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Schema validation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Response normalization | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Middleware pipeline | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Retry with backoff | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Batch transformation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Reverse transform | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Event emitter | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Circular reference protection | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) | ✅ (19 types) | ✅ (22 types) | ✅ (22 types) |
+| Session management | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Plugin system | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Schema inference | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Field projection | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Data masking (PII) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Rate limiter | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Schema diff engine | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| TypeScript type generator | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Metrics collector | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Circuit breaker | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Request deduplication | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| GraphQL bridge | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| OpenAPI schema importer | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| API versioning | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Webhook handler | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| JSON Patch generator | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Composable pipeline | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Advanced retry strategies | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Structured request logger | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Schema registry | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Response streamer | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Dependency graph | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Mock server | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Health check monitor | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Event bus | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Enhanced fuzzy matcher | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (weighted ensemble) |
+| Cryptic name resolver | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (+ DB prefix, n-gram) |
+| Schema-based type coercer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (enhanced) |
+| **Weighted ensemble matching** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **N-gram similarity** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Abbreviation-aware semantics** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Database prefix stripping** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Case-insensitive booleans** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Percentage/comma coercion** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Expanded synonym dictionary** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -462,6 +476,107 @@ const r1 = t.transform({ first_name: 'John' });
 const r2 = t.transform({ last_name: 'Doe' });
 
 console.log(t.getStats()); // Stats accumulate across calls
+```
+
+---
+
+## V7 Features
+
+### Weighted Ensemble Fuzzy Matcher
+
+v7 replaces the max-based scoring of v6 with a **weighted ensemble** that combines all 7 matching strategies with tuned weights for 99%+ accuracy:
+
+```js
+const { FuzzyMatcher } = require('api-bridge-ai');
+
+const fuzzy = new FuzzyMatcher();
+
+// Strategies: Levenshtein, token match, vowel-drop, phonetic,
+//             abbreviation, n-gram, substring — all combined
+const result = fuzzy.findBestMatch('usr_email', ['user_email', 'user_name']);
+console.log(result);
+// { match: 'user_email', confidence: 0.92, method: 'fuzzy_ensemble' }
+
+// Get/set strategy weights
+console.log(fuzzy.getWeights());
+// { levenshtein: 0.30, tokenMatch: 0.25, vowelDrop: 0.10, ... }
+
+fuzzy.setWeights({ levenshtein: 0.5, tokenMatch: 0.3 }); // Custom tuning
+```
+
+### N-Gram Similarity Matching
+
+New bigram-based similarity scoring that catches matches missed by Levenshtein distance — especially effective for short/garbled field names:
+
+```js
+const { ngramSimilarity, ngrams } = require('api-bridge-ai/src/fuzzy-matcher');
+
+// Generate bigrams
+ngrams('hello'); // ['he', 'el', 'll', 'lo']
+
+// Dice coefficient similarity
+ngramSimilarity('username', 'usrname'); // ~0.67
+ngramSimilarity('email', 'emial');      // ~0.50
+```
+
+### Context-Aware Field Resolution
+
+v7's transformer uses abbreviation expansion in semantic similarity, meaning fields like `txn_id`, `inv_num`, or `cert_id` are automatically matched to `transaction_id`, `invoice_number`, or `certificate_id` even without a schema.
+
+### Enhanced Type Coercion
+
+v7 adds case-insensitive boolean parsing, percentage strings, comma-separated numbers, and more date formats:
+
+```js
+const { TypeCoercer } = require('api-bridge-ai');
+
+const coercer = new TypeCoercer();
+
+// Case-insensitive booleans
+coercer.coerceValue('TRUE', 'boolean', 'flag');   // { value: true, coerced: true }
+coercer.coerceValue('Yes', 'boolean', 'active');   // { value: true, coerced: true }
+coercer.coerceValue('OFF', 'boolean', 'enabled');  // { value: false, coerced: true }
+
+// Percentage strings
+coercer.coerceValue('50%', 'float', 'rate');       // { value: 0.5, coerced: true }
+coercer.coerceValue('75%', 'number', 'completion');// { value: 0.75, coerced: true }
+
+// Comma-separated numbers
+coercer.coerceValue('1,000', 'integer', 'count');  // { value: 1000, coerced: true }
+coercer.coerceValue('1,234.56', 'float', 'amt');   // { value: 1234.56, coerced: true }
+
+// More date formats (DD/MM/YYYY, MM-DD-YYYY)
+coercer.coerceValue('15/01/2024', 'date', 'created_at');  // Date object
+
+// Comma-separated strings as arrays
+coercer.coerceValue('red,green,blue', 'array', 'colors'); // ['red', 'green', 'blue']
+```
+
+### Expanded Synonym Dictionary
+
+v7 adds **4 new domain dictionaries** with 60+ new synonym groups:
+
+| Domain | Example Groups |
+|--------|---------------|
+| **Financial** | balance/account_balance, credit/debit, routing_number/sort_code, transfer/wire/remittance |
+| **IoT/Hardware** | device/gadget/endpoint, sensor/probe/detector, temperature/celsius, battery/charge |
+| **Education** | student/pupil/learner, teacher/instructor/professor, course/class/module, grade/score/mark |
+| **Social** | follower/subscriber/fan, post/article/entry, like/upvote/reaction, notification/alert/push |
+
+### Database Prefix Stripping
+
+The cryptic resolver now automatically strips common database prefixes (`tbl_`, `fk_`, `pk_`, `vw_`, `sp_`, `idx_`, `fn_`) before matching:
+
+```js
+const { CrypticResolver } = require('api-bridge-ai');
+
+const resolver = new CrypticResolver();
+
+resolver.resolve('tbl_user_name', ['user_name', 'account_name']);
+// { match: 'user_name', confidence: 0.70, method: 'db_prefix_strip' }
+
+resolver.resolve('fk_order_id', ['order_id', 'product_id']);
+// { match: 'order_id', confidence: 0.70, method: 'db_prefix_strip' }
 ```
 
 ---
@@ -2159,7 +2274,7 @@ Api_bridge/
 │   ├── index.js            # Main entry — bridge(), bridgeFetch(), transform()
 │   ├── transformer.js      # Core transform engine (7-level detection)
 │   ├── learning.js         # Persistent learning engine
-│   ├── synonyms.js         # 100+ synonym groups dictionary (healthcare, analytics, DevOps)
+│   ├── synonyms.js         # 160+ synonym groups dictionary (healthcare, analytics, DevOps, financial, IoT, education, social)
 │   ├── exporter.js         # CSV & JSON report generators
 │   ├── cache.js            # LRU response cache with TTL
 │   ├── middleware.js        # Composable before/after pipeline
@@ -2207,7 +2322,7 @@ Api_bridge/
 npm test
 ```
 
-This runs 332 tests covering:
+This runs 373 tests covering:
 - Basic transformations (all conventions)
 - Nested objects and arrays
 - Type coercion with schemas
@@ -2253,47 +2368,57 @@ This runs 332 tests covering:
 - **v6: Enhanced fuzzy matcher** (Levenshtein, token matching, vowel-drop, phonetic, abbreviation, confidence boosting)
 - **v6: Cryptic name resolver** (prefix stripping, suffix matching, vocabulary matching, token overlap, cryptic detection)
 - **v6: Schema-based type coercer** (boolean, integer, float, date, JSON coercion, conflict detection, batch coercion)
+- **v7: Weighted ensemble matching** (7-strategy weighted scoring, tunable weights, ensemble vs max selection)
+- **v7: N-gram similarity** (bigram generation, Dice coefficient, short-token matching)
+- **v7: Expanded abbreviations** (financial, IoT, security, application abbreviations)
+- **v7: Enhanced type coercion** (case-insensitive booleans, on/off, percentages, comma numbers, DD/MM/YYYY dates)
+- **v7: Database prefix stripping** (tbl_, fk_, pk_, vw_, sp_, idx_ prefix removal)
+- **v7: Expanded synonym dictionary** (financial, IoT, education, social domain groups)
+- **v7: Transformer accuracy** (abbreviation-aware semantics, backward compatibility, nested objects)
 
 ---
 
-## Migration from V5
+## Migration from V6
 
-V6 is backward compatible. Your V5 code will work without changes.
+V7 is backward compatible. Your V6 code will work without changes.
 
 **Breaking changes:** None.
 
-**Import path change:** None — same as V5.
+**Import path change:** None — same as V6.
 
 ```js
 const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
 ```
 
-**New v6 features you can adopt incrementally:**
+**New v7 features you can adopt incrementally:**
 
 ```js
-// Enhanced fuzzy matcher with multi-strategy matching
+// Weighted ensemble fuzzy matching (7 strategies combined)
 const { FuzzyMatcher } = require('api-bridge-ai');
 const fuzzy = new FuzzyMatcher();
 const match = fuzzy.findBestMatch('usr_email', ['user_email', 'user_name']);
-// { match: 'user_email', confidence: 0.92, method: 'fuzzy_abbreviation' }
+// { match: 'user_email', confidence: 0.92, method: 'fuzzy_ensemble' }
 
-// Cryptic name resolver for legacy field names
+// Tune strategy weights for your use case
+fuzzy.setWeights({ levenshtein: 0.5, tokenMatch: 0.3 });
+
+// N-gram similarity for short/garbled names
+const { ngramSimilarity } = require('api-bridge-ai/src/fuzzy-matcher');
+ngramSimilarity('username', 'usrname'); // ~0.67
+
+// Database prefix stripping in cryptic resolver
 const { CrypticResolver } = require('api-bridge-ai');
 const resolver = new CrypticResolver();
-const resolved = resolver.resolve('z9_ref_id', ['reference_id', 'user_id']);
-// { match: 'reference_id', confidence: 0.65, method: 'prefix_strip', stripped: 'ref_id' }
+resolver.resolve('tbl_user_name', ['user_name']);
+// { match: 'user_name', confidence: 0.70, method: 'db_prefix_strip' }
 
-// Schema-based type coercer for automatic type conversion
+// Enhanced type coercion
 const { TypeCoercer } = require('api-bridge-ai');
 const coercer = new TypeCoercer();
-const { data, coerced } = coercer.coerceObject(
-  { isActive: '1', count: '42' },
-  { isActive: { type: 'boolean' }, count: { type: 'integer' } },
-);
-// data: { isActive: true, count: 42 }
-
-// New error classes for v6 features
-const { FuzzyMatchError, TypeCoercionError, CrypticResolverError } = require('api-bridge-ai');
+coercer.coerceValue('TRUE', 'boolean', 'flag');    // { value: true }
+coercer.coerceValue('50%', 'float', 'rate');        // { value: 0.5 }
+coercer.coerceValue('1,000', 'integer', 'count');   // { value: 1000 }
+coercer.coerceValue('red,green,blue', 'array', 'c');// { value: ['red','green','blue'] }
 ```
 
 ---

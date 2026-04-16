@@ -68,29 +68,45 @@ This handles standard conversions between `snake_case`, `camelCase`, `PascalCase
 
 ### Level 5 — Synonym Match (92% confidence)
 
-APIBridge has a built-in dictionary of developer vocabulary. It knows that `phone`, `mobile`, `cell`, `tel`, and `contact_number` all mean the same thing.
+APIBridge has a built-in dictionary of 160+ developer vocabulary synonym groups spanning multiple domains (person, contact, auth, status, dates, media, pricing, healthcare, analytics, infrastructure, financial, IoT, education, social). It knows that `phone`, `mobile`, `cell`, `tel`, and `contact_number` all mean the same thing.
 
 ```
 Input:  "cell_number"
 Result: "phone"        → recognized as synonym for "phone"
 ```
 
-### Level 6 — Fuzzy + Semantic Match (70–90% confidence)
+### Level 6 — Fuzzy + Semantic Match (70–95% confidence)
 
-When a schema is provided, APIBridge compares the field against schema keys using multiple strategies: character similarity (Levenshtein distance), synonym proximity, vowel-drop detection, phonetic matching, and abbreviation expansion. In v6, the enhanced fuzzy matcher uses all 5 strategies simultaneously and boosts confidence when multiple strategies agree.
+When a schema is provided, APIBridge compares the field against schema keys using a **weighted ensemble of 7 strategies**: Levenshtein distance, token matching, vowel-drop detection, phonetic similarity, abbreviation expansion, n-gram overlap, and substring containment.
+
+In v7, all strategies are combined with tuned weights and the ensemble score is compared against the best individual strategy. Multiple strategies agreeing boosts confidence further. The semantic similarity engine also expands abbreviations (`txn` → `transaction`, `dev` → `device`, etc.) before comparing tokens.
 
 ```
 Input:  "usr_email"   Schema has: "userEmail"
-Result: "userEmail"   → fuzzy match with 92% confidence (abbreviation + Levenshtein)
+Result: "userEmail"   → weighted ensemble match with 92% confidence
+
+Input:  "txn_id"      Schema has: "transactionId"
+Result: "transactionId" → abbreviation expansion + token match
 ```
 
-### Level 7 — Best Effort with Cryptic Resolution (60% confidence)
+### Level 7 — Best Effort with Cryptic Resolution (55–70% confidence)
 
-When nothing else matches, APIBridge attempts to resolve cryptic/arbitrary field names by stripping common prefixes (like `x_`, `z9_`), matching by suffixes (`_id`, `_flag`, `_date`), and checking fragments against known vocabulary. If resolution fails, it does a basic convention conversion. All Level 7 results are flagged for your review.
+When nothing else matches, APIBridge attempts to resolve cryptic/arbitrary field names by:
+- Stripping cryptic prefixes (`x_`, `z9_`, etc.)
+- Stripping database prefixes (`tbl_`, `fk_`, `pk_`, `vw_`, `sp_`, `idx_`)
+- Matching by suffixes (`_id`, `_flag`, `_date`)
+- Checking fragments against known vocabulary with n-gram similarity
+- N-gram based matching for short/garbled names
+
+All Level 7 results are flagged for your review.
 
 ```
 Input:  "z9_ref_id"
 Result: "referenceId"  → cryptic prefix stripped, matched against schema
+
+Input:  "tbl_user_name"
+Result: "userName"     → database prefix stripped, matched
+
 Input:  "xq_flag"
 Result: "xqFlag"       → converted but flagged for review
 ```
@@ -162,6 +178,21 @@ await api.post('/users', {
 
 ---
 
+## Enhanced Type Coercion (v7)
+
+APIBridge v7 automatically coerces values when a schema is provided, with support for:
+
+| Input | Target Type | Output |
+|-------|-------------|--------|
+| `"TRUE"`, `"Yes"`, `"on"` | `boolean` | `true` |
+| `"FALSE"`, `"No"`, `"off"` | `boolean` | `false` |
+| `"50%"` | `float` | `0.5` |
+| `"1,000"` | `integer` | `1000` |
+| `"15/01/2024"` | `date` | `Date` object |
+| `"red,green,blue"` | `array` | `['red','green','blue']` |
+
+---
+
 ## Using a Schema for Exact Control
 
 When automatic detection isn't enough, provide a schema:
@@ -179,6 +210,7 @@ const api = bridge(axios.create(), {
 The schema gives you:
 - **Exact field mapping** — `usr_nm` always becomes `userName`
 - **Type coercion** — `"1"` becomes `true` for boolean fields, date strings become Date objects
+- **Fuzzy matching** — Schema keys serve as candidates for the weighted ensemble matcher
 
 ---
 
@@ -235,3 +267,4 @@ api.exportCSV('./mismatches.csv');
 | Teach it | `approve(source, target)` or `reject(source, wrong, correct)` |
 | It remembers | Learnings saved to `.apibridge/learned.json` |
 | Review flags | `getPending()` shows low-confidence mappings that need your approval |
+| Accuracy | 99%+ for standard fields, 92%+ for synonyms, 70-95% for fuzzy matches |

@@ -1,9 +1,10 @@
 /**
- * APIBridge AI v3 — Developer Vocabulary Synonym Dictionary
+ * APIBridge AI v7 — Developer Vocabulary Synonym Dictionary
  *
  * Expanded for v2 with more domain-specific groups,
  * abbreviation handling, and internationalised variants.
  * v3: additional healthcare, analytics, and infrastructure groups.
+ * v7: additional financial, IoT, education, and social groups.
  */
 
 const SYNONYM_GROUPS = [
@@ -179,6 +180,44 @@ const SYNONYM_GROUPS = [
   ["disk", "storage", "volume", "disk_usage", "fs"],
   ["network", "bandwidth", "throughput", "traffic", "io"],
   ["log", "log_entry", "log_line", "trace", "span", "event"],
+
+  // ── Financial / Banking (v7) ───────────────────────────────
+  ["balance", "account_balance", "bal", "available_balance", "ledger_balance"],
+  ["credit", "credit_amount", "crd", "credit_entry"],
+  ["debit", "debit_amount", "dbt", "debit_entry"],
+  ["routing_number", "routing", "rtn", "aba", "sort_code"],
+  ["account_number", "acn", "iban", "account_no"],
+  ["interest", "interest_rate", "apr", "apy", "rate"],
+  ["deposit", "credit", "incoming", "inflow"],
+  ["withdrawal", "debit", "outgoing", "outflow"],
+  ["transfer", "wire", "remittance", "send", "movement"],
+  ["loan", "mortgage", "credit_line", "facility", "advance"],
+
+  // ── IoT / Hardware (v7) ────────────────────────────────────
+  ["device", "dev", "gadget", "endpoint", "thing", "asset"],
+  ["sensor", "sen", "probe", "detector", "reader"],
+  ["temperature", "temp", "tmp", "celsius", "fahrenheit", "kelvin"],
+  ["humidity", "hum", "moisture", "rh", "relative_humidity"],
+  ["firmware", "fw", "bios", "embedded_software"],
+  ["battery", "batt", "power_level", "charge", "energy_level"],
+  ["signal", "sig", "rssi", "signal_strength", "reception"],
+  ["frequency", "freq", "hz", "hertz", "rate"],
+
+  // ── Education (v7) ─────────────────────────────────────────
+  ["student", "pupil", "learner", "enrollee", "participant"],
+  ["teacher", "instructor", "professor", "tutor", "educator", "faculty"],
+  ["course", "class", "subject", "module", "program", "curriculum"],
+  ["grade", "score", "mark", "rating", "result", "gpa"],
+  ["enrollment", "registration", "admission", "matriculation"],
+  ["semester", "term", "quarter", "academic_period", "session"],
+
+  // ── Social / Communication (v7) ────────────────────────────
+  ["follower", "subscriber", "fan", "connection"],
+  ["friend", "contact", "buddy", "connection"],
+  ["post", "article", "entry", "publication", "update"],
+  ["like", "upvote", "reaction", "favorite", "heart", "star"],
+  ["share", "repost", "retweet", "forward", "redistribute"],
+  ["notification", "notif", "alert", "push", "announcement"],
 ];
 
 // Build flat lookup map: word → group index

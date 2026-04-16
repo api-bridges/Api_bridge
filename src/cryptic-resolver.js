@@ -1,19 +1,29 @@
 /**
- * APIBridge AI v6 — Cryptic Name Resolver
+ * APIBridge AI v7 — Enhanced Cryptic Name Resolver
  *
  * Best-effort resolution of cryptic/arbitrary field names:
  *  - Prefix/suffix pattern extraction (e.g., z9_ref_id → ref_id)
  *  - Common cryptic prefix stripping (x_, z_, q_, etc.)
+ *  - Database prefix stripping (tbl_, fk_, pk_, vw_, sp_)
  *  - Numeric prefix/suffix removal (e.g., field1 → field)
  *  - Known suffix matching (_id, _flag, _ref, _code, _type, _name, _date, _time)
  *  - Fragment-based matching against known vocabulary
- *  - Confidence-weighted resolution with flagging
+ *  - N-gram similarity for short fragments
+ *  - Confidence-weighted resolution with calibrated scoring
+ *  - Context-aware scoring when sibling fields are available
  *
- * Level 7 resolution: 60% confidence, always flagged for review.
+ * v7 improvements:
+ *  - N-gram similarity for short fragment comparison
+ *  - Database prefix detection (tbl_, fk_, pk_, vw_, sp_, idx_, fn_)
+ *  - Calibrated confidence scoring with less conservative capping
+ *  - Improved vocabulary matching with partial word detection
+ *
+ * Level 7 resolution: 55-70% confidence, flagged for review.
  */
 
 const { distance } = require('fastest-levenshtein');
 const { WORD_TO_GROUP, SYNONYM_GROUPS } = require('./synonyms');
+const { ngramSimilarity } = require('./fuzzy-matcher');
 
 // ─── KNOWN SUFFIXES AND PREFIXES ─────────────────────────────────────────────
 
@@ -44,6 +54,11 @@ const KNOWN_SUFFIXES = [
 const CRYPTIC_PREFIXES = /^([a-z]{1,2}\d{0,2}|[a-z]\d|[a-z]{1,2})_/;
 
 /**
+ * v7: Common database/system prefixes that can be stripped.
+ */
+const DB_PREFIXES = /^(tbl|fk|pk|vw|sp|idx|fn|udf|trg|tmp|stg|dim|fct)_/i;
+
+/**
  * Tokenize (same logic as transformer.js).
  */
 function tokenize(key) {
@@ -65,14 +80,18 @@ class CrypticResolver {
    * @param {object} options
    * @param {number}  options.minConfidence      Minimum confidence to report (default 0.45)
    * @param {boolean} options.stripCrypticPrefix  Strip cryptic prefixes like x_, z9_, etc. (default true)
+   * @param {boolean} options.stripDbPrefix        Strip database prefixes like tbl_, fk_, etc. (default true)
    * @param {boolean} options.useSuffixMatching   Use suffix-based matching (default true)
    * @param {boolean} options.useVocabulary       Match fragments against known vocabulary (default true)
+   * @param {boolean} options.useNgram            Use n-gram similarity for short fragments (default true)
    */
   constructor(options = {}) {
     this.minConfidence = options.minConfidence || 0.45;
     this.stripCrypticPrefix = options.stripCrypticPrefix !== false;
+    this.stripDbPrefix = options.stripDbPrefix !== false;
     this.useSuffixMatching = options.useSuffixMatching !== false;
     this.useVocabulary = options.useVocabulary !== false;
+    this.useNgram = options.useNgram !== false;
   }
 
   /**
@@ -101,6 +120,22 @@ class CrypticResolver {
             confidence: match.score * 0.65, // Prefix-stripped matches are lower confidence
             method: 'prefix_strip',
             stripped,
+          });
+        }
+      }
+    }
+
+    // Strategy 1b: Strip database prefix and match remainder (v7)
+    if (this.stripDbPrefix) {
+      const dbStripped = this._stripDbPrefix(lower);
+      if (dbStripped && dbStripped !== lower) {
+        const match = this._findBestCandidate(dbStripped, candidates);
+        if (match) {
+          results.push({
+            match: match.candidate,
+            confidence: match.score * 0.70, // DB prefixes are more meaningful than cryptic
+            method: 'db_prefix_strip',
+            stripped: dbStripped,
           });
         }
       }
@@ -142,6 +177,19 @@ class CrypticResolver {
           confidence: tokenMatch.score,
           method: 'token_overlap',
           stripped: cleanedTokens.join('_'),
+        });
+      }
+    }
+
+    // Strategy 5: N-gram similarity (v7 — helps with short/garbled names)
+    if (this.useNgram) {
+      const ngramMatch = this._ngramMatch(lower, candidates);
+      if (ngramMatch) {
+        results.push({
+          match: ngramMatch.candidate,
+          confidence: ngramMatch.score,
+          method: 'ngram_match',
+          stripped: null,
         });
       }
     }
@@ -204,7 +252,19 @@ class CrypticResolver {
   }
 
   /**
+   * v7: Strip database prefix from a key.
+   */
+  _stripDbPrefix(key) {
+    const match = key.match(DB_PREFIXES);
+    if (match) {
+      return key.slice(match[0].length);
+    }
+    return null;
+  }
+
+  /**
    * Find the best candidate match for a stripped/cleaned key.
+   * v7: Enhanced with n-gram fallback for short tokens.
    */
   _findBestCandidate(key, candidates) {
     const keyTokens = tokenize(key);
@@ -226,7 +286,13 @@ class CrypticResolver {
       const maxLen = Math.max(keyJoined.length, candJoined.length);
       if (maxLen === 0) continue;
       const dist = distance(keyJoined, candJoined);
-      const score = 1 - dist / maxLen;
+      let score = 1 - dist / maxLen;
+
+      // v7: Boost with n-gram similarity for short keys
+      if (this.useNgram && keyJoined.length >= 3 && candJoined.length >= 3) {
+        const ngramScore = ngramSimilarity(keyJoined, candJoined);
+        score = Math.max(score, (score + ngramScore) / 2);
+      }
 
       if (score > bestScore) {
         bestScore = score;
@@ -281,6 +347,7 @@ class CrypticResolver {
 
   /**
    * Match fragments of the cryptic key against known vocabulary words.
+   * v7: Improved with partial word detection and better confidence calibration.
    */
   _vocabularyMatch(key, candidates) {
     const tokens = tokenize(key);
@@ -313,11 +380,20 @@ class CrypticResolver {
             overlapCount += 0.8;
             break;
           }
+          // v7: Partial word overlap (one contains the other)
+          if (mt.length >= 3 && ct.length >= 3 && (mt.includes(ct) || ct.includes(mt))) {
+            const shorter = Math.min(mt.length, ct.length);
+            const longer = Math.max(mt.length, ct.length);
+            overlapCount += (shorter / longer) * 0.6;
+            break;
+          }
         }
       }
 
       if (overlapCount > 0) {
-        const score = Math.min(0.65, (overlapCount / Math.max(meaningfulTokens.length, candTokens.length)) * 0.7 + 0.1);
+        // v7: Better confidence calibration — allow higher confidence when overlap is strong
+        const ratio = overlapCount / Math.max(meaningfulTokens.length, candTokens.length);
+        const score = Math.min(0.70, ratio * 0.75 + 0.1);
         if (score > bestScore) {
           bestScore = score;
           bestCandidate = candidate;
@@ -347,6 +423,7 @@ class CrypticResolver {
 
   /**
    * Match cleaned tokens against candidate tokens.
+   * v7: Enhanced with n-gram similarity for better short-token matching.
    */
   _tokenOverlapMatch(cleanedTokens, candidates) {
     let bestCandidate = null;
@@ -370,13 +447,22 @@ class CrypticResolver {
               matchCount += sim;
               break;
             }
+            // v7: N-gram fallback for short tokens
+            if (this.useNgram && ct.length >= 3 && candt.length >= 3) {
+              const ngramSim = ngramSimilarity(ct, candt);
+              if (ngramSim > 0.6) {
+                matchCount += ngramSim * 0.7;
+                break;
+              }
+            }
           }
         }
       }
 
       if (matchCount > 0) {
         const total = Math.max(cleanedTokens.length, candTokens.length);
-        const score = Math.min(0.65, (matchCount / total) * 0.65 + 0.1);
+        // v7: Better calibration — allow higher confidence when match is strong
+        const score = Math.min(0.70, (matchCount / total) * 0.70 + 0.1);
 
         if (score > bestScore) {
           bestScore = score;
@@ -388,11 +474,38 @@ class CrypticResolver {
     if (!bestCandidate || bestScore < 0.45) return null;
     return { candidate: bestCandidate, score: bestScore };
   }
+
+  /**
+   * v7: N-gram based matching for short/garbled cryptic names.
+   */
+  _ngramMatch(key, candidates) {
+    const keyTokens = tokenize(key).join('');
+    if (keyTokens.length < 3) return null;
+
+    let bestCandidate = null;
+    let bestScore = 0;
+
+    for (const candidate of candidates) {
+      const candTokens = tokenize(candidate).join('');
+      if (candTokens.length < 3) continue;
+
+      const sim = ngramSimilarity(keyTokens, candTokens);
+      if (sim > bestScore) {
+        bestScore = sim;
+        bestCandidate = candidate;
+      }
+    }
+
+    if (!bestCandidate || bestScore < 0.5) return null;
+    // Cap at 0.60 — n-gram alone is not high-confidence
+    return { candidate: bestCandidate, score: Math.min(bestScore * 0.65, 0.60) };
+  }
 }
 
 module.exports = {
   CrypticResolver,
   KNOWN_SUFFIXES,
   CRYPTIC_PREFIXES,
+  DB_PREFIXES,
   tokenize,
 };
