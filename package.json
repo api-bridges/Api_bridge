@@ -1,16 +1,37 @@
 {
   "name": "api-bridge-ai",
   "version": "8.0.0",
-  "description": "The most powerful API mismatch detector, transformer, and learner — now with multi-alias field resolution, schema migration engine, batch request orchestration, field analytics, conditional transforms, deep merge engine, output formatters, request interceptor chain, weighted ensemble fuzzy matching, context-aware field resolution, n-gram cryptic name resolution, enhanced type coercion, expanded synonym dictionary, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more",
+  "description": "Production-ready API mismatch detector, transformer, and intelligent field mapping SDK — with fuzzy matching, schema migration, circuit breakers, GraphQL support, plugins, and 45+ modules",
   "main": "src/index.js",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": "./src/index.js",
+    "./core": "./src/core/index.js",
+    "./utils": "./src/utils/index.js",
+    "./adapters": "./src/adapters/index.js",
+    "./errors": "./src/core/errors.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src/",
+    "types/",
+    "examples/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node test.js",
-    "start": "node src/index.js"
+    "example": "node examples/basic-usage.js",
+    "example:advanced": "node examples/advanced-usage.js",
+    "example:plugins": "node examples/plugin-example.js",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "api",
     "bridge",
     "transformer",
+    "sdk",
     "camelCase",
     "snake_case",
     "mismatch",
@@ -59,6 +80,17 @@
     "output-formatter",
     "request-interceptor"
   ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/biswaranjantudu064-netizen/Api_bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/biswaranjantudu064-netizen/Api_bridge/issues"
+  },
+  "homepage": "https://github.com/biswaranjantudu064-netizen/Api_bridge#readme",
   "author": "",
   "license": "MIT",
   "dependencies": {

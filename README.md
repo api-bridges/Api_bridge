@@ -1,6 +1,10 @@
 # APIBridge AI v8
 
-**The most powerful API mismatch detector, transformer, and learner — now with multi-alias field resolution, schema migration engine, batch request orchestration, field analytics, conditional transforms, deep merge engine, output formatters, request interceptor chain, weighted ensemble fuzzy matching, n-gram similarity, context-aware field resolution, enhanced type coercion, expanded synonym dictionary, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
+[![npm version](https://img.shields.io/npm/v/api-bridge-ai.svg)](https://www.npmjs.com/package/api-bridge-ai)
+[![license](https://img.shields.io/npm/l/api-bridge-ai.svg)](https://github.com/biswaranjantudu064-netizen/Api_bridge/blob/main/LICENSE)
+[![Node.js](https://img.shields.io/node/v/api-bridge-ai.svg)](https://nodejs.org)
+
+**Production-ready API mismatch detector, transformer, and intelligent field mapping SDK** — with fuzzy matching, schema migration, circuit breakers, GraphQL support, plugins, and 45+ modules.
 
 APIBridge automatically bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
@@ -169,6 +173,196 @@ Or clone the repo:
 git clone https://github.com/biswaranjantudu064-netizen/Api_bridge.git
 cd Api_bridge
 npm install
+```
+
+---
+
+## Project Structure
+
+```
+api-bridge-ai/
+├── src/
+│   ├── index.js                 # Main entry point (exports everything)
+│   ├── core/                    # Core transformation engine
+│   │   ├── index.js             # Barrel export for core module
+│   │   ├── errors.js            # 27 structured error classes
+│   │   ├── transformer.js       # 7-level mismatch detection & correction
+│   │   ├── learning.js          # Persistent learning engine
+│   │   ├── normalizer.js        # Response normalization
+│   │   ├── synonyms.js          # Synonym dictionary (financial, IoT, etc.)
+│   │   ├── fuzzy-matcher.js     # Weighted ensemble fuzzy matching
+│   │   ├── cryptic-resolver.js  # Cryptic/arbitrary name resolution
+│   │   ├── type-coercer.js      # Schema-based type coercion
+│   │   ├── field-aliaser.js     # Multi-alias field resolution
+│   │   ├── validator.js         # Schema validation
+│   │   ├── inference.js         # Auto schema inference
+│   │   ├── conditional-transform.js  # Conditional rules
+│   │   └── schema-migrator.js   # Version migration engine
+│   ├── utils/                   # Utility modules
+│   │   ├── index.js             # Barrel export for utils module
+│   │   ├── cache.js             # LRU response cache with TTL
+│   │   ├── dedup.js             # Request deduplication
+│   │   ├── diff.js              # Schema diff engine
+│   │   ├── exporter.js          # CSV/JSON export
+│   │   ├── masking.js           # PII data masking
+│   │   ├── metrics.js           # Performance metrics
+│   │   ├── patch.js             # JSON Patch (RFC 6902)
+│   │   ├── typegen.js           # TypeScript type generator
+│   │   ├── deep-merge.js        # Intelligent deep merge
+│   │   ├── output-formatter.js  # Multi-format output
+│   │   ├── field-stats.js       # Field analytics
+│   │   ├── projection.js        # Field projection
+│   │   └── request-logger.js    # Structured request logging
+│   └── adapters/                # Protocol adapters & middleware
+│       ├── index.js             # Barrel export for adapters module
+│       ├── graphql.js           # GraphQL bridge
+│       ├── webhook.js           # Webhook handler
+│       ├── openapi.js           # OpenAPI importer
+│       ├── mock-server.js       # Mock server
+│       ├── circuit-breaker.js   # Circuit breaker
+│       ├── retry-strategy.js    # Advanced retry strategies
+│       ├── rate-limiter.js      # Rate limiter
+│       ├── health-check.js      # Health check monitor
+│       ├── event-bus.js         # Event bus (pub/sub)
+│       ├── middleware.js        # Middleware pipeline
+│       ├── pipeline.js          # Composable pipeline
+│       ├── plugins.js           # Plugin system
+│       ├── request-interceptor.js # Request interceptor chain
+│       ├── batch-orchestrator.js  # Batch execution
+│       ├── dependency-graph.js  # DAG orchestration
+│       ├── schema-registry.js   # Versioned schema registry
+│       ├── response-streamer.js # Response streaming
+│       └── versioning.js        # API versioning
+├── types/
+│   └── index.d.ts               # TypeScript type declarations
+├── examples/
+│   ├── basic-usage.js           # Basic usage examples
+│   ├── advanced-usage.js        # Advanced SDK patterns
+│   └── plugin-example.js        # Custom plugin development
+├── test.js                      # 462 tests
+├── package.json
+├── CHANGELOG.md
+└── README.md
+```
+
+---
+
+## Importing Modules
+
+### Full Import (default)
+
+```js
+const { bridge, transform, CircuitBreaker, EventBus } = require('api-bridge-ai');
+```
+
+### Subpath Imports (tree-shakeable)
+
+Import only the modules you need for smaller bundle sizes:
+
+```js
+// Core transformation & matching
+const { APIBridgeTransformer, FuzzyMatcher, SchemaValidator } = require('api-bridge-ai/core');
+
+// Utilities
+const { ResponseCache, DeepMerge, OutputFormatter } = require('api-bridge-ai/utils');
+
+// Adapters & middleware
+const { CircuitBreaker, EventBus, PluginManager } = require('api-bridge-ai/adapters');
+
+// Error classes only
+const { ValidationError, TransformError } = require('api-bridge-ai/errors');
+```
+
+---
+
+## TypeScript Support
+
+TypeScript type declarations are included out of the box:
+
+```ts
+import { transform, SchemaValidator, CircuitBreaker } from 'api-bridge-ai';
+
+const result = transform({ first_name: 'John' });
+// result is Record<string, any>
+
+const validator = new SchemaValidator({ strict: true });
+const { valid, errors } = validator.validate(data, schema);
+```
+
+---
+
+## Plugin & Extension System
+
+APIBridge has a built-in plugin system for extending functionality:
+
+### Creating a Plugin
+
+```js
+const { PluginManager } = require('api-bridge-ai');
+
+const myPlugin = {
+  name: 'my-plugin',
+  version: '1.0.0',
+  hooks: {
+    beforeTransform: (data, ctx) => {
+      // Modify data before transformation
+      console.log('Transforming:', Object.keys(data));
+      return data;
+    },
+    afterTransform: (data, ctx) => {
+      // Modify data after transformation
+      return { ...data, _transformed: true };
+    },
+    onMismatch: (record) => {
+      // React to field mismatches
+      console.log('Mismatch detected:', record);
+    },
+    onError: (error) => {
+      // Handle errors
+      console.error('Error:', error.message);
+    },
+  },
+  init: () => console.log('Plugin loaded'),
+  destroy: () => console.log('Plugin unloaded'),
+};
+
+const plugins = new PluginManager();
+plugins.register(myPlugin);
+```
+
+### Available Hook Points
+
+| Hook | Phase | Description |
+|------|-------|-------------|
+| `beforeTransform` | Pre-transform | Modify data before field mapping |
+| `afterTransform` | Post-transform | Modify data after field mapping |
+| `beforeValidate` | Pre-validation | Modify data before schema validation |
+| `afterValidate` | Post-validation | Modify validation results |
+| `onMismatch` | Detection | React to field name mismatches |
+| `onError` | Error | Handle errors in the pipeline |
+| `beforeRequest` | Pre-request | Modify outgoing HTTP requests |
+| `afterRequest` | Post-request | Modify incoming HTTP responses |
+
+### Plugin Factory Pattern
+
+```js
+function createMetricsPlugin(options = {}) {
+  const metrics = {};
+  return {
+    name: 'metrics-plugin',
+    hooks: {
+      beforeTransform: (data) => {
+        metrics.startTime = Date.now();
+        return data;
+      },
+      afterTransform: (data) => {
+        metrics.duration = Date.now() - metrics.startTime;
+        if (options.onMetric) options.onMetric(metrics);
+        return data;
+      },
+    },
+  };
+}
 ```
 
 ---
@@ -2601,56 +2795,68 @@ try {
 ## Architecture
 
 ```
-Api_bridge/
+api-bridge-ai/
 ├── src/
-│   ├── index.js              # Main entry — bridge(), bridgeFetch(), transform()
-│   ├── transformer.js        # Core transform engine (8-level detection)
-│   ├── learning.js           # Persistent learning engine
-│   ├── synonyms.js           # 160+ synonym groups dictionary (healthcare, analytics, DevOps, financial, IoT, education, social)
-│   ├── exporter.js           # CSV & JSON report generators
-│   ├── cache.js              # LRU response cache with TTL
-│   ├── middleware.js          # Composable before/after pipeline
-│   ├── validator.js           # Schema validation engine
-│   ├── normalizer.js          # Response format normalizer
-│   ├── errors.js              # Custom error class hierarchy (27 types)
-│   ├── plugins.js             # v3: Plugin system
-│   ├── inference.js           # v3: Schema inference engine
-│   ├── projection.js          # v3: Field projection (pick/omit/rename/reshape)
-│   ├── masking.js             # v3: Data masking (PII protection)
-│   ├── rate-limiter.js        # v3: Rate limiter (token bucket)
-│   ├── diff.js                # v3: Schema diff engine
-│   ├── typegen.js             # v3: TypeScript type generator
-│   ├── metrics.js             # v3: Performance metrics collector
-│   ├── circuit-breaker.js     # v4: Circuit breaker (fault tolerance)
-│   ├── dedup.js               # v4: Request deduplication
-│   ├── graphql.js             # v4: GraphQL response/variable bridge
-│   ├── openapi.js             # v4: OpenAPI/Swagger schema importer
-│   ├── versioning.js          # v4: API version management
-│   ├── webhook.js             # v4: Webhook handler & normalizer
-│   ├── patch.js               # v4: JSON Patch generator (RFC 6902)
-│   ├── pipeline.js            # v4: Composable transformation pipeline
-│   ├── retry-strategy.js      # v5: Advanced retry strategies
-│   ├── request-logger.js      # v5: Structured request/response logger
-│   ├── schema-registry.js     # v5: Versioned schema registry
-│   ├── response-streamer.js   # v5: Chunked response transformer
-│   ├── dependency-graph.js    # v5: API dependency graph orchestrator
-│   ├── mock-server.js         # v5: Built-in mock server for testing
-│   ├── health-check.js        # v5: Endpoint health monitoring
-│   ├── event-bus.js           # v5: Typed pub/sub event bus
-│   ├── fuzzy-matcher.js       # v6: Enhanced multi-strategy fuzzy matcher
-│   ├── cryptic-resolver.js    # v6: Cryptic/arbitrary name resolver
-│   ├── type-coercer.js        # v6: Schema-based type coercer
-│   ├── field-aliaser.js       # v8: Multi-alias field resolution
-│   ├── schema-migrator.js     # v8: Schema migration engine
-│   ├── batch-orchestrator.js  # v8: Batch request orchestrator
-│   ├── field-stats.js         # v8: Field analytics collector
-│   ├── conditional-transform.js # v8: Conditional transformation rules
-│   ├── deep-merge.js          # v8: Deep merge engine
-│   ├── output-formatter.js    # v8: Output formatter (JSON, XML, CSV, table, template)
-│   └── request-interceptor.js # v8: Request interceptor chain
-├── test.js                    # 462-test comprehensive test suite
-├── package.json
-├── .gitignore
+│   ├── index.js                   # Main entry — bridge(), bridgeFetch(), transform()
+│   ├── core/                      # Core transformation engine
+│   │   ├── index.js               # Core barrel export
+│   │   ├── errors.js              # Custom error class hierarchy (27 types)
+│   │   ├── transformer.js         # 7-level mismatch detection & correction
+│   │   ├── learning.js            # Persistent learning engine
+│   │   ├── normalizer.js          # Response format normalizer
+│   │   ├── synonyms.js            # 160+ synonym groups dictionary
+│   │   ├── fuzzy-matcher.js       # Weighted ensemble fuzzy matching (7 strategies)
+│   │   ├── cryptic-resolver.js    # Cryptic/arbitrary name resolver
+│   │   ├── type-coercer.js        # Schema-based type coercer
+│   │   ├── field-aliaser.js       # Multi-alias field resolution
+│   │   ├── validator.js           # Schema validation engine
+│   │   ├── inference.js           # Auto schema inference
+│   │   ├── conditional-transform.js # Conditional transformation rules
+│   │   └── schema-migrator.js     # Version migration engine
+│   ├── utils/                     # Utility modules
+│   │   ├── index.js               # Utils barrel export
+│   │   ├── cache.js               # LRU response cache with TTL
+│   │   ├── dedup.js               # Request deduplication
+│   │   ├── diff.js                # Schema diff engine
+│   │   ├── exporter.js            # CSV & JSON report generators
+│   │   ├── masking.js             # PII data masking
+│   │   ├── metrics.js             # Performance metrics collector
+│   │   ├── patch.js               # JSON Patch generator (RFC 6902)
+│   │   ├── typegen.js             # TypeScript type generator
+│   │   ├── deep-merge.js          # Intelligent deep merge
+│   │   ├── output-formatter.js    # Multi-format output (JSON, XML, CSV, table)
+│   │   ├── field-stats.js         # Field analytics collector
+│   │   ├── projection.js          # Field projection (pick/omit/rename/reshape)
+│   │   └── request-logger.js      # Structured request logging
+│   └── adapters/                  # Protocol adapters & middleware
+│       ├── index.js               # Adapters barrel export
+│       ├── graphql.js             # GraphQL response/variable bridge
+│       ├── webhook.js             # Webhook handler & normalizer
+│       ├── openapi.js             # OpenAPI/Swagger schema importer
+│       ├── mock-server.js         # Built-in mock server for testing
+│       ├── response-streamer.js   # Chunked response transformer
+│       ├── circuit-breaker.js     # Circuit breaker (fault tolerance)
+│       ├── retry-strategy.js      # Advanced retry strategies
+│       ├── rate-limiter.js        # Rate limiter (token bucket)
+│       ├── health-check.js        # Endpoint health monitoring
+│       ├── middleware.js           # Composable before/after pipeline
+│       ├── pipeline.js            # Composable transformation pipeline
+│       ├── plugins.js             # Plugin system
+│       ├── request-interceptor.js # Request interceptor chain
+│       ├── batch-orchestrator.js  # Batch request orchestrator
+│       ├── dependency-graph.js    # API dependency graph orchestrator
+│       ├── event-bus.js           # Typed pub/sub event bus
+│       ├── schema-registry.js     # Versioned schema registry
+│       └── versioning.js          # API version management
+├── types/
+│   └── index.d.ts                 # TypeScript type declarations
+├── examples/
+│   ├── basic-usage.js             # Basic usage examples
+│   ├── advanced-usage.js          # Advanced SDK patterns
+│   └── plugin-example.js          # Plugin development guide
+├── test.js                        # 462-test comprehensive suite
+├── package.json                   # npm package config with subpath exports
+├── CHANGELOG.md                   # Version history
 └── README.md
 ```
 
@@ -2734,10 +2940,16 @@ V8 is backward compatible. Your V7 code will work without changes.
 
 **Breaking changes:** None.
 
-**Import path change:** None — same as V7.
+**Import path change:** None — the main import is the same as V7. Additionally, you can now use subpath imports:
 
 ```js
+// Same as V7 (still works)
 const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
+
+// New in V8: subpath imports
+const { FuzzyMatcher } = require('api-bridge-ai/core');
+const { DeepMerge } = require('api-bridge-ai/utils');
+const { CircuitBreaker } = require('api-bridge-ai/adapters');
 ```
 
 **New v8 features you can adopt incrementally:**
@@ -2797,6 +3009,32 @@ const { RequestInterceptor } = require('api-bridge-ai');
 const interceptor = new RequestInterceptor();
 interceptor.useRequest('addAuth', (ctx) => ({ ...ctx, headers: { Authorization: 'Bearer token' } }));
 ```
+
+---
+
+## Industry Improvements & Roadmap
+
+### Current Production Features
+- ✅ **Modular architecture** — `core/`, `utils/`, `adapters/` separation
+- ✅ **Subpath exports** — Tree-shakeable imports for smaller bundles
+- ✅ **TypeScript declarations** — Full type safety out of the box
+- ✅ **Plugin system** — Extensible via 8 hook points
+- ✅ **27 structured error classes** — Precise error handling
+- ✅ **462 tests** — Comprehensive test coverage
+- ✅ **Zero config** — Works out of the box with sensible defaults
+- ✅ **Single dependency** — Only `fastest-levenshtein` (no bloat)
+
+### Suggested Future Improvements
+- 📦 **ES Module support** — Add dual CJS/ESM builds via `exports` conditions
+- 📊 **OpenTelemetry integration** — Distributed tracing support
+- 🔌 **Official plugin registry** — Published plugins for common APIs (Stripe, Twilio, etc.)
+- 🧪 **Property-based testing** — Fuzz testing for edge cases
+- 📝 **JSON Schema validation** — Support standard JSON Schema (Draft 7+) alongside custom schemas
+- 🚀 **Worker thread support** — Offload heavy transformations to worker threads
+- 🌐 **Browser bundle** — UMD/ESM build for browser environments
+- 📈 **Benchmarking suite** — Performance regression testing
+- 🔄 **Streaming transforms** — Transform large datasets without buffering
+- 🛡️ **Content Security Policy** — Built-in input sanitization
 
 ---
 

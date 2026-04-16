@@ -1,0 +1,22 @@
+# Ignore test files
+test.js
+
+# Ignore demo app
+demo/
+
+# Ignore CI/CD
+.github/
+.gitignore
+
+# Ignore dev files
+.apibridge/
+*.log
+.DS_Store
+coverage/
+dist/
+.env
+*.zip
+mismatch_report.csv
+
+# Ignore lock files (consumers have their own)
+package-lock.json
