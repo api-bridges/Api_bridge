@@ -77,20 +77,22 @@ Result: "phone"        → recognized as synonym for "phone"
 
 ### Level 6 — Fuzzy + Semantic Match (70–90% confidence)
 
-When a schema is provided, APIBridge compares the field against schema keys using character similarity (Levenshtein distance) and synonym proximity.
+When a schema is provided, APIBridge compares the field against schema keys using multiple strategies: character similarity (Levenshtein distance), synonym proximity, vowel-drop detection, phonetic matching, and abbreviation expansion. In v6, the enhanced fuzzy matcher uses all 5 strategies simultaneously and boosts confidence when multiple strategies agree.
 
 ```
 Input:  "usr_email"   Schema has: "userEmail"
-Result: "userEmail"   → fuzzy match with 85% confidence
+Result: "userEmail"   → fuzzy match with 92% confidence (abbreviation + Levenshtein)
 ```
 
-### Level 7 — Best Effort (60% confidence)
+### Level 7 — Best Effort with Cryptic Resolution (60% confidence)
 
-When nothing else matches, it does a basic convention conversion and flags the field for your review.
+When nothing else matches, APIBridge attempts to resolve cryptic/arbitrary field names by stripping common prefixes (like `x_`, `z9_`), matching by suffixes (`_id`, `_flag`, `_date`), and checking fragments against known vocabulary. If resolution fails, it does a basic convention conversion. All Level 7 results are flagged for your review.
 
 ```
+Input:  "z9_ref_id"
+Result: "referenceId"  → cryptic prefix stripped, matched against schema
 Input:  "xq_flag"
-Result: "xqFlag"      → converted but flagged for review
+Result: "xqFlag"       → converted but flagged for review
 ```
 
 ---
