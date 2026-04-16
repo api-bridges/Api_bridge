@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v5 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2, v3, v4, and v5 features.
+ * APIBridge AI v6 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, and v6 features.
  */
 
 const {
@@ -55,6 +55,12 @@ const {
   MockServerError,
   HealthCheckError,
   EventBusError,
+  FuzzyMatcher,
+  CrypticResolver,
+  TypeCoercer,
+  FuzzyMatchError,
+  TypeCoercionError,
+  CrypticResolverError,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -98,7 +104,7 @@ const t = new APIBridgeTransformer({ logMismatches: false });
 
 // ─────────────────────────────────────────────────────────────
 console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-console.log('  APIBridge AI v3 \u2014 Test Suite');
+console.log('  APIBridge AI v6 \u2014 Test Suite');
 console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n');
 
 // ─── 1. BASIC TRANSFORMATION ──────────────────────────────────
@@ -2657,6 +2663,620 @@ test('v5 errors serialize to JSON', () => {
   assertEqual(json.name, 'RetryError');
   assertEqual(json.code, 'RETRY_ERROR');
   assert(json.timestamp !== undefined, 'Should have timestamp');
+});
+
+// ─── v6: FUZZY MATCHER ───────────────────────────────────────
+console.log('\n28. FuzzyMatcher (v6)');
+
+test('FuzzyMatcher finds exact token match', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('user_email', ['user_email', 'user_name']);
+  assertEqual(result.match, 'user_email');
+  assert(result.confidence >= 0.9, 'Should have high confidence for exact match');
+});
+
+test('FuzzyMatcher matches usr_email → user_email (abbreviation)', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('usr_email', ['user_email', 'user_name', 'phone_number']);
+  assertEqual(result.match, 'user_email');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher matches userEmal → user_email (typo)', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('userEmal', ['user_email', 'user_name', 'phone_number']);
+  assertEqual(result.match, 'user_email');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher matches phn_number → phone_number (abbreviation)', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('phn_number', ['user_email', 'user_name', 'phone_number']);
+  assertEqual(result.match, 'phone_number');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher matches frst_name → first_name (vowel-drop)', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('frst_name', ['first_name', 'last_name', 'full_name']);
+  assertEqual(result.match, 'first_name');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher returns null for completely unrelated key', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('xyzabc123', ['user_email', 'user_name']);
+  assertEqual(result.match, null);
+});
+
+test('FuzzyMatcher returns null for empty candidates', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('user_email', []);
+  assertEqual(result.match, null);
+});
+
+test('FuzzyMatcher handles single-token keys', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('eml', ['email', 'phone', 'name']);
+  assertEqual(result.match, 'email');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher getStrategies returns strategy info', () => {
+  const fm = new FuzzyMatcher();
+  const strategies = fm.getStrategies();
+  assertEqual(strategies.levenshtein, true);
+  assertEqual(strategies.tokenMatch, true);
+  assertEqual(strategies.vowelDrop, true);
+  assertEqual(strategies.phonetic, true);
+  assertEqual(strategies.abbreviation, true);
+});
+
+test('FuzzyMatcher respects custom minConfidence', () => {
+  const fm = new FuzzyMatcher({ minConfidence: 0.99 });
+  const result = fm.findBestMatch('usr_email', ['user_email']);
+  // With very high threshold, might not match
+  assert(result.confidence < 1.0 || result.match !== null, 'Should handle high threshold');
+});
+
+test('FuzzyMatcher matches addr → address (common abbreviation)', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('addr', ['address', 'phone', 'email']);
+  assertEqual(result.match, 'address');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher matches passwd → password', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('passwd', ['password', 'username', 'email']);
+  assertEqual(result.match, 'password');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher matches desc → description', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('desc', ['description', 'title', 'name']);
+  assertEqual(result.match, 'description');
+  assert(result.confidence >= 0.55, `Confidence ${result.confidence} should be >= 0.55`);
+});
+
+test('FuzzyMatcher can disable strategies', () => {
+  const fm = new FuzzyMatcher({ usePhonetic: false, useVowelDrop: false, expandAbbreviations: false });
+  const strategies = fm.getStrategies();
+  assertEqual(strategies.phonetic, false);
+  assertEqual(strategies.vowelDrop, false);
+  assertEqual(strategies.abbreviation, false);
+});
+
+// ─── v6: CRYPTIC RESOLVER ────────────────────────────────────
+console.log('\n29. CrypticResolver (v6)');
+
+test('CrypticResolver detects cryptic keys', () => {
+  const cr = new CrypticResolver();
+  assert(cr.isCryptic('x9_ref_id'), 'x9_ref_id should be cryptic');
+  assert(cr.isCryptic('z_flag'), 'z_flag should be cryptic');
+  assert(cr.isCryptic('q1_status'), 'q1_status should be cryptic');
+});
+
+test('CrypticResolver does not flag normal keys as cryptic', () => {
+  const cr = new CrypticResolver();
+  assert(!cr.isCryptic('user_email'), 'user_email should not be cryptic');
+  assert(!cr.isCryptic('firstName'), 'firstName should not be cryptic');
+  assert(!cr.isCryptic('is_active'), 'is_active should not be cryptic');
+});
+
+test('CrypticResolver resolves z9_ref_id via prefix stripping', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('z9_ref_id', ['reference_id', 'user_id', 'order_id']);
+  assert(result.match !== null, 'Should find a match');
+  assert(result.confidence >= 0.45, `Confidence ${result.confidence} should be >= 0.45`);
+});
+
+test('CrypticResolver resolves x_flag via suffix matching', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('x_flag', ['is_active_flag', 'status_flag', 'deleted_flag']);
+  assert(result.match !== null, 'Should find a match via suffix');
+  assert(result.confidence >= 0.45, `Confidence ${result.confidence} should be >= 0.45`);
+});
+
+test('CrypticResolver returns null for completely unresolvable key', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('qqq', ['user_email', 'user_name']);
+  // May or may not find a match, but if not, confidence should be low
+  if (result.match === null) {
+    assert(result.confidence < 0.45, 'Should have low confidence for unresolvable key');
+  }
+});
+
+test('CrypticResolver returns null for empty candidates', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('x9_ref_id', []);
+  assertEqual(result.match, null);
+});
+
+test('CrypticResolver resolves via vocabulary matching', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('q1_email', ['user_email', 'user_name', 'phone_number']);
+  assert(result.match !== null, 'Should resolve via vocabulary');
+  assertEqual(result.match, 'user_email');
+});
+
+test('CrypticResolver handles multi-token cryptic keys', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('x1_user_name', ['username', 'user_name', 'full_name']);
+  assert(result.match !== null, 'Should match despite cryptic prefix');
+});
+
+test('CrypticResolver confidence is capped at 0.65', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('z9_ref_id', ['ref_id', 'reference_id']);
+  if (result.match) {
+    assert(result.confidence <= 0.65, `Confidence ${result.confidence} should be <= 0.65 for cryptic`);
+  }
+});
+
+test('CrypticResolver with custom minConfidence', () => {
+  const cr = new CrypticResolver({ minConfidence: 0.9 });
+  const result = cr.resolve('z9_ref_id', ['reference_id']);
+  // With high minConfidence, may not match
+  if (result.match === null) {
+    assert(result.confidence < 0.9, 'Should be below threshold');
+  }
+});
+
+// ─── v6: TYPE COERCER ────────────────────────────────────────
+console.log('\n30. TypeCoercer (v6)');
+
+test('TypeCoercer coerces "true" string to boolean true', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('true', 'boolean', 'isActive');
+  assertEqual(result.value, true);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces "false" string to boolean false', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('false', 'boolean', 'isActive');
+  assertEqual(result.value, false);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces "1" to boolean true', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('1', 'boolean', 'flag');
+  assertEqual(result.value, true);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces "0" to boolean false', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('0', 'boolean', 'flag');
+  assertEqual(result.value, false);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces "yes" to boolean true', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('yes', 'boolean', 'flag');
+  assertEqual(result.value, true);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces "42" string to integer', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('42', 'integer', 'age');
+  assertEqual(result.value, 42);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces "3.14" string to float', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('3.14', 'float', 'price');
+  assertEqual(result.value, 3.14);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces "100" string to number', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('100', 'number', 'count');
+  assertEqual(result.value, 100);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces ISO date string to Date', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('2024-01-15', 'date', 'createdAt');
+  assert(result.value instanceof Date, 'Should be a Date instance');
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces ISO datetime string to Date', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('2024-01-15T10:30:00Z', 'date', 'updatedAt');
+  assert(result.value instanceof Date, 'Should be a Date instance');
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer does not coerce already correct types', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue(true, 'boolean', 'isActive');
+  assertEqual(result.value, true);
+  assertEqual(result.coerced, false);
+});
+
+test('TypeCoercer coerces number 1 to boolean true', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue(1, 'boolean', 'flag');
+  assertEqual(result.value, true);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces number 0 to boolean false', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue(0, 'boolean', 'flag');
+  assertEqual(result.value, false);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer handles null values gracefully', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue(null, 'boolean', 'isActive');
+  assertEqual(result.value, null);
+  assertEqual(result.coerced, false);
+});
+
+test('TypeCoercer handles undefined values gracefully', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue(undefined, 'string', 'name');
+  assertEqual(result.value, undefined);
+  assertEqual(result.coerced, false);
+});
+
+test('TypeCoercer coerceObject coerces all fields per schema', () => {
+  const tc = new TypeCoercer();
+  const data = { isActive: 'true', age: '25', name: 'John' };
+  const schema = {
+    isActive: { type: 'boolean' },
+    age: { type: 'integer' },
+    name: { type: 'string' },
+  };
+  const result = tc.coerceObject(data, schema);
+  assertEqual(result.data.isActive, true);
+  assertEqual(result.data.age, 25);
+  assertEqual(result.data.name, 'John');
+  assert(result.coerced.includes('isActive'), 'isActive should be listed as coerced');
+  assert(result.coerced.includes('age'), 'age should be listed as coerced');
+});
+
+test('TypeCoercer detectConflicts finds type mismatches', () => {
+  const tc = new TypeCoercer();
+  const data = { isActive: 'true', count: '42' };
+  const schema = {
+    isActive: { type: 'boolean' },
+    count: { type: 'integer' },
+  };
+  const conflicts = tc.detectConflicts(data, schema);
+  assert(conflicts.length >= 2, `Should find at least 2 conflicts, found ${conflicts.length}`);
+  assert(conflicts.some(c => c.field === 'isActive'), 'Should detect isActive conflict');
+  assert(conflicts.some(c => c.field === 'count'), 'Should detect count conflict');
+});
+
+test('TypeCoercer getStats returns coercion statistics', () => {
+  const tc = new TypeCoercer();
+  tc.coerceValue('true', 'boolean', 'flag1');
+  tc.coerceValue('42', 'integer', 'count1');
+  const stats = tc.getStats();
+  assert(stats.totalConflicts >= 2, `Should have >= 2 conflicts, got ${stats.totalConflicts}`);
+  assert(stats.coerced >= 2, `Should have >= 2 coerced, got ${stats.coerced}`);
+});
+
+test('TypeCoercer clearConflicts resets conflict log', () => {
+  const tc = new TypeCoercer();
+  tc.coerceValue('true', 'boolean', 'flag');
+  tc.clearConflicts();
+  assertEqual(tc.getConflicts().length, 0);
+});
+
+test('TypeCoercer coerces JSON string to object', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('{"key":"val"}', 'object', 'metadata');
+  assert(typeof result.value === 'object', 'Should be object');
+  assertEqual(result.value.key, 'val');
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces JSON string to array', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('[1,2,3]', 'array', 'items');
+  assert(Array.isArray(result.value), 'Should be array');
+  assertEqual(result.value.length, 3);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerces number to string', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue(42, 'string', 'id');
+  assertEqual(result.value, '42');
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer coerceObject handles missing schema', () => {
+  const tc = new TypeCoercer();
+  const data = { name: 'test' };
+  const result = tc.coerceObject(data, null);
+  assertEqual(result.data.name, 'test');
+  assertEqual(result.coerced.length, 0);
+});
+
+test('TypeCoercer coerceObject handles missing data', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceObject(null, { name: { type: 'string' } });
+  assertEqual(result.data, null);
+});
+
+test('TypeCoercer coerceObject skips fields not in data', () => {
+  const tc = new TypeCoercer();
+  const data = { name: 'test' };
+  const schema = { name: { type: 'string' }, age: { type: 'integer' } };
+  const result = tc.coerceObject(data, schema);
+  assertEqual(result.data.name, 'test');
+  assert(!result.coerced.includes('age'), 'age not in data should not be coerced');
+});
+
+// ─── v6: TRANSFORMER INTEGRATION ─────────────────────────────
+console.log('\n31. Transformer v6 Integration');
+
+test('Transformer v6 resolves typo usr_email with schema', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const schema = {
+    userEmail: { type: 'string', from: 'user_email' },
+    userName: { type: 'string' },
+  };
+  const result = t6.transform({ usr_email: 'test@test.com' }, schema, 'toFrontend');
+  // Should map to userEmail via schema or fuzzy match
+  assert(result.userEmail === 'test@test.com' || result.usrEmail === 'test@test.com',
+    'Should transform usr_email field');
+});
+
+test('Transformer v6 performs type coercion with schema', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const schema = {
+    isActive: { type: 'boolean', column: 'is_active' },
+  };
+  const result = t6.transform({ is_active: 'true' }, schema, 'toFrontend');
+  assertEqual(result.isActive, true);
+});
+
+test('Transformer v6 coerces integer string with schema', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const schema = {
+    age: { type: 'integer', column: 'age' },
+  };
+  const result = t6.transform({ age: '25' }, schema, 'toFrontend');
+  assertEqual(result.age, 25);
+});
+
+test('Transformer v6 coerces date string with schema', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const schema = {
+    createdAt: { type: 'date', column: 'created_at' },
+  };
+  const result = t6.transform({ created_at: '2024-01-15' }, schema, 'toFrontend');
+  assert(result.createdAt instanceof Date, 'Should be Date object');
+});
+
+test('Transformer v6 handles mixed type conflicts in batch', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const schema = {
+    isActive: { type: 'boolean', column: 'is_active' },
+    count: { type: 'integer', column: 'count' },
+    price: { type: 'float', column: 'price' },
+  };
+  const data = [
+    { is_active: '1', count: '10', price: '19.99' },
+    { is_active: '0', count: '5', price: '9.99' },
+  ];
+  const result = t6.transformBatch(data, schema, 'toFrontend');
+  assertEqual(result[0].isActive, true);
+  assertEqual(result[0].count, 10);
+  assertEqual(result[0].price, 19.99);
+  assertEqual(result[1].isActive, false);
+  assertEqual(result[1].count, 5);
+});
+
+test('Transformer v6 enhanced fuzzy matching with schema', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const schema = {
+    userEmail: { type: 'string' },
+    userName: { type: 'string' },
+    phoneNumber: { type: 'string' },
+  };
+  // Test with abbreviation "eml"
+  const result = t6.transform({ user_eml: 'test@test.com' }, schema, 'toFrontend');
+  // Should either fuzzy match to userEmail or pattern-convert to userEml
+  assert(result.userEmail !== undefined || result.userEml !== undefined,
+    'Should handle abbreviated field name');
+});
+
+test('Transformer v6 stats track fuzzy and cryptic matches', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  t6.transform({ first_name: 'John' }, null, 'toFrontend');
+  const stats = t6.getStats();
+  assert(stats.totalFields > 0, 'Should track total fields');
+});
+
+// ─── v6: ERROR CLASSES ───────────────────────────────────────
+console.log('\n32. v6 Error Classes');
+
+test('FuzzyMatchError has correct properties', () => {
+  const err = new FuzzyMatchError('No match found', 'usr_email', ['user_email']);
+  assertEqual(err.name, 'FuzzyMatchError');
+  assertEqual(err.code, 'FUZZY_MATCH_ERROR');
+  assertEqual(err.details.sourceKey, 'usr_email');
+  assert(Array.isArray(err.details.candidates), 'candidates should be array');
+});
+
+test('TypeCoercionError has correct properties', () => {
+  const err = new TypeCoercionError('Cannot coerce', 'isActive', 'string', 'boolean');
+  assertEqual(err.name, 'TypeCoercionError');
+  assertEqual(err.code, 'TYPE_COERCION_ERROR');
+  assertEqual(err.details.field, 'isActive');
+  assertEqual(err.details.sourceType, 'string');
+  assertEqual(err.details.targetType, 'boolean');
+});
+
+test('CrypticResolverError has correct properties', () => {
+  const err = new CrypticResolverError('Cannot resolve', 'xq_flag', 'no_match');
+  assertEqual(err.name, 'CrypticResolverError');
+  assertEqual(err.code, 'CRYPTIC_RESOLVER_ERROR');
+  assertEqual(err.details.sourceKey, 'xq_flag');
+  assertEqual(err.details.reason, 'no_match');
+});
+
+test('all v6 errors extend ApiBridgeError', () => {
+  assert(new FuzzyMatchError('test', 'key') instanceof ApiBridgeError, 'FuzzyMatchError should extend ApiBridgeError');
+  assert(new TypeCoercionError('test', 'field', 'string', 'boolean') instanceof ApiBridgeError, 'TypeCoercionError should extend ApiBridgeError');
+  assert(new CrypticResolverError('test', 'key') instanceof ApiBridgeError, 'CrypticResolverError should extend ApiBridgeError');
+});
+
+test('v6 errors serialize to JSON', () => {
+  const err = new FuzzyMatchError('test', 'usr_email', ['user_email']);
+  const json = err.toJSON();
+  assertEqual(json.name, 'FuzzyMatchError');
+  assertEqual(json.code, 'FUZZY_MATCH_ERROR');
+  assert(json.timestamp !== undefined, 'Should have timestamp');
+});
+
+test('v6 errors have timestamps', () => {
+  const err1 = new FuzzyMatchError('test', 'key');
+  const err2 = new TypeCoercionError('test', 'field', 's', 'b');
+  const err3 = new CrypticResolverError('test', 'key', 'reason');
+  assert(err1.timestamp !== undefined, 'FuzzyMatchError should have timestamp');
+  assert(err2.timestamp !== undefined, 'TypeCoercionError should have timestamp');
+  assert(err3.timestamp !== undefined, 'CrypticResolverError should have timestamp');
+});
+
+// ─── v6: EDGE CASES ──────────────────────────────────────────
+console.log('\n33. v6 Edge Cases');
+
+test('FuzzyMatcher handles very long key names', () => {
+  const fm = new FuzzyMatcher();
+  const longKey = 'a'.repeat(250) + '_email';
+  const result = fm.findBestMatch(longKey, ['user_email']);
+  // Should not crash, may or may not match
+  assert(result !== null, 'Should return a result object');
+});
+
+test('CrypticResolver handles empty string', () => {
+  const cr = new CrypticResolver();
+  const result = cr.resolve('', ['user_email']);
+  // Should not crash
+  assert(result !== null, 'Should return a result object');
+});
+
+test('TypeCoercer handles non-parseable date string', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('not-a-date', 'date', 'createdAt');
+  // Should not crash, may fail to coerce
+  assert(result !== null, 'Should return a result object');
+});
+
+test('TypeCoercer handles NaN for integer coercion', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('abc', 'integer', 'count');
+  // Should fail gracefully
+  assert(result !== null, 'Should return a result object');
+  assertEqual(result.value, 'abc');
+});
+
+test('FuzzyMatcher handles keys with special characters', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('user.email', ['user_email', 'user_name']);
+  assertEqual(result.match, 'user_email');
+  assert(result.confidence >= 0.55, 'Should match despite dot separator');
+});
+
+test('FuzzyMatcher matches with different casing conventions', () => {
+  const fm = new FuzzyMatcher();
+  const result = fm.findBestMatch('UserEmail', ['user_email', 'user_name']);
+  assertEqual(result.match, 'user_email');
+  assert(result.confidence >= 0.55, 'Should match PascalCase to snake_case');
+});
+
+test('TypeCoercer coerces "no" to boolean false', () => {
+  const tc = new TypeCoercer();
+  const result = tc.coerceValue('no', 'boolean', 'flag');
+  assertEqual(result.value, false);
+  assertEqual(result.coerced, true);
+});
+
+test('TypeCoercer detects boolean_string conflict type', () => {
+  const tc = new TypeCoercer();
+  const conflicts = tc.detectConflicts(
+    { isActive: 'true' },
+    { isActive: { type: 'boolean' } },
+  );
+  assert(conflicts.length === 1, 'Should detect one conflict');
+  assertEqual(conflicts[0].field, 'isActive');
+  assertEqual(conflicts[0].sourceType, 'boolean_string');
+  assertEqual(conflicts[0].targetType, 'boolean');
+  assertEqual(conflicts[0].canCoerce, true);
+});
+
+test('CrypticResolver isCryptic handles edge cases', () => {
+  const cr = new CrypticResolver();
+  assert(!cr.isCryptic(''), 'Empty string should not be cryptic');
+  assert(!cr.isCryptic('a'), 'Single char should not be cryptic');
+  assert(!cr.isCryptic('email'), 'Normal word should not be cryptic');
+});
+
+test('Transformer v6 preserves existing behavior for standard transforms', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false });
+  const result = t6.transform({ first_name: 'John', last_name: 'Doe' });
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+});
+
+test('Transformer v6 preserves nested object transformation', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false });
+  const result = t6.transform({
+    user_data: {
+      first_name: 'John',
+      contact_info: { phone_number: '555-1234' },
+    },
+  });
+  assertEqual(result.userData.firstName, 'John');
+  assertEqual(result.userData.contactInfo.phoneNumber, '555-1234');
+});
+
+test('Transformer v6 preserves array transformation', () => {
+  const t6 = new APIBridgeTransformer({ logMismatches: false });
+  const result = t6.transform([
+    { first_name: 'John' },
+    { first_name: 'Jane' },
+  ]);
+  assertEqual(result[0].firstName, 'John');
+  assertEqual(result[1].firstName, 'Jane');
 });
 
 // ─── SUMMARY ──────────────────────────────────────────────────

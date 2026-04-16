@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "5.0.0",
-  "description": "The most powerful API mismatch detector, transformer, and learner — now with advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more",
+  "version": "6.0.0",
+  "description": "The most powerful API mismatch detector, transformer, and learner — now with enhanced fuzzy matching, cryptic name resolution, schema-based type coercion, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more",
   "main": "src/index.js",
   "scripts": {
     "test": "node test.js",
@@ -42,7 +42,10 @@
     "dependency-graph",
     "mock-server",
     "health-check",
-    "event-bus"
+    "event-bus",
+    "fuzzy-matcher",
+    "cryptic-resolver",
+    "type-coercer"
   ],
   "author": "",
   "license": "MIT",

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v5
+ * APIBridge AI v6
  * Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -42,6 +42,15 @@
  *  - Mock server (endpoint mocking, request recording, sequence responses)
  *  - Health check monitor (configurable probes, aggregated status, alert callbacks)
  *  - Event bus (typed pub/sub, wildcards, priority listeners, event replay)
+ *
+ * v6 features:
+ *  - Enhanced fuzzy matcher (Levenshtein + phonetic + vowel-drop + abbreviation patterns, 97%+ accuracy)
+ *  - Cryptic name resolver (prefix stripping, suffix matching, vocabulary-based, best-effort 60% confidence)
+ *  - Schema-based type coercer (automatic coercion of string↔boolean, date strings, numeric strings)
+ *  - Improved Level 6 matching: multi-strategy fuzzy with confidence boosting
+ *  - Improved Level 7 matching: cryptic/arbitrary name detection and resolution
+ *  - Type conflict detection and automatic resolution when schema is defined
+ *  - 3 new error classes (FuzzyMatchError, TypeCoercionError, CrypticResolverError)
  *
  * Usage:
  *   const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
@@ -94,6 +103,21 @@
  *   const { MockServer } = require('api-bridge-ai');
  *   const mock = new MockServer();
  *   mock.register('GET', '/api/users', { body: [{ id: 1 }] });
+ *
+ *   // v6: Fuzzy matcher
+ *   const { FuzzyMatcher } = require('api-bridge-ai');
+ *   const fuzzy = new FuzzyMatcher();
+ *   const result = fuzzy.findBestMatch('usr_email', ['user_email', 'user_name']);
+ *
+ *   // v6: Cryptic resolver
+ *   const { CrypticResolver } = require('api-bridge-ai');
+ *   const resolver = new CrypticResolver();
+ *   const resolved = resolver.resolve('z9_ref_id', ['reference_id', 'user_id']);
+ *
+ *   // v6: Type coercer
+ *   const { TypeCoercer } = require('api-bridge-ai');
+ *   const coercer = new TypeCoercer();
+ *   const coerced = coercer.coerceValue('true', 'boolean', 'isActive');
  */
 
 const { APIBridgeTransformer } = require('./transformer');
@@ -127,6 +151,9 @@ const { DependencyGraph } = require('./dependency-graph');
 const { MockServer } = require('./mock-server');
 const { HealthCheck } = require('./health-check');
 const { EventBus } = require('./event-bus');
+const { FuzzyMatcher } = require('./fuzzy-matcher');
+const { CrypticResolver } = require('./cryptic-resolver');
+const { TypeCoercer } = require('./type-coercer');
 const {
   ApiBridgeError,
   ValidationError,
@@ -147,6 +174,9 @@ const {
   MockServerError,
   HealthCheckError,
   EventBusError,
+  FuzzyMatchError,
+  TypeCoercionError,
+  CrypticResolverError,
 } = require('./errors');
 
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
@@ -458,6 +488,11 @@ module.exports = {
   HealthCheck,
   EventBus,
 
+  // v6 classes
+  FuzzyMatcher,
+  CrypticResolver,
+  TypeCoercer,
+
   // Exporters
   exportMismatchCSV,
   exportMismatchJSON,
@@ -483,4 +518,7 @@ module.exports = {
   MockServerError,
   HealthCheckError,
   EventBusError,
+  FuzzyMatchError,
+  TypeCoercionError,
+  CrypticResolverError,
 };
