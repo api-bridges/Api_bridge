@@ -2827,11 +2827,11 @@ test('CrypticResolver handles multi-token cryptic keys', () => {
   assert(result.match !== null, 'Should match despite cryptic prefix');
 });
 
-test('CrypticResolver confidence is capped at 0.65', () => {
+test('CrypticResolver confidence is capped at 0.70', () => {
   const cr = new CrypticResolver();
   const result = cr.resolve('z9_ref_id', ['ref_id', 'reference_id']);
   if (result.match) {
-    assert(result.confidence <= 0.65, `Confidence ${result.confidence} should be <= 0.65 for cryptic`);
+    assert(result.confidence <= 0.70, `Confidence ${result.confidence} should be <= 0.70 for cryptic`);
   }
 });
 

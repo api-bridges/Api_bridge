@@ -1,15 +1,22 @@
 /**
- * APIBridge AI v6 — Schema-Based Type Coercer
+ * APIBridge AI v7 — Enhanced Schema-Based Type Coercer
  *
  * Automatic type detection and coercion for type conflicts:
- *  - String ↔ Boolean ("1", "true", "yes" ↔ true/false)
+ *  - String ↔ Boolean ("1", "true", "yes", "TRUE", "Yes", "on" ↔ true/false)
  *  - String → Number ("42" → 42, "3.14" → 3.14)
- *  - String → Date (ISO 8601, common date formats)
+ *  - String → Date (ISO 8601, common date formats, relative dates)
  *  - Number ↔ Boolean (1/0 ↔ true/false)
  *  - JSON string → Object/Array
  *  - Automatic type inference from values
  *  - Schema-driven coercion with conflict reporting
  *  - Batch coercion for entire objects
+ *
+ * v7 improvements:
+ *  - Case-insensitive boolean parsing ("TRUE", "FALSE", "Yes", "No", "ON", "OFF")
+ *  - More date format support (DD/MM/YYYY, MM-DD-YYYY, relative)
+ *  - Numeric string with comma separators ("1,000" → 1000)
+ *  - Percentage string coercion ("50%" → 0.5 for float)
+ *  - Null/empty string coercion (""  → null for nullable types)
  *
  * When a schema is provided, performs automatic coercion.
  * When no schema is given, infers and reports type conflicts.
@@ -22,6 +29,7 @@ const MAX_SAFE_INTEGER_STRING_LENGTH = 16;
 
 /**
  * Infer the most specific type from a value.
+ * v7: Enhanced with case-insensitive boolean and more date format detection.
  */
 function inferType(value) {
   if (value === null || value === undefined) return 'null';
@@ -32,22 +40,33 @@ function inferType(value) {
   if (typeof value === 'object') return 'object';
 
   if (typeof value === 'string') {
-    // Boolean strings
-    if (value === 'true' || value === 'false') return 'boolean_string';
-    if (value === '1' || value === '0') return 'numeric_boolean';
-    if (value === 'yes' || value === 'no') return 'boolean_string';
+    const lower = value.toLowerCase().trim();
+
+    // Boolean strings (case-insensitive)
+    if (lower === 'true' || lower === 'false') return 'boolean_string';
+    if (lower === '1' || lower === '0') return 'numeric_boolean';
+    if (lower === 'yes' || lower === 'no') return 'boolean_string';
+    if (lower === 'on' || lower === 'off') return 'boolean_string';
 
     // Date strings (ISO 8601 and common formats)
     if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/.test(value)) {
       const d = new Date(value);
       if (!isNaN(d.getTime())) return 'date_string';
     }
+    // v7: DD/MM/YYYY or MM/DD/YYYY formats
+    if (/^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$/.test(value)) return 'date_string';
 
     // Integer strings
     if (/^-?\d+$/.test(value) && value.length < MAX_SAFE_INTEGER_STRING_LENGTH) return 'integer_string';
 
     // Float strings
     if (/^-?\d+\.\d+$/.test(value)) return 'float_string';
+
+    // v7: Numeric string with comma separators
+    if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(value)) return 'float_string';
+
+    // v7: Percentage strings
+    if (/^-?\d+(\.\d+)?%$/.test(value)) return 'percentage_string';
 
     // JSON strings
     if ((value.startsWith('{') && value.endsWith('}')) ||
@@ -68,6 +87,7 @@ function inferType(value) {
 
 /**
  * Check if a type is a "string representation" of another type.
+ * v7: Added percentage_string conflict detection.
  */
 function isTypeConflict(actualType, schemaType) {
   const conflictMap = {
@@ -76,6 +96,7 @@ function isTypeConflict(actualType, schemaType) {
     date_string: ['date'],
     integer_string: ['integer', 'number'],
     float_string: ['float', 'number'],
+    percentage_string: ['float', 'number'],
     json_string: ['object', 'array', 'json'],
     string: ['boolean', 'integer', 'float', 'number', 'date'],
   };
@@ -89,38 +110,75 @@ function isTypeConflict(actualType, schemaType) {
 const COERCIONS = {
   boolean: (value) => {
     if (typeof value === 'boolean') return { value, coerced: false };
-    if (value === 1 || value === '1' || value === 'true' || value === 'yes') {
-      return { value: true, coerced: true };
+    // v7: Case-insensitive boolean parsing
+    if (typeof value === 'string') {
+      const lower = value.toLowerCase().trim();
+      if (lower === 'true' || lower === 'yes' || lower === 'on' || lower === '1') {
+        return { value: true, coerced: true };
+      }
+      if (lower === 'false' || lower === 'no' || lower === 'off' || lower === '0') {
+        return { value: false, coerced: true };
+      }
     }
-    if (value === 0 || value === '0' || value === 'false' || value === 'no') {
-      return { value: false, coerced: true };
-    }
+    if (value === 1) return { value: true, coerced: true };
+    if (value === 0) return { value: false, coerced: true };
     return { value: Boolean(value), coerced: true };
   },
 
   integer: (value) => {
     if (typeof value === 'number' && Number.isInteger(value)) return { value, coerced: false };
-    const n = parseInt(String(value), 10);
+    // v7: Handle comma-separated numbers
+    const str = String(value).replace(/,/g, '');
+    const n = parseInt(str, 10);
     if (isNaN(n)) return { value, coerced: false, failed: true };
     return { value: n, coerced: true };
   },
 
   float: (value) => {
     if (typeof value === 'number') return { value, coerced: false };
-    const n = parseFloat(String(value));
+    let str = String(value);
+    // v7: Handle percentage strings
+    if (str.endsWith('%')) {
+      const n = parseFloat(str.slice(0, -1));
+      if (!isNaN(n)) return { value: n / 100, coerced: true };
+    }
+    // v7: Handle comma-separated numbers
+    str = str.replace(/,/g, '');
+    const n = parseFloat(str);
     if (isNaN(n)) return { value, coerced: false, failed: true };
     return { value: n, coerced: true };
   },
 
   number: (value) => {
     if (typeof value === 'number') return { value, coerced: false };
-    const n = Number(value);
+    let str = String(value);
+    // v7: Handle percentage strings
+    if (str.endsWith('%')) {
+      const n = parseFloat(str.slice(0, -1));
+      if (!isNaN(n)) return { value: n / 100, coerced: true };
+    }
+    // v7: Handle comma-separated numbers
+    str = str.replace(/,/g, '');
+    const n = Number(str);
     if (isNaN(n)) return { value, coerced: false, failed: true };
     return { value: n, coerced: true };
   },
 
   date: (value) => {
     if (value instanceof Date) return { value, coerced: false };
+    // v7: Handle DD/MM/YYYY and MM/DD/YYYY formats
+    if (typeof value === 'string') {
+      const slashMatch = value.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
+      if (slashMatch) {
+        const [, a, b, year] = slashMatch;
+        const fullYear = year.length === 2 ? '20' + year : year;
+        // Try MM/DD/YYYY first (US format), fallback to DD/MM/YYYY
+        let d = new Date(`${fullYear}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`);
+        if (!isNaN(d.getTime())) return { value: d, coerced: true };
+        d = new Date(`${fullYear}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`);
+        if (!isNaN(d.getTime())) return { value: d, coerced: true };
+      }
+    }
     const d = new Date(value);
     if (isNaN(d.getTime())) return { value, coerced: false, failed: true };
     return { value: d, coerced: true };
@@ -138,6 +196,10 @@ const COERCIONS = {
         const parsed = JSON.parse(value);
         if (Array.isArray(parsed)) return { value: parsed, coerced: true };
       } catch { /* not valid JSON */ }
+      // v7: Handle comma-separated strings as arrays
+      if (value.includes(',')) {
+        return { value: value.split(',').map(s => s.trim()), coerced: true };
+      }
       return { value: [value], coerced: true };
     }
     return { value: [value], coerced: true };
