@@ -21,7 +21,7 @@
  *   }
  */
 
-const { PluginError } = require('./errors');
+const { PluginError } = require('../core/errors');
 
 const VALID_HOOKS = new Set([
   'beforeTransform',

@@ -14,7 +14,7 @@
  *  - Force-open / force-close for manual control
  */
 
-const { CircuitBreakerError } = require('./errors');
+const { CircuitBreakerError } = require('../core/errors');
 
 const STATES = {
   CLOSED: 'CLOSED',

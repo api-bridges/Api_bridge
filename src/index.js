@@ -167,48 +167,18 @@
  *   ct.when('nullToDefault', (v) => v === null, () => 'N/A');
  */
 
-const { APIBridgeTransformer } = require('./transformer');
-const { exportMismatchCSV, exportMismatchJSON, exportSchemaSuggestions } = require('./exporter');
-const { ResponseCache } = require('./cache');
-const { MiddlewarePipeline } = require('./middleware');
-const { SchemaValidator } = require('./validator');
-const { ResponseNormalizer } = require('./normalizer');
-const { LearningEngine } = require('./learning');
-const { PluginManager } = require('./plugins');
-const { SchemaInference } = require('./inference');
-const { FieldProjection } = require('./projection');
-const { DataMasker } = require('./masking');
-const { RateLimiter } = require('./rate-limiter');
-const { SchemaDiff } = require('./diff');
-const { TypeGenerator } = require('./typegen');
-const { MetricsCollector } = require('./metrics');
-const { CircuitBreaker } = require('./circuit-breaker');
-const { RequestDeduplicator } = require('./dedup');
-const { GraphQLBridge } = require('./graphql');
-const { OpenAPIImporter } = require('./openapi');
-const { APIVersionManager } = require('./versioning');
-const { WebhookHandler } = require('./webhook');
-const { JSONPatchGenerator } = require('./patch');
-const { ComposablePipeline } = require('./pipeline');
-const { RetryStrategy } = require('./retry-strategy');
-const { RequestLogger } = require('./request-logger');
-const { SchemaRegistry } = require('./schema-registry');
-const { ResponseStreamer } = require('./response-streamer');
-const { DependencyGraph } = require('./dependency-graph');
-const { MockServer } = require('./mock-server');
-const { HealthCheck } = require('./health-check');
-const { EventBus } = require('./event-bus');
-const { FuzzyMatcher } = require('./fuzzy-matcher');
-const { CrypticResolver } = require('./cryptic-resolver');
-const { TypeCoercer } = require('./type-coercer');
-const { FieldAliaser } = require('./field-aliaser');
-const { SchemaMigrator } = require('./schema-migrator');
-const { BatchOrchestrator } = require('./batch-orchestrator');
-const { FieldStats } = require('./field-stats');
-const { ConditionalTransform } = require('./conditional-transform');
-const { DeepMerge } = require('./deep-merge');
-const { OutputFormatter } = require('./output-formatter');
-const { RequestInterceptor } = require('./request-interceptor');
+// ─── Core ─────────────────────────────────────────────────────────────────────
+const { APIBridgeTransformer } = require('./core/transformer');
+const { LearningEngine } = require('./core/learning');
+const { ResponseNormalizer } = require('./core/normalizer');
+const { SchemaValidator } = require('./core/validator');
+const { SchemaInference } = require('./core/inference');
+const { FuzzyMatcher } = require('./core/fuzzy-matcher');
+const { CrypticResolver } = require('./core/cryptic-resolver');
+const { TypeCoercer } = require('./core/type-coercer');
+const { FieldAliaser } = require('./core/field-aliaser');
+const { ConditionalTransform } = require('./core/conditional-transform');
+const { SchemaMigrator } = require('./core/schema-migrator');
 const {
   ApiBridgeError,
   ValidationError,
@@ -237,7 +207,42 @@ const {
   BatchOrchestratorError,
   DeepMergeError,
   InterceptorError,
-} = require('./errors');
+} = require('./core/errors');
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+const { ResponseCache } = require('./utils/cache');
+const { RequestDeduplicator } = require('./utils/dedup');
+const { SchemaDiff } = require('./utils/diff');
+const { exportMismatchCSV, exportMismatchJSON, exportSchemaSuggestions } = require('./utils/exporter');
+const { DataMasker } = require('./utils/masking');
+const { MetricsCollector } = require('./utils/metrics');
+const { JSONPatchGenerator } = require('./utils/patch');
+const { TypeGenerator } = require('./utils/typegen');
+const { DeepMerge } = require('./utils/deep-merge');
+const { OutputFormatter } = require('./utils/output-formatter');
+const { FieldStats } = require('./utils/field-stats');
+const { FieldProjection } = require('./utils/projection');
+const { RequestLogger } = require('./utils/request-logger');
+
+// ─── Adapters ─────────────────────────────────────────────────────────────────
+const { GraphQLBridge } = require('./adapters/graphql');
+const { WebhookHandler } = require('./adapters/webhook');
+const { OpenAPIImporter } = require('./adapters/openapi');
+const { MockServer } = require('./adapters/mock-server');
+const { ResponseStreamer } = require('./adapters/response-streamer');
+const { MiddlewarePipeline } = require('./adapters/middleware');
+const { ComposablePipeline } = require('./adapters/pipeline');
+const { PluginManager } = require('./adapters/plugins');
+const { RequestInterceptor } = require('./adapters/request-interceptor');
+const { BatchOrchestrator } = require('./adapters/batch-orchestrator');
+const { DependencyGraph } = require('./adapters/dependency-graph');
+const { EventBus } = require('./adapters/event-bus');
+const { APIVersionManager } = require('./adapters/versioning');
+const { CircuitBreaker } = require('./adapters/circuit-breaker');
+const { RetryStrategy } = require('./adapters/retry-strategy');
+const { RateLimiter } = require('./adapters/rate-limiter');
+const { HealthCheck } = require('./adapters/health-check');
+const { SchemaRegistry } = require('./adapters/schema-registry');
 
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
 

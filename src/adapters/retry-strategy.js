@@ -11,7 +11,7 @@
  *  - Detailed retry statistics
  */
 
-const { RetryError } = require('./errors');
+const { RetryError } = require('../core/errors');
 
 // ─── BUILT-IN STRATEGIES ──────────────────────────────────────────────────────
 

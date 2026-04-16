@@ -12,7 +12,7 @@
  *  - Statistics tracking
  */
 
-const { MockServerError } = require('./errors');
+const { MockServerError } = require('../core/errors');
 
 class MockServer {
   /**

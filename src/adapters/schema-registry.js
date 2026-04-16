@@ -12,7 +12,7 @@
  *  - Statistics tracking
  */
 
-const { SchemaRegistryError } = require('./errors');
+const { SchemaRegistryError } = require('../core/errors');
 
 class SchemaRegistry {
   /**
