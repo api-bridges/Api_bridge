@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v5 — Custom Error Classes
+ * APIBridge AI v6 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
  *  - ValidationError        — schema or type mismatch
@@ -20,6 +20,9 @@
  *  - MockServerError        — mock server matching / handling          (v5)
  *  - HealthCheckError       — health check probe failure               (v5)
  *  - EventBusError          — event bus subscription / emission        (v5)
+ *  - FuzzyMatchError        — fuzzy matching failure                   (v6)
+ *  - TypeCoercionError      — type coercion failure                    (v6)
+ *  - CrypticResolverError   — cryptic name resolution failure          (v6)
  */
 
 class ApiBridgeError extends Error {
@@ -177,6 +180,27 @@ class EventBusError extends ApiBridgeError {
   }
 }
 
+class FuzzyMatchError extends ApiBridgeError {
+  constructor(message, sourceKey, candidates) {
+    super(message, 'FUZZY_MATCH_ERROR', { sourceKey, candidates });
+    this.name = 'FuzzyMatchError';
+  }
+}
+
+class TypeCoercionError extends ApiBridgeError {
+  constructor(message, field, sourceType, targetType) {
+    super(message, 'TYPE_COERCION_ERROR', { field, sourceType, targetType });
+    this.name = 'TypeCoercionError';
+  }
+}
+
+class CrypticResolverError extends ApiBridgeError {
+  constructor(message, sourceKey, reason) {
+    super(message, 'CRYPTIC_RESOLVER_ERROR', { sourceKey, reason });
+    this.name = 'CrypticResolverError';
+  }
+}
+
 module.exports = {
   ApiBridgeError,
   ValidationError,
@@ -197,4 +221,7 @@ module.exports = {
   MockServerError,
   HealthCheckError,
   EventBusError,
+  FuzzyMatchError,
+  TypeCoercionError,
+  CrypticResolverError,
 };
