@@ -196,7 +196,7 @@ Once approved, APIBridge remembers it forever (Level 2). Next time it sees `usr_
 
 ### Where Learnings Are Stored
 
-Approved mappings are saved to `.apibridge/learned.json` in your project root. This file is auto-created and can be committed to your repo so the whole team shares the same learnings.
+Approved mappings are saved to `.apibridge/learned.json` in your project root. This file is auto-created. You can commit it to your repo so the whole team shares the same learnings, or add it to `.gitignore` if each environment should learn independently.
 
 ---
 
