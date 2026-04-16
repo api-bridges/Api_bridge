@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3
+ * APIBridge AI v4
  * Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -23,6 +23,16 @@
  *  - TypeScript type generator (interfaces, type guards)
  *  - Metrics collector (timing, counters, percentiles)
  *
+ * v4 features:
+ *  - Circuit breaker (fault tolerance, auto-recovery)
+ *  - Request deduplication (coalesce concurrent identical requests)
+ *  - GraphQL bridge (response/variable transformation)
+ *  - OpenAPI schema importer (auto-generate schemas from specs)
+ *  - API versioning (version-specific transforms, migration)
+ *  - Webhook handler (normalize incoming webhooks)
+ *  - JSON Patch generator (RFC 6902 patch generation & application)
+ *  - Composable pipeline (functional stage-based transformation)
+ *
  * Usage:
  *   const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
  *
@@ -38,13 +48,21 @@
  *   const result = transform({ first_name: 'John' });
  *   // → { firstName: 'John' }
  *
- *   // v3: Infer schema
- *   const { SchemaInference } = require('api-bridge-ai');
- *   const schema = new SchemaInference().infer(apiResponse);
+ *   // v4: Circuit breaker
+ *   const { CircuitBreaker } = require('api-bridge-ai');
+ *   const breaker = new CircuitBreaker({ failureThreshold: 3 });
+ *   const data = await breaker.execute(() => fetch('/api/users'));
  *
- *   // v3: Mask sensitive data
- *   const { DataMasker } = require('api-bridge-ai');
- *   const masked = new DataMasker().mask(data);
+ *   // v4: GraphQL bridge
+ *   const { GraphQLBridge } = require('api-bridge-ai');
+ *   const gql = new GraphQLBridge({ convention: 'camelCase' });
+ *   const result = gql.transformResponse(graphqlResponse);
+ *
+ *   // v4: Composable pipeline
+ *   const { ComposablePipeline } = require('api-bridge-ai');
+ *   const pipe = new ComposablePipeline();
+ *   pipe.pipe('validate', validateFn).pipe('transform', transformFn);
+ *   const result = await pipe.execute(data);
  */
 
 const { APIBridgeTransformer } = require('./transformer');
@@ -62,6 +80,14 @@ const { RateLimiter } = require('./rate-limiter');
 const { SchemaDiff } = require('./diff');
 const { TypeGenerator } = require('./typegen');
 const { MetricsCollector } = require('./metrics');
+const { CircuitBreaker } = require('./circuit-breaker');
+const { RequestDeduplicator } = require('./dedup');
+const { GraphQLBridge } = require('./graphql');
+const { OpenAPIImporter } = require('./openapi');
+const { APIVersionManager } = require('./versioning');
+const { WebhookHandler } = require('./webhook');
+const { JSONPatchGenerator } = require('./patch');
+const { ComposablePipeline } = require('./pipeline');
 const {
   ApiBridgeError,
   ValidationError,
@@ -72,12 +98,16 @@ const {
   PluginError,
   RateLimitError,
   InferenceError,
+  CircuitBreakerError,
+  PipelineError,
+  WebhookError,
+  VersioningError,
 } = require('./errors');
 
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap an axios instance with APIBridge v3.
+ * Wrap an axios instance with APIBridge v4.
  *
  * @param {object} axiosInstance
  * @param {object} options
@@ -137,7 +167,7 @@ function bridge(axiosInstance, options = {}) {
     );
   }
 
-  // Attach v3 utilities
+  // Attach v4 utilities
   axiosInstance.__bridge    = transformer;
   axiosInstance.__cache     = cache;
   axiosInstance.__middleware = middleware;
@@ -168,7 +198,7 @@ function bridge(axiosInstance, options = {}) {
 // ─── FETCH BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap native fetch with APIBridge v3.
+ * Wrap native fetch with APIBridge v4.
  * Supports all HTTP methods, retry logic, caching, middleware, and normalization.
  *
  * @param {object} options
@@ -363,6 +393,16 @@ module.exports = {
   TypeGenerator,
   MetricsCollector,
 
+  // v4 classes
+  CircuitBreaker,
+  RequestDeduplicator,
+  GraphQLBridge,
+  OpenAPIImporter,
+  APIVersionManager,
+  WebhookHandler,
+  JSONPatchGenerator,
+  ComposablePipeline,
+
   // Exporters
   exportMismatchCSV,
   exportMismatchJSON,
@@ -378,4 +418,8 @@ module.exports = {
   PluginError,
   RateLimitError,
   InferenceError,
+  CircuitBreakerError,
+  PipelineError,
+  WebhookError,
+  VersioningError,
 };

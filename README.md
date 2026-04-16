@@ -1,6 +1,6 @@
-# APIBridge AI v3
+# APIBridge AI v4
 
-**The most powerful API mismatch detector, transformer, and learner.**
+**The most powerful API mismatch detector, transformer, and learner — now with circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
 
 APIBridge automatically bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
@@ -16,6 +16,15 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
   - [bridgeFetch() — Native Fetch Integration](#bridgefetch--native-fetch-integration)
   - [transform() — Direct Transform](#transform--direct-transform)
   - [createTransformer() — Reusable Instance](#createtransformer--reusable-instance)
+- [V4 Features](#v4-features)
+  - [Circuit Breaker](#circuit-breaker)
+  - [Request Deduplication](#request-deduplication)
+  - [GraphQL Bridge](#graphql-bridge)
+  - [OpenAPI Schema Importer](#openapi-schema-importer)
+  - [API Versioning](#api-versioning)
+  - [Webhook Handler](#webhook-handler)
+  - [JSON Patch Generator](#json-patch-generator)
+  - [Composable Pipeline](#composable-pipeline)
 - [V3 Features](#v3-features)
   - [Plugin System](#plugin-system)
   - [Schema Inference](#schema-inference)
@@ -44,44 +53,52 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
 - [Error Handling](#error-handling)
 - [Architecture](#architecture)
 - [Running Tests](#running-tests)
-- [Migration from V2](#migration-from-v2)
+- [Migration from V3](#migration-from-v3)
 - [License](#license)
 
 ---
 
 ## Features
 
-| Feature | v1 | v2 | v3 |
-|---------|----|----|-----|
-| snake_case → camelCase | ✅ | ✅ | ✅ |
-| All 5 naming conventions | ❌ | ✅ | ✅ |
-| Axios interceptors | ✅ | ✅ | ✅ |
-| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods |
-| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) |
-| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ |
-| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) |
-| Type coercion | ✅ | ✅ (+ integer, float) | ✅ |
-| CSV export | ✅ | ✅ | ✅ |
-| JSON export | ❌ | ✅ | ✅ |
-| Schema validation | ❌ | ✅ | ✅ |
-| Response normalization | ❌ | ✅ | ✅ |
-| Middleware pipeline | ❌ | ✅ | ✅ |
-| Response caching (LRU + TTL) | ❌ | ✅ | ✅ |
-| Retry with backoff | ❌ | ✅ | ✅ |
-| Batch transformation | ❌ | ✅ | ✅ |
-| Reverse transform | ❌ | ✅ | ✅ |
-| Event emitter | ❌ | ✅ | ✅ |
-| Circular reference protection | ❌ | ✅ | ✅ |
-| Custom error classes | ❌ | ✅ | ✅ (+ PluginError, RateLimitError, InferenceError) |
-| Session management | ❌ | ✅ | ✅ |
-| **Plugin system** | ❌ | ❌ | ✅ |
-| **Schema inference** | ❌ | ❌ | ✅ |
-| **Field projection** | ❌ | ❌ | ✅ |
-| **Data masking (PII)** | ❌ | ❌ | ✅ |
-| **Rate limiter** | ❌ | ❌ | ✅ |
-| **Schema diff engine** | ❌ | ❌ | ✅ |
-| **TypeScript type generator** | ❌ | ❌ | ✅ |
-| **Metrics collector** | ❌ | ❌ | ✅ |
+| Feature | v1 | v2 | v3 | v4 |
+|---------|----|----|-----|-----|
+| snake_case → camelCase | ✅ | ✅ | ✅ | ✅ |
+| All 5 naming conventions | ❌ | ✅ | ✅ | ✅ |
+| Axios interceptors | ✅ | ✅ | ✅ | ✅ |
+| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods | All HTTP methods |
+| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) | ✅ |
+| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ | ✅ |
+| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) | ✅ |
+| Type coercion | ✅ | ✅ (+ integer, float) | ✅ | ✅ |
+| CSV export | ✅ | ✅ | ✅ | ✅ |
+| JSON export | ❌ | ✅ | ✅ | ✅ |
+| Schema validation | ❌ | ✅ | ✅ | ✅ |
+| Response normalization | ❌ | ✅ | ✅ | ✅ |
+| Middleware pipeline | ❌ | ✅ | ✅ | ✅ |
+| Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ |
+| Retry with backoff | ❌ | ✅ | ✅ | ✅ |
+| Batch transformation | ❌ | ✅ | ✅ | ✅ |
+| Reverse transform | ❌ | ✅ | ✅ | ✅ |
+| Event emitter | ❌ | ✅ | ✅ | ✅ |
+| Circular reference protection | ❌ | ✅ | ✅ | ✅ |
+| Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) |
+| Session management | ❌ | ✅ | ✅ | ✅ |
+| Plugin system | ❌ | ❌ | ✅ | ✅ |
+| Schema inference | ❌ | ❌ | ✅ | ✅ |
+| Field projection | ❌ | ❌ | ✅ | ✅ |
+| Data masking (PII) | ❌ | ❌ | ✅ | ✅ |
+| Rate limiter | ❌ | ❌ | ✅ | ✅ |
+| Schema diff engine | ❌ | ❌ | ✅ | ✅ |
+| TypeScript type generator | ❌ | ❌ | ✅ | ✅ |
+| Metrics collector | ❌ | ❌ | ✅ | ✅ |
+| **Circuit breaker** | ❌ | ❌ | ❌ | ✅ |
+| **Request deduplication** | ❌ | ❌ | ❌ | ✅ |
+| **GraphQL bridge** | ❌ | ❌ | ❌ | ✅ |
+| **OpenAPI schema importer** | ❌ | ❌ | ❌ | ✅ |
+| **API versioning** | ❌ | ❌ | ❌ | ✅ |
+| **Webhook handler** | ❌ | ❌ | ❌ | ✅ |
+| **JSON Patch generator** | ❌ | ❌ | ❌ | ✅ |
+| **Composable pipeline** | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -188,6 +205,69 @@ const masked = masker.mask({
 // { name: 'John', password: '[REDACTED]', api_key: '[REDACTED]', email: 'john@example.com' }
 ```
 
+### 6. Circuit Breaker (v4)
+
+```js
+const { CircuitBreaker } = require('api-bridge-ai');
+
+const breaker = new CircuitBreaker({
+  failureThreshold: 5,  // Open after 5 consecutive failures
+  resetTimeout: 30000,  // Try half-open after 30s
+});
+
+// All API calls go through the breaker
+const data = await breaker.execute(async () => {
+  const res = await fetch('https://api.example.com/users');
+  return res.json();
+});
+
+// If the API keeps failing, the breaker opens and rejects instantly
+// After 30s, it allows a probe request to test recovery
+console.log(breaker.getState()); // 'CLOSED', 'OPEN', or 'HALF_OPEN'
+```
+
+### 7. GraphQL Bridge (v4)
+
+```js
+const { GraphQLBridge } = require('api-bridge-ai');
+
+const gql = new GraphQLBridge({
+  convention: 'camelCase',
+  stripTypename: true,
+});
+
+// Transform GraphQL response
+const result = gql.transformResponse({
+  data: { user_name: 'John', email_address: 'john@test.com' },
+  errors: [],
+});
+// { data: { userName: 'John', emailAddress: 'john@test.com' }, errors: [] }
+
+// Transform variables for server
+const vars = gql.transformVariables({ userName: 'John' }, 'snake_case');
+// { user_name: 'John' }
+
+// Extract nested data
+const posts = gql.extractData(response, 'user.posts');
+```
+
+### 8. Composable Pipeline (v4)
+
+```js
+const { ComposablePipeline } = require('api-bridge-ai');
+
+const pipe = new ComposablePipeline({ name: 'userPipeline' });
+
+pipe
+  .pipe('validate', (data) => { if (!data.name) throw new Error('Name required'); return data; })
+  .pipe('transform', (data) => ({ ...data, name: data.name.toUpperCase() }))
+  .tap('log', (data) => console.log('Processed:', data.name))
+  .pipe('enrich', (data) => ({ ...data, processedAt: new Date().toISOString() }));
+
+const { result, stages, duration } = await pipe.execute({ name: 'John', age: 30 });
+// result: { name: 'JOHN', age: 30, processedAt: '2024-...' }
+```
+
 ---
 
 ## API Reference
@@ -291,6 +371,391 @@ const r1 = t.transform({ first_name: 'John' });
 const r2 = t.transform({ last_name: 'Doe' });
 
 console.log(t.getStats()); // Stats accumulate across calls
+```
+
+---
+
+## V4 Features
+
+### Circuit Breaker
+
+Fault-tolerant API calls with automatic failure detection and recovery:
+
+```js
+const { CircuitBreaker } = require('api-bridge-ai');
+
+const breaker = new CircuitBreaker({
+  failureThreshold: 5,    // Open after 5 consecutive failures
+  resetTimeout: 30000,    // Try half-open after 30 seconds
+  halfOpenMax: 1,          // Allow 1 probe request in half-open
+  onStateChange: ({ from, to }) => console.log(`Circuit: ${from} → ${to}`),
+});
+
+// Execute through the breaker
+try {
+  const data = await breaker.execute(async () => {
+    const res = await fetch('https://api.example.com/users');
+    return res.json();
+  });
+} catch (err) {
+  if (err instanceof CircuitBreakerError) {
+    console.log('Circuit is open, service unavailable');
+    console.log(err.details); // { state: 'OPEN', failures: 5 }
+  }
+}
+
+// Manual control
+breaker.forceOpen();      // Force open for maintenance
+breaker.forceClose();     // Force close to resume
+breaker.reset();          // Reset all state
+
+// Stats
+console.log(breaker.getStats());
+// { state: 'CLOSED', failures: 0, successes: 10, totalRequests: 10, ... }
+
+// Cleanup
+breaker.destroy();        // Clear timers
+```
+
+**States:**
+| State | Behavior |
+|-------|----------|
+| `CLOSED` | Requests flow normally. Failures counted. |
+| `OPEN` | All requests rejected instantly with `CircuitBreakerError`. |
+| `HALF_OPEN` | Limited probe requests allowed. Success → CLOSED, failure → OPEN. |
+
+---
+
+### Request Deduplication
+
+Coalesce concurrent identical requests — only one network call is made:
+
+```js
+const { RequestDeduplicator } = require('api-bridge-ai');
+
+const dedup = new RequestDeduplicator({
+  ttl: 5000,      // Max time to keep a pending entry
+  maxSize: 1000,   // Max concurrent dedup entries
+});
+
+// Three concurrent calls with the same key → only ONE fetch executes
+const [a, b, c] = await Promise.all([
+  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
+  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
+  dedup.dedupe('/api/users', () => fetch('/api/users').then(r => r.json())),
+]);
+// a === b === c (same result, single HTTP call)
+
+// Check if a request is in-flight
+dedup.has('/api/users'); // false (completed)
+
+// Stats
+console.log(dedup.getStats());
+// { totalRequests: 3, deduped: 2, executed: 1, pending: 0 }
+```
+
+---
+
+### GraphQL Bridge
+
+Transform GraphQL responses and variables between naming conventions:
+
+```js
+const { GraphQLBridge } = require('api-bridge-ai');
+
+const gql = new GraphQLBridge({
+  convention: 'camelCase',      // Target convention for response fields
+  transformVariables: true,      // Transform query variable names
+  transformFields: true,         // Transform response field names
+  stripTypename: true,           // Remove __typename from responses
+});
+
+// Transform a full GraphQL response
+const result = gql.transformResponse({
+  data: {
+    user_profile: {
+      first_name: 'John',
+      email_address: 'john@test.com',
+      __typename: 'User',
+    },
+  },
+  errors: [],
+});
+// { data: { userProfile: { firstName: 'John', emailAddress: 'john@test.com' } }, errors: [] }
+
+// Transform variables for the server (camelCase → snake_case)
+const vars = gql.transformVariables({ userId: 1, sortOrder: 'asc' }, 'snake_case');
+// { user_id: 1, sort_order: 'asc' }
+
+// Extract nested data from response
+const posts = gql.extractData(response, 'user.posts');
+
+// Normalize GraphQL errors
+const errors = gql.normalizeErrors(response.errors);
+// [{ message: '...', path: [...], code: '...', locations: [...] }]
+
+// Build query with transformed variables
+const query = gql.buildQuery('query GetUser($userId: ID!) { ... }', { userId: 1 });
+```
+
+---
+
+### OpenAPI Schema Importer
+
+Auto-generate APIBridge schemas from OpenAPI/Swagger specifications:
+
+```js
+const { OpenAPIImporter } = require('api-bridge-ai');
+
+const importer = new OpenAPIImporter({
+  convention: 'camelCase',       // Target naming convention
+  includeDescriptions: true,     // Include field descriptions
+});
+
+// Parse a full OpenAPI v3 spec
+const endpoints = importer.import({
+  openapi: '3.0.0',
+  paths: {
+    '/users': {
+      get: { /* ... */ },
+      post: {
+        requestBody: {
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } },
+        },
+      },
+    },
+  },
+  components: {
+    schemas: {
+      User: {
+        type: 'object',
+        required: ['id', 'name'],
+        properties: {
+          id: { type: 'integer', description: 'Unique identifier' },
+          name: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  },
+});
+// Returns: [{ path: '/users', method: 'get', ... }, { path: '/users', method: 'post', requestSchema: {...} }]
+
+// Extract all named schemas
+const schemas = importer.extractSchemas(spec);
+// { User: { id: { type: 'integer', required: true, description: '...' }, ... } }
+
+// Resolve $ref references
+const resolved = importer.resolveRef('#/components/schemas/User', spec);
+
+// List all endpoints
+const endpoints = importer.getEndpoints(spec);
+// [{ path: '/users', method: 'get', operationId: 'getUsers', summary: '...' }]
+```
+
+**Supports:** OpenAPI 3.x and Swagger 2.0 specifications.
+
+---
+
+### API Versioning
+
+Version-specific transforms with migration support:
+
+```js
+const { APIVersionManager } = require('api-bridge-ai');
+
+const versions = new APIVersionManager({ defaultVersion: 'v1' });
+
+// Register version-specific configurations
+versions.register('v1', {
+  schema: { userName: { column: 'user_name' } },
+  transforms: {
+    response: (data) => ({ ...data, apiVersion: 'v1' }),
+  },
+});
+
+versions.register('v2', {
+  schema: { fullName: { column: 'full_name' } },
+  transforms: {
+    response: (data) => ({ ...data, apiVersion: 'v2' }),
+    request: (data) => ({ ...data, version: 2 }),
+  },
+});
+
+versions.register('v1', {
+  deprecated: true,
+  successor: 'v2',
+  // ...other config
+});
+
+// Transform with version
+const result = versions.transform(data, 'v2', 'response');
+
+// Check deprecation
+if (versions.isDeprecated('v1')) {
+  const next = versions.getSuccessor('v1'); // 'v2'
+  console.warn(`v1 is deprecated, migrate to ${next}`);
+}
+
+// Migrate data between versions
+const migrated = versions.migrate(data, 'v1', 'v3');
+// Chains through: v1 → v2 → v3
+
+// List all versions
+const all = versions.list();
+// [{ version: 'v1', deprecated: true, successor: 'v2' }, { version: 'v2', deprecated: false }]
+```
+
+---
+
+### Webhook Handler
+
+Normalize incoming webhook payloads from any provider:
+
+```js
+const { WebhookHandler } = require('api-bridge-ai');
+
+const webhooks = new WebhookHandler({
+  convention: 'camelCase',      // Normalize payload keys
+  verifySignatures: true,        // Enable signature verification
+});
+
+// Built-in providers: 'github', 'stripe', 'generic'
+
+// Process a GitHub webhook
+const event = webhooks.process('github', payload, headers);
+// { event: 'push', data: { ... }, provider: 'github', timestamp: '...', raw: { ... } }
+
+// Register a custom provider
+webhooks.register('slack', {
+  eventKey: 'type',
+  payloadKey: 'event',
+  signatureHeader: 'x-slack-signature',
+  signatureAlgorithm: 'sha256',
+});
+
+// Process custom webhook
+const slackEvent = webhooks.process('slack', payload, headers);
+
+// Verify webhook signature
+const isValid = webhooks.verifySignature('github', rawBody, signature, secret);
+
+// Normalize any payload to target convention
+const normalized = webhooks.normalize({ user_name: 'John', created_at: '2024-01-15' });
+// { userName: 'John', createdAt: '2024-01-15' }
+
+// Stats
+console.log(webhooks.getStats());
+// { webhooksProcessed: 42, byProvider: { github: 30, stripe: 12 }, ... }
+```
+
+---
+
+### JSON Patch Generator
+
+Generate and apply RFC 6902 JSON Patch operations:
+
+```js
+const { JSONPatchGenerator } = require('api-bridge-ai');
+
+const patcher = new JSONPatchGenerator({ deepClone: true });
+
+// Generate patches (diff two objects)
+const patches = patcher.generate(
+  { name: 'John', age: 30, email: 'john@test.com' },
+  { name: 'Jane', age: 30, phone: '555-1234' },
+);
+// [
+//   { op: 'replace', path: '/name', value: 'Jane' },
+//   { op: 'remove', path: '/email' },
+//   { op: 'add', path: '/phone', value: '555-1234' },
+// ]
+
+// Apply patches to a document
+const result = patcher.apply(
+  { name: 'John', age: 30 },
+  [
+    { op: 'replace', path: '/name', value: 'Jane' },
+    { op: 'add', path: '/email', value: 'jane@test.com' },
+  ],
+);
+// { name: 'Jane', age: 30, email: 'jane@test.com' }
+
+// Validate patches
+const { valid, errors } = patcher.validate(patches);
+
+// Test a value at a path
+patcher.test(document, { op: 'test', path: '/name', value: 'John' }); // true
+
+// Generate reverse patches (undo)
+const undoPatches = patcher.revert(document, patches);
+
+// Merge patch arrays
+const merged = patcher.merge(patchesA, patchesB);
+```
+
+**Security:** Automatically rejects paths containing `__proto__`, `constructor`, or `prototype` to prevent prototype pollution.
+
+---
+
+### Composable Pipeline
+
+Build functional, stage-based data transformation pipelines:
+
+```js
+const { ComposablePipeline } = require('api-bridge-ai');
+
+const pipe = new ComposablePipeline({
+  name: 'userPipeline',
+  errorStrategy: 'skip',      // 'throw' | 'skip' | 'fallback'
+});
+
+// Chain stages with pipe()
+pipe
+  .pipe('validate', (data) => {
+    if (!data.name) throw new Error('Name required');
+    return data;
+  })
+  .pipe('normalize', (data) => ({
+    ...data,
+    name: data.name.trim().toLowerCase(),
+  }))
+  .pipe('enrich', async (data) => ({
+    ...data,
+    enrichedAt: new Date().toISOString(),
+  }))
+  .pipe('expensive', (data) => data, {
+    condition: (data) => data.premium,  // Only run for premium users
+    timeout: 5000,                       // 5s timeout
+  });
+
+// Side-effect stage (doesn't modify data)
+pipe.tap('audit', (data) => auditLog.write(data));
+
+// Execute the pipeline
+const { result, stages, duration, errors } = await pipe.execute({ name: '  John  ', premium: false });
+// result: { name: 'john', enrichedAt: '...', premium: false }
+// stages: [{ name: 'validate', duration: 0.5, skipped: false }, ...]
+
+// Dynamic pipeline modification
+pipe.insertBefore('enrich', 'uppercase', (data) => ({ ...data, name: data.name.toUpperCase() }));
+pipe.insertAfter('validate', 'sanitize', (data) => ({ ...data, name: data.name.replace(/[<>]/g, '') }));
+pipe.replace('normalize', (data) => ({ ...data, name: data.name.toUpperCase() }));
+pipe.remove('expensive');
+
+// Branch: conditional pipeline execution
+const branchFn = pipe.branch(
+  (data) => data.type === 'admin',
+  adminPipeline,
+  userPipeline,
+);
+
+// Parallel execution: run pipelines concurrently and merge results
+pipe.parallel('enrichAll', [enrichPipeA, enrichPipeB]);
+
+// Clone for reuse
+const pipe2 = pipe.clone();
 ```
 
 ---
@@ -524,7 +989,7 @@ const ts = gen.fromSchema('User', {
 });
 // Output:
 // /**
-//  * Auto-generated by APIBridge AI v3
+//  * Auto-generated by APIBridge AI v4
 //  * @generated
 //  */
 // export interface User {
@@ -987,39 +1452,66 @@ exportSchemaSuggestions(api.__bridge.learning, '/path/to/suggestions.json');
 
 ## Error Handling
 
-V3 introduces additional structured error classes on top of V2:
+V4 introduces 4 additional structured error classes on top of V3's 9:
 
 ```js
 const {
-  ApiBridgeError,    // Base error
-  ValidationError,   // Schema/type validation failure
-  TransformError,    // Key resolution or coercion failure
-  CacheError,        // Cache read/write issue
-  MiddlewareError,   // Middleware pipeline failure
-  NetworkError,      // Fetch retry exhaustion
-  PluginError,       // Plugin registration/execution failure (v3)
-  RateLimitError,    // Rate limit exceeded (v3)
-  InferenceError,    // Schema inference failure (v3)
+  ApiBridgeError,          // Base error
+  ValidationError,         // Schema/type validation failure
+  TransformError,          // Key resolution or coercion failure
+  CacheError,              // Cache read/write issue
+  MiddlewareError,         // Middleware pipeline failure
+  NetworkError,            // Fetch retry exhaustion
+  PluginError,             // Plugin registration/execution failure (v3)
+  RateLimitError,          // Rate limit exceeded (v3)
+  InferenceError,          // Schema inference failure (v3)
+  CircuitBreakerError,     // Circuit breaker tripped (v4)
+  PipelineError,           // Composable pipeline stage failure (v4)
+  WebhookError,            // Webhook processing failure (v4)
+  VersioningError,         // API version management failure (v4)
 } = require('api-bridge-ai');
 
 try {
-  await api.get('https://api.example.com/data');
+  await breaker.execute(() => api.get('/data'));
 } catch (err) {
+  if (err instanceof CircuitBreakerError) {
+    console.log(err.details); // { state: 'OPEN', failures: 5 }
+  }
   if (err instanceof NetworkError) {
-    console.log(err.code);     // 'NETWORK_ERROR'
-    console.log(err.details);  // { url, attempt, maxRetries }
+    console.log(err.details); // { url, attempt, maxRetries }
   }
-  if (err instanceof RateLimitError) {
-    console.log(err.details);  // { limit, retryAfterMs }
+  if (err instanceof PipelineError) {
+    console.log(err.details); // { stage: 'validate', originalMessage: '...' }
   }
-  if (err instanceof PluginError) {
-    console.log(err.details);  // { plugin, originalMessage }
+  if (err instanceof WebhookError) {
+    console.log(err.details); // { provider: 'github', reason: '...' }
+  }
+  if (err instanceof VersioningError) {
+    console.log(err.details); // { version: 'v99', reason: 'not_registered' }
   }
 
   // All errors serialize to JSON
   console.log(JSON.stringify(err.toJSON()));
 }
 ```
+
+**Error class summary:**
+
+| Error | Code | Added | Use Case |
+|-------|------|-------|----------|
+| `ApiBridgeError` | varies | v1 | Base error class |
+| `ValidationError` | `VALIDATION_ERROR` | v2 | Schema/type validation |
+| `TransformError` | `TRANSFORM_ERROR` | v2 | Key resolution failure |
+| `CacheError` | `CACHE_ERROR` | v2 | Cache operations |
+| `MiddlewareError` | `MIDDLEWARE_ERROR` | v2 | Pipeline hooks |
+| `NetworkError` | `NETWORK_ERROR` | v2 | HTTP request failures |
+| `PluginError` | `PLUGIN_ERROR` | v3 | Plugin system |
+| `RateLimitError` | `RATE_LIMIT_ERROR` | v3 | Rate limiting |
+| `InferenceError` | `INFERENCE_ERROR` | v3 | Schema inference |
+| `CircuitBreakerError` | `CIRCUIT_BREAKER_ERROR` | v4 | Circuit breaker tripped |
+| `PipelineError` | `PIPELINE_ERROR` | v4 | Pipeline stage failure |
+| `WebhookError` | `WEBHOOK_ERROR` | v4 | Webhook processing |
+| `VersioningError` | `VERSIONING_ERROR` | v4 | Version management |
 
 ---
 
@@ -1028,25 +1520,33 @@ try {
 ```
 Api_bridge/
 ├── src/
-│   ├── index.js          # Main entry — bridge(), bridgeFetch(), transform()
-│   ├── transformer.js    # Core transform engine (7-level detection)
-│   ├── learning.js       # Persistent learning engine
-│   ├── synonyms.js       # 100+ synonym groups dictionary (healthcare, analytics, DevOps)
-│   ├── exporter.js       # CSV & JSON report generators
-│   ├── cache.js          # LRU response cache with TTL
-│   ├── middleware.js      # Composable before/after pipeline
-│   ├── validator.js       # Schema validation engine
-│   ├── normalizer.js      # Response format normalizer
-│   ├── errors.js          # Custom error class hierarchy (9 types)
-│   ├── plugins.js         # v3: Plugin system
-│   ├── inference.js       # v3: Schema inference engine
-│   ├── projection.js      # v3: Field projection (pick/omit/rename/reshape)
-│   ├── masking.js         # v3: Data masking (PII protection)
-│   ├── rate-limiter.js    # v3: Rate limiter (token bucket)
-│   ├── diff.js            # v3: Schema diff engine
-│   ├── typegen.js         # v3: TypeScript type generator
-│   └── metrics.js         # v3: Performance metrics collector
-├── test.js               # 109-test comprehensive test suite
+│   ├── index.js            # Main entry — bridge(), bridgeFetch(), transform()
+│   ├── transformer.js      # Core transform engine (7-level detection)
+│   ├── learning.js         # Persistent learning engine
+│   ├── synonyms.js         # 100+ synonym groups dictionary (healthcare, analytics, DevOps)
+│   ├── exporter.js         # CSV & JSON report generators
+│   ├── cache.js            # LRU response cache with TTL
+│   ├── middleware.js        # Composable before/after pipeline
+│   ├── validator.js         # Schema validation engine
+│   ├── normalizer.js        # Response format normalizer
+│   ├── errors.js            # Custom error class hierarchy (13 types)
+│   ├── plugins.js           # v3: Plugin system
+│   ├── inference.js         # v3: Schema inference engine
+│   ├── projection.js        # v3: Field projection (pick/omit/rename/reshape)
+│   ├── masking.js           # v3: Data masking (PII protection)
+│   ├── rate-limiter.js      # v3: Rate limiter (token bucket)
+│   ├── diff.js              # v3: Schema diff engine
+│   ├── typegen.js           # v3: TypeScript type generator
+│   ├── metrics.js           # v3: Performance metrics collector
+│   ├── circuit-breaker.js   # v4: Circuit breaker (fault tolerance)
+│   ├── dedup.js             # v4: Request deduplication
+│   ├── graphql.js           # v4: GraphQL response/variable bridge
+│   ├── openapi.js           # v4: OpenAPI/Swagger schema importer
+│   ├── versioning.js        # v4: API version management
+│   ├── webhook.js           # v4: Webhook handler & normalizer
+│   ├── patch.js             # v4: JSON Patch generator (RFC 6902)
+│   └── pipeline.js          # v4: Composable transformation pipeline
+├── test.js                  # 172-test comprehensive test suite
 ├── package.json
 ├── .gitignore
 └── README.md
@@ -1060,7 +1560,7 @@ Api_bridge/
 npm test
 ```
 
-This runs 109 tests covering:
+This runs 172 tests covering:
 - Basic transformations (all conventions)
 - Nested objects and arrays
 - Type coercion with schemas
@@ -1076,7 +1576,7 @@ This runs 109 tests covering:
 - Middleware pipeline
 - Schema validation
 - Response normalization
-- Custom error classes (9 types)
+- Custom error classes (13 types)
 - Event emitter
 - Session management
 - **v3: Plugin system** (register, unregister, hooks, error handling)
@@ -1087,57 +1587,70 @@ This runs 109 tests covering:
 - **v3: Schema diff** (added, removed, type changes, renames, breaking changes)
 - **v3: TypeScript generation** (interfaces, type guards, nested types)
 - **v3: Metrics collector** (record, counters, summaries, reports)
+- **v4: Circuit breaker** (states, transitions, failure threshold, recovery, force open/close)
+- **v4: Request deduplication** (concurrent request coalescing, stats, cleanup)
+- **v4: GraphQL bridge** (response transform, variable transform, data extraction, errors)
+- **v4: OpenAPI importer** (v2/v3 specs, schema extraction, ref resolution, endpoints)
+- **v4: API versioning** (register, transform, deprecation, migration, stats)
+- **v4: Webhook handler** (process, normalize, providers, signature verification)
+- **v4: JSON Patch** (generate, apply, validate, test, revert, prototype pollution protection)
+- **v4: Composable pipeline** (stages, conditions, tap, error strategies, insert/remove)
 
 ---
 
-## Migration from V2
+## Migration from V3
 
-V3 is backward compatible. Your V2 code will work without changes.
+V4 is backward compatible. Your V3 code will work without changes.
 
 **Breaking changes:** None.
 
-**Import path change:** None — same as V2.
+**Import path change:** None — same as V3.
 
 ```js
 const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
 ```
 
-**New v3 features you can adopt incrementally:**
+**New v4 features you can adopt incrementally:**
 
 ```js
-// Plugin system
-const { PluginManager } = require('api-bridge-ai');
-const pm = new PluginManager();
-pm.register({ name: 'myPlugin', hooks: { ... } });
+// Circuit breaker for fault tolerance
+const { CircuitBreaker } = require('api-bridge-ai');
+const breaker = new CircuitBreaker({ failureThreshold: 5 });
+const data = await breaker.execute(() => fetchData());
 
-// Schema inference
-const { SchemaInference } = require('api-bridge-ai');
-const schema = new SchemaInference().infer(apiResponse);
+// Request deduplication
+const { RequestDeduplicator } = require('api-bridge-ai');
+const dedup = new RequestDeduplicator();
+const data = await dedup.dedupe('key', () => fetchData());
 
-// Field projection
-const { FieldProjection } = require('api-bridge-ai');
-const clean = new FieldProjection().pick(data, ['id', 'name']);
+// GraphQL support
+const { GraphQLBridge } = require('api-bridge-ai');
+const gql = new GraphQLBridge({ convention: 'camelCase', stripTypename: true });
+const result = gql.transformResponse(graphqlResponse);
 
-// Data masking
-const { DataMasker } = require('api-bridge-ai');
-const safe = new DataMasker().mask(sensitiveData);
+// OpenAPI schema import
+const { OpenAPIImporter } = require('api-bridge-ai');
+const schemas = new OpenAPIImporter().extractSchemas(openApiSpec);
 
-// Rate limiting
-const { RateLimiter } = require('api-bridge-ai');
-const limiter = new RateLimiter({ maxRequests: 100 });
+// API versioning
+const { APIVersionManager } = require('api-bridge-ai');
+const versions = new APIVersionManager();
+versions.register('v2', { transforms: { response: (d) => d } });
 
-// Schema diff
-const { SchemaDiff } = require('api-bridge-ai');
-const diff = new SchemaDiff().diff(oldData, newData);
+// Webhook handling
+const { WebhookHandler } = require('api-bridge-ai');
+const webhooks = new WebhookHandler();
+const event = webhooks.process('github', payload, headers);
 
-// TypeScript types
-const { TypeGenerator } = require('api-bridge-ai');
-const ts = new TypeGenerator().fromSchema('User', schema);
+// JSON Patch (RFC 6902)
+const { JSONPatchGenerator } = require('api-bridge-ai');
+const patches = new JSONPatchGenerator().generate(oldData, newData);
 
-// Metrics
-const { MetricsCollector } = require('api-bridge-ai');
-const metrics = new MetricsCollector();
-metrics.record('transform.duration', 5.2);
+// Composable pipelines
+const { ComposablePipeline } = require('api-bridge-ai');
+const pipe = new ComposablePipeline();
+pipe.pipe('validate', validateFn).pipe('transform', transformFn);
+const { result } = await pipe.execute(data);
 ```
 
 ---
