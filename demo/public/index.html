@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APIBridge AI Demo — Mismatch Resolution</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-alt: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border: #475569;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 1rem 2rem 3rem; }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      padding: 2rem 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 2rem; color: var(--primary-light); }
+    header p { color: var(--text-muted); margin-top: 0.5rem; }
+
+    /* ── Tabs ───────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--primary-light);
+      border-bottom-color: var(--primary);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Cards ──────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1.15rem;
+      color: var(--primary-light);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ── Stats bar ─────────────────────────────────────────── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-light);
+    }
+    .stat-card .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Table ──────────────────────────────────────────────── */
+    .table-wrapper { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 0.6rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    th {
+      background: var(--surface-alt);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    tr:hover { background: rgba(99, 102, 241, 0.05); }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-danger  { background: rgba(239, 68, 68, 0.15);  color: var(--danger); }
+
+    /* ── Mismatch mapping ──────────────────────────────────── */
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 0.75rem;
+    }
+    .mapping-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--surface-alt);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+    }
+    .mapping-item .sql-key {
+      font-family: 'Courier New', monospace;
+      color: var(--danger);
+      font-weight: 600;
+      min-width: 130px;
+    }
+    .mapping-item .arrow { color: var(--text-muted); font-size: 1.2rem; }
+    .mapping-item .fe-key {
+      font-family: 'Courier New', monospace;
+      color: var(--success);
+      font-weight: 600;
+    }
+    .mapping-item.no-change .sql-key,
+    .mapping-item.no-change .fe-key { color: var(--text-muted); }
+
+    /* ── JSON viewer ───────────────────────────────────────── */
+    .json-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 768px) {
+      .json-compare { grid-template-columns: 1fr; }
+    }
+    .json-box {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow: auto;
+      max-height: 500px;
+    }
+    .json-box h3 {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .json-box pre {
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: #e6edf3;
+    }
+    .json-key { color: #79c0ff; }
+    .json-string { color: #a5d6ff; }
+    .json-number { color: #56d364; }
+    .json-bool { color: #ff7b72; }
+    .json-null { color: #8b949e; }
+
+    /* ── User form ─────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .form-group label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .form-group input, .form-group select {
+      padding: 0.6rem 0.8rem;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 0.4rem;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .btn {
+      padding: 0.7rem 1.5rem;
+      border: none;
+      border-radius: 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-light); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+
+    .form-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 0.4rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .alert-success { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
+    .alert-error   { background: rgba(239, 68, 68, 0.15);  color: var(--danger);  border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .loading { text-align: center; padding: 3rem; color: var(--text-muted); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>🌉 APIBridge AI Demo</h1>
+    <p>See how APIBridge AI automatically resolves field name mismatches between SQL, Backend, and Frontend</p>
+  </header>
+
+  <!-- Stats bar -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <div class="number" id="statTotal">—</div>
+      <div class="label">Total Fields</div>
+    </div>
+    <div class="stat-card">
+      <div class="number" id="statMismatches">—</div>
+      <div class="label">Mismatches Resolved</div>
+    </div>
+    <div class="stat-card">
+      <div class="number" id="statUsers">—</div>
+      <div class="label">Users in DB</div>
+    </div>
+    <div class="stat-card">
+      <div class="number" id="statAccuracy">—</div>
+      <div class="label">Resolution Accuracy</div>
+    </div>
+  </div>
+
+  <!-- Tab navigation -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="mappings">🗺️ Field Mappings</button>
+    <button class="tab-btn" data-tab="comparison">🔀 Before / After</button>
+    <button class="tab-btn" data-tab="users">👥 User Data</button>
+    <button class="tab-btn" data-tab="create">➕ Create User</button>
+  </div>
+
+  <!-- Tab: Field Mappings -->
+  <div class="tab-panel active" id="tab-mappings">
+    <div class="card">
+      <h2>📋 SQL → Frontend Field Resolution</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Each row shows a SQL column name and what APIBridge AI automatically resolved it to.
+        <span style="color: var(--danger);">Red</span> = original SQL name,
+        <span style="color: var(--success);">Green</span> = resolved frontend name.
+      </p>
+      <div class="mapping-grid" id="mappingGrid">
+        <div class="loading">Loading mappings…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Before / After JSON -->
+  <div class="tab-panel" id="tab-comparison">
+    <div class="card">
+      <h2>🔀 Raw SQL vs Transformed Response</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Left: raw data from SQLite (snake_case, abbreviations). Right: after APIBridge AI transformation (camelCase).
+      </p>
+      <div class="json-compare">
+        <div class="json-box">
+          <h3>❌ Raw SQL Response (before)</h3>
+          <pre id="jsonRaw">Loading…</pre>
+        </div>
+        <div class="json-box">
+          <h3>✅ Transformed Response (after)</h3>
+          <pre id="jsonTransformed">Loading…</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: User Table -->
+  <div class="tab-panel" id="tab-users">
+    <div class="card">
+      <h2>👥 Users (Transformed by APIBridge AI)</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead id="userTableHead"></thead>
+          <tbody id="userTableBody">
+            <tr><td colspan="20" class="loading">Loading users…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Create User -->
+  <div class="tab-panel" id="tab-create">
+    <div class="card">
+      <h2>➕ Create New User (sends camelCase → APIBridge reverses to SQL names)</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        The form sends camelCase field names. The server uses APIBridge AI to reverse-transform
+        them back to SQL column names before inserting.
+      </p>
+      <div id="formAlert"></div>
+      <form id="createUserForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="firstName">firstName</label>
+            <input type="text" id="firstName" placeholder="e.g., John" required>
+          </div>
+          <div class="form-group">
+            <label for="lastName">lastName</label>
+            <input type="text" id="lastName" placeholder="e.g., Doe" required>
+          </div>
+          <div class="form-group">
+            <label for="email">email</label>
+            <input type="email" id="email" placeholder="e.g., john@example.com" required>
+          </div>
+          <div class="form-group">
+            <label for="phoneNumber">phoneNumber</label>
+            <input type="text" id="phoneNumber" placeholder="e.g., 555-0606">
+          </div>
+          <div class="form-group">
+            <label for="dateOfBirth">dateOfBirth</label>
+            <input type="date" id="dateOfBirth">
+          </div>
+          <div class="form-group">
+            <label for="role">role</label>
+            <select id="role">
+              <option value="member">member</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="addressLine1">addressLine1</label>
+            <input type="text" id="addressLine1" placeholder="e.g., 100 Main St">
+          </div>
+          <div class="form-group">
+            <label for="city">city</label>
+            <input type="text" id="city" placeholder="e.g., New York">
+          </div>
+          <div class="form-group">
+            <label for="state">state</label>
+            <input type="text" id="state" placeholder="e.g., NY">
+          </div>
+          <div class="form-group">
+            <label for="zipCode">zipCode</label>
+            <input type="text" id="zipCode" placeholder="e.g., 10001">
+          </div>
+          <div class="form-group">
+            <label for="employeeId">employeeId</label>
+            <input type="text" id="employeeId" placeholder="e.g., EMP-006">
+          </div>
+          <div class="form-group">
+            <label for="departmentName">departmentName</label>
+            <input type="text" id="departmentName" placeholder="e.g., Sales">
+          </div>
+          <div class="form-group">
+            <label for="annualSalary">annualSalary</label>
+            <input type="number" id="annualSalary" placeholder="e.g., 90000" step="0.01">
+          </div>
+          <div class="form-group">
+            <label for="accountBalance">accountBalance</label>
+            <input type="number" id="accountBalance" placeholder="e.g., 5000" step="0.01">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create User (sends camelCase)</button>
+          <button type="reset" class="btn" style="background: var(--surface-alt); color: var(--text);">Reset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Tab switching ────────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Syntax-highlighted JSON ──────────────────────────────────────────────────
+  function syntaxHighlight(json) {
+    if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
+    return json
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"([^"]+)"(?=\s*:)/g, '"<span class="json-key">$1</span>"')
+      .replace(/:\s*"([^"]*)"/g, ': "<span class="json-string">$1</span>"')
+      .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
+      .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>')
+      .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
+  }
+
+  // ── Load data ────────────────────────────────────────────────────────────────
+  async function loadAll() {
+    try {
+      const [usersRes, rawRes, mapRes] = await Promise.all([
+        fetch('/api/users').then(r => r.json()),
+        fetch('/api/debug/raw').then(r => r.json()),
+        fetch('/api/debug/mismatch-map').then(r => r.json()),
+      ]);
+
+      // Stats
+      document.getElementById('statTotal').textContent = mapRes.totalFields || 0;
+      document.getElementById('statMismatches').textContent = mapRes.mismatches || 0;
+      document.getElementById('statUsers').textContent = usersRes.count || 0;
+      const accuracy = mapRes.totalFields
+        ? ((mapRes.mismatches / mapRes.totalFields) * 100).toFixed(0)
+        : 0;
+      document.getElementById('statAccuracy').textContent = accuracy + '%';
+
+      // Mappings tab
+      renderMappings(mapRes.mappings || []);
+
+      // Comparison tab
+      const firstRaw = rawRes.data && rawRes.data[0];
+      const firstTransformed = usersRes.data && usersRes.data[0];
+      document.getElementById('jsonRaw').innerHTML = syntaxHighlight(firstRaw || {});
+      document.getElementById('jsonTransformed').innerHTML = syntaxHighlight(firstTransformed || {});
+
+      // Users table
+      renderUserTable(usersRes.data || []);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    }
+  }
+
+  function renderMappings(mappings) {
+    const grid = document.getElementById('mappingGrid');
+    if (!mappings.length) {
+      grid.innerHTML = '<p style="color: var(--text-muted);">No mappings found.</p>';
+      return;
+    }
+    grid.innerHTML = mappings.map(m => `
+      <div class="mapping-item ${m.matched ? '' : 'no-change'}">
+        <span class="sql-key">${m.sqlColumn}</span>
+        <span class="arrow">${m.matched ? '→' : '='}</span>
+        <span class="fe-key">${m.frontendField}</span>
+        ${m.matched
+          ? '<span class="badge badge-success">resolved</span>'
+          : '<span class="badge badge-warning">same</span>'}
+      </div>
+    `).join('');
+  }
+
+  function renderUserTable(users) {
+    if (!users.length) {
+      document.getElementById('userTableBody').innerHTML =
+        '<tr><td colspan="20">No users found.</td></tr>';
+      return;
+    }
+
+    // Show a subset of columns
+    const cols = [
+      'usrId', 'firstName', 'lastName', 'emailAddress', 'phNumber',
+      'dtOfBirth', 'isActive', 'accBalance', 'usrRole', 'deptName', 'annualSal',
+    ];
+    const displayCols = cols.filter(c => users[0].hasOwnProperty(c));
+
+    document.getElementById('userTableHead').innerHTML =
+      '<tr>' + displayCols.map(c => `<th>${c}</th>`).join('') + '<th>Actions</th></tr>';
+
+    document.getElementById('userTableBody').innerHTML = users.map(u => `
+      <tr>
+        ${displayCols.map(c => {
+          let val = u[c];
+          if (c === 'isActive') {
+            return `<td><span class="badge ${val ? 'badge-success' : 'badge-danger'}">${val ? 'Active' : 'Inactive'}</span></td>`;
+          }
+          if (c === 'accBalance' || c === 'annualSal') {
+            return `<td>${val != null ? '$' + Number(val).toLocaleString() : '—'}</td>`;
+          }
+          return `<td>${val != null ? val : '—'}</td>`;
+        }).join('')}
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.usrId || u.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // ── Delete user ──────────────────────────────────────────────────────────────
+  async function deleteUser(id) {
+    if (!confirm('Delete this user?')) return;
+    try {
+      await fetch('/api/users/' + id, { method: 'DELETE' });
+      loadAll();
+    } catch (err) {
+      alert('Delete failed: ' + err.message);
+    }
+  }
+
+  // ── Create user form ─────────────────────────────────────────────────────────
+  document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alertDiv = document.getElementById('formAlert');
+
+    // Collect form data as camelCase — frontend convention
+    const userData = {
+      firstName: document.getElementById('firstName').value,
+      lastName: document.getElementById('lastName').value,
+      email: document.getElementById('email').value,
+      phoneNumber: document.getElementById('phoneNumber').value || null,
+      dateOfBirth: document.getElementById('dateOfBirth').value || null,
+      role: document.getElementById('role').value,
+      addressLine1: document.getElementById('addressLine1').value || null,
+      city: document.getElementById('city').value || null,
+      state: document.getElementById('state').value || null,
+      zipCode: document.getElementById('zipCode').value || null,
+      employeeId: document.getElementById('employeeId').value || null,
+      departmentName: document.getElementById('departmentName').value || null,
+      annualSalary: document.getElementById('annualSalary').value ? Number(document.getElementById('annualSalary').value) : null,
+      accountBalance: document.getElementById('accountBalance').value ? Number(document.getElementById('accountBalance').value) : null,
+      active: true,
+    };
+
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        alertDiv.innerHTML = '<div class="alert alert-success">✅ User created! camelCase fields were automatically reverse-transformed to SQL column names by APIBridge AI.</div>';
+        e.target.reset();
+        loadAll();
+      } else {
+        alertDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${result.error}</div>`;
+      }
+    } catch (err) {
+      alertDiv.innerHTML = `<div class="alert alert-error">❌ Network error: ${err.message}</div>`;
+    }
+  });
+
+  // ── Initial load ─────────────────────────────────────────────────────────────
+  loadAll();
+</script>
+
+</body>
+</html>
