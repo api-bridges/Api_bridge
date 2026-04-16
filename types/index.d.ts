@@ -223,10 +223,10 @@ declare namespace ApiBridgeAI {
   class OutputFormatter {
     constructor();
     toCSV(data: any[]): string;
-    toJSON(data: any, options?: { pretty?: boolean }): string;
+    toJSON(data: any, indent?: number): string;
     toKeyValue(data: Record<string, any>): string;
     toTable(data: any[]): string;
-    toXML(data: any, rootName?: string): string;
+    toXML(data: any, options?: { root?: string; item?: string }): string;
     format(data: any, template: string): string;
   }
 
