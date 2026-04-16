@@ -1,6 +1,6 @@
-# APIBridge AI v4
+# APIBridge AI v5
 
-**The most powerful API mismatch detector, transformer, and learner — now with circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
+**The most powerful API mismatch detector, transformer, and learner — now with advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
 
 APIBridge automatically bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
@@ -25,6 +25,15 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
   - [Webhook Handler](#webhook-handler)
   - [JSON Patch Generator](#json-patch-generator)
   - [Composable Pipeline](#composable-pipeline)
+- [V5 Features](#v5-features)
+  - [Retry Strategy](#retry-strategy)
+  - [Request Logger](#request-logger)
+  - [Schema Registry](#schema-registry)
+  - [Response Streamer](#response-streamer)
+  - [Dependency Graph](#dependency-graph)
+  - [Mock Server](#mock-server)
+  - [Health Check](#health-check)
+  - [Event Bus](#event-bus)
 - [V3 Features](#v3-features)
   - [Plugin System](#plugin-system)
   - [Schema Inference](#schema-inference)
@@ -53,52 +62,60 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
 - [Error Handling](#error-handling)
 - [Architecture](#architecture)
 - [Running Tests](#running-tests)
-- [Migration from V3](#migration-from-v3)
+- [Migration from V4](#migration-from-v4)
 - [License](#license)
 
 ---
 
 ## Features
 
-| Feature | v1 | v2 | v3 | v4 |
-|---------|----|----|-----|-----|
-| snake_case → camelCase | ✅ | ✅ | ✅ | ✅ |
-| All 5 naming conventions | ❌ | ✅ | ✅ | ✅ |
-| Axios interceptors | ✅ | ✅ | ✅ | ✅ |
-| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods | All HTTP methods |
-| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) | ✅ |
-| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ | ✅ |
-| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) | ✅ |
-| Type coercion | ✅ | ✅ (+ integer, float) | ✅ | ✅ |
-| CSV export | ✅ | ✅ | ✅ | ✅ |
-| JSON export | ❌ | ✅ | ✅ | ✅ |
-| Schema validation | ❌ | ✅ | ✅ | ✅ |
-| Response normalization | ❌ | ✅ | ✅ | ✅ |
-| Middleware pipeline | ❌ | ✅ | ✅ | ✅ |
-| Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ |
-| Retry with backoff | ❌ | ✅ | ✅ | ✅ |
-| Batch transformation | ❌ | ✅ | ✅ | ✅ |
-| Reverse transform | ❌ | ✅ | ✅ | ✅ |
-| Event emitter | ❌ | ✅ | ✅ | ✅ |
-| Circular reference protection | ❌ | ✅ | ✅ | ✅ |
-| Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) |
-| Session management | ❌ | ✅ | ✅ | ✅ |
-| Plugin system | ❌ | ❌ | ✅ | ✅ |
-| Schema inference | ❌ | ❌ | ✅ | ✅ |
-| Field projection | ❌ | ❌ | ✅ | ✅ |
-| Data masking (PII) | ❌ | ❌ | ✅ | ✅ |
-| Rate limiter | ❌ | ❌ | ✅ | ✅ |
-| Schema diff engine | ❌ | ❌ | ✅ | ✅ |
-| TypeScript type generator | ❌ | ❌ | ✅ | ✅ |
-| Metrics collector | ❌ | ❌ | ✅ | ✅ |
-| **Circuit breaker** | ❌ | ❌ | ❌ | ✅ |
-| **Request deduplication** | ❌ | ❌ | ❌ | ✅ |
-| **GraphQL bridge** | ❌ | ❌ | ❌ | ✅ |
-| **OpenAPI schema importer** | ❌ | ❌ | ❌ | ✅ |
-| **API versioning** | ❌ | ❌ | ❌ | ✅ |
-| **Webhook handler** | ❌ | ❌ | ❌ | ✅ |
-| **JSON Patch generator** | ❌ | ❌ | ❌ | ✅ |
-| **Composable pipeline** | ❌ | ❌ | ❌ | ✅ |
+| Feature | v1 | v2 | v3 | v4 | v5 |
+|---------|----|----|-----|-----|-----|
+| snake_case → camelCase | ✅ | ✅ | ✅ | ✅ | ✅ |
+| All 5 naming conventions | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Axios interceptors | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods |
+| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) | ✅ | ✅ |
+| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) | ✅ | ✅ |
+| Type coercion | ✅ | ✅ (+ integer, float) | ✅ | ✅ | ✅ |
+| CSV export | ✅ | ✅ | ✅ | ✅ | ✅ |
+| JSON export | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Schema validation | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Response normalization | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Middleware pipeline | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Retry with backoff | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Batch transformation | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Reverse transform | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Event emitter | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Circular reference protection | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) | ✅ (19 types) |
+| Session management | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Plugin system | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Schema inference | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Field projection | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Data masking (PII) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Rate limiter | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Schema diff engine | ❌ | ❌ | ✅ | ✅ | ✅ |
+| TypeScript type generator | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Metrics collector | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Circuit breaker | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Request deduplication | ❌ | ❌ | ❌ | ✅ | ✅ |
+| GraphQL bridge | ❌ | ❌ | ❌ | ✅ | ✅ |
+| OpenAPI schema importer | ❌ | ❌ | ❌ | ✅ | ✅ |
+| API versioning | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Webhook handler | ❌ | ❌ | ❌ | ✅ | ✅ |
+| JSON Patch generator | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Composable pipeline | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Advanced retry strategies** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Structured request logger** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Schema registry** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Response streamer** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Dependency graph** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Mock server** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Health check monitor** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Event bus** | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -756,6 +773,369 @@ pipe.parallel('enrichAll', [enrichPipeA, enrichPipeB]);
 
 // Clone for reuse
 const pipe2 = pipe.clone();
+```
+
+---
+
+## V5 Features
+
+### Retry Strategy
+
+Advanced pluggable retry strategies with configurable backoff, budget, and abort support:
+
+```js
+const { RetryStrategy } = require('api-bridge-ai');
+
+// Exponential backoff with jitter (default)
+const retry = new RetryStrategy({
+  strategy: 'exponentialJitter', // 'linear' | 'exponential' | 'exponentialJitter' | 'constant'
+  maxRetries: 5,
+  baseDelay: 1000,
+  maxDelay: 30000,
+});
+const data = await retry.execute(() => fetch('/api/users').then(r => r.json()));
+
+// Custom backoff function
+const custom = new RetryStrategy({
+  backoffFn: (attempt, baseDelay) => baseDelay * attempt * attempt,
+  maxRetries: 3,
+});
+
+// With retry budget (max 10 retries per minute)
+const budgeted = new RetryStrategy({
+  budgetWindow: 60000,
+  budgetMax: 10,
+});
+
+// With abort signal
+const controller = new AbortController();
+const data = await retry.execute(() => fetch('/api'), { signal: controller.signal });
+
+// onRetry callback
+const retry = new RetryStrategy({
+  onRetry: (attempt, delay, error) => {
+    console.log(`Retry #${attempt} in ${delay}ms: ${error.message}`);
+  },
+});
+
+// Check if status code is retryable
+retry.isRetryable(503); // true
+retry.isRetryable(404); // false
+
+// Statistics
+retry.getStats(); // { totalExecutions, totalRetries, totalSuccesses, totalFailures, lastError }
+```
+
+### Request Logger
+
+Structured request/response logging with automatic field redaction:
+
+```js
+const { RequestLogger } = require('api-bridge-ai');
+
+const logger = new RequestLogger({
+  level: 'info',          // 'debug' | 'info' | 'warn' | 'error' | 'silent'
+  redactWith: '[REDACTED]',
+  sensitiveFields: ['ssn', 'creditCard'],  // Extends built-in list
+  includeBody: true,
+  includeHeaders: false,
+  maxBodyLength: 10000,
+});
+
+// Log request/response with correlation IDs
+const correlationId = logger.correlationId();
+logger.logRequest({ method: 'POST', url: '/api/users', body: { name: 'John', password: 'secret' }, correlationId });
+logger.logResponse({ status: 201, url: '/api/users', duration: 42, correlationId });
+logger.logError({ message: 'Timeout', url: '/api/users', correlationId });
+
+// Automatic sensitive field redaction
+logger.redact({ username: 'john', password: 'secret123', token: 'abc' });
+// → { username: 'john', password: '[REDACTED]', token: '[REDACTED]' }
+
+// Query log entries
+logger.getEntries({ type: 'request' });
+logger.getEntries({ level: 'error' });
+logger.getEntries({ correlationId: 'req_abc123_0001' });
+
+// Custom transport
+const logger = new RequestLogger({
+  transport: (entry) => myExternalLogger.log(entry),
+});
+
+// Statistics
+logger.getStats(); // { totalLogs, byLevel, redactedFields, bufferSize }
+```
+
+### Schema Registry
+
+Centralized, versioned schema storage with compatibility checking:
+
+```js
+const { SchemaRegistry } = require('api-bridge-ai');
+
+const registry = new SchemaRegistry({
+  strict: false,
+  requireCompatible: true,  // Enforce backward compatibility
+});
+
+// Register schemas (auto-versioned)
+registry.register('User', {
+  name: { type: 'string', required: true },
+  email: { type: 'string', required: true },
+});
+registry.register('User', {
+  name: { type: 'string', required: true },
+  email: { type: 'string', required: true },
+  age: { type: 'number' },
+}, { metadata: { author: 'team-a' } });
+
+// Retrieve latest or specific version
+const latest = registry.get('User');
+const v1 = registry.getVersion('User', 1);
+
+// Namespace support for multi-service
+registry.register('User', schema, { namespace: 'auth-service' });
+registry.get('User', { namespace: 'auth-service' });
+
+// Compatibility checking
+const compat = registry.checkCompatibility(oldSchema, newSchema);
+// { backward: true/false, forward: true/false, breakingChanges: [], additions: [] }
+
+// Search for fields across all schemas
+registry.search('email');
+// [{ name: 'User', namespace: 'default', version: 2, field: 'email' }]
+
+// Export/import for persistence
+const snapshot = registry.export();
+registry.import(snapshot);
+
+// Statistics
+registry.getStats(); // { totalRegistrations, totalLookups, totalSchemas, namespaces }
+```
+
+### Response Streamer
+
+Chunked JSON response transformation with field filtering and progress tracking:
+
+```js
+const { ResponseStreamer } = require('api-bridge-ai');
+
+const streamer = new ResponseStreamer({
+  convention: 'camelCase',
+  chunkSize: 50,                           // Keys per chunk
+  includeFields: ['first_name', 'email'],  // Whitelist
+  excludeFields: ['password'],             // Blacklist
+  onChunk: (chunk, index) => console.log(`Chunk ${index}:`, chunk),
+  onProgress: ({ processed, total, percent }) => console.log(`${percent}%`),
+});
+
+// Transform a large object in chunks
+const result = streamer.process(largeApiResponse);
+
+// Transform an array of objects
+const users = streamer.processArray(usersFromApi);
+
+// Accumulator for incremental building
+const acc = streamer.createAccumulator();
+acc.add({ first_name: 'John' });
+acc.add({ last_name: 'Doe' });
+const merged = acc.getResult();
+// { firstName: 'John', lastName: 'Doe' }
+
+// Statistics
+streamer.getStats(); // { chunksProcessed, keysTransformed, totalBytesProcessed, streamsCompleted }
+```
+
+### Dependency Graph
+
+DAG-based orchestration for dependent API calls with parallel execution:
+
+```js
+const { DependencyGraph } = require('api-bridge-ai');
+
+const graph = new DependencyGraph();
+
+// Add independent nodes (run in parallel)
+graph.add('fetchUser', async () => {
+  return await fetch('/api/user/1').then(r => r.json());
+});
+graph.add('fetchConfig', async () => {
+  return await fetch('/api/config').then(r => r.json());
+});
+
+// Add dependent node (runs after its deps complete)
+graph.add('merge', async (results) => {
+  return { ...results.fetchUser, config: results.fetchConfig };
+}, { deps: ['fetchUser', 'fetchConfig'] });
+
+// Conditional execution
+graph.add('optional', async () => 'extra data', {
+  deps: ['fetchUser'],
+  condition: (results) => results.fetchUser.premium === true,
+  defaultValue: null,
+});
+
+// Execute the graph
+const results = await graph.execute();
+// { fetchUser: {...}, fetchConfig: {...}, merge: {...}, optional: null }
+
+// Validate before execution
+const validation = graph.validate();
+// { valid: true/false, errors: [] }
+
+// Get topological execution order
+graph.getOrder(); // ['fetchUser', 'fetchConfig', 'merge', 'optional']
+
+// Statistics
+graph.getStats(); // { totalExecutions, totalNodeRuns, lastDuration, errors }
+```
+
+### Mock Server
+
+Built-in mock server for testing with request recording and assertion helpers:
+
+```js
+const { MockServer } = require('api-bridge-ai');
+
+const mock = new MockServer({
+  defaultDelay: 0,
+  defaultStatus: 200,
+  recordRequests: true,
+  strict: false,
+});
+
+// Static responses
+mock.register('GET', '/api/users', {
+  status: 200,
+  body: [{ id: 1, name: 'John' }],
+  headers: { 'x-total': '1' },
+});
+
+// Wildcard patterns
+mock.register('GET', '/api/users/*', { body: { id: 1 } });
+
+// Dynamic handlers
+mock.register('POST', '/api/users', {
+  handler: (req) => ({
+    status: 201,
+    body: { id: Date.now(), ...req.body },
+  }),
+});
+
+// Sequence responses (different per call)
+mock.registerSequence('GET', '/api/flaky', [
+  { status: 500, body: { error: 'Server Error' } },
+  { status: 200, body: { data: 'recovered' } },
+]);
+
+// Handle requests
+const response = await mock.handle('GET', '/api/users');
+
+// Request assertion
+const result = mock.assertCalled('GET', '/api/users', { times: 1 });
+// { called: true, count: 1, passed: true, requests: [...] }
+
+// Get recorded requests
+mock.getRequests({ method: 'POST' });
+
+// Statistics
+mock.getStats(); // { totalRequests, matchedRequests, unmatchedRequests, routesRegistered }
+```
+
+### Health Check
+
+Endpoint health monitoring with configurable probes and alert callbacks:
+
+```js
+const { HealthCheck } = require('api-bridge-ai');
+
+const health = new HealthCheck({
+  failureThreshold: 3,    // Consecutive failures → UNHEALTHY
+  successThreshold: 2,    // Consecutive successes → HEALTHY
+  degradedThreshold: 1,   // Consecutive failures → DEGRADED
+  defaultTimeout: 5000,
+  onStatusChange: (endpoint, prev, next) => {
+    console.log(`${endpoint}: ${prev} → ${next}`);
+  },
+});
+
+// Register health check probes
+health.register('database', async () => {
+  const result = await db.ping();
+  return result.ok;
+}, { timeout: 3000 });
+
+health.register('redis', async () => {
+  return await redis.ping() === 'PONG';
+});
+
+// Manual check
+const result = await health.check('database');
+// { status: 'HEALTHY', duration: 12, error: null }
+
+// Check all endpoints
+const results = await health.checkAll();
+
+// Aggregated status
+const overall = health.getOverallStatus();
+// { status: 'HEALTHY', endpoints: { database: 'HEALTHY', redis: 'HEALTHY' } }
+
+// Check history
+health.getHistory('database');
+// [{ success: true, duration: 12, timestamp: '...', error: null }, ...]
+
+// Auto-check with interval
+health.register('api', checkFn, { interval: 30000 }); // Check every 30s
+
+// Statistics
+health.getStats(); // { totalChecks, totalFailures, totalSuccesses, endpointsRegistered }
+```
+
+### Event Bus
+
+Typed, cross-module pub/sub event bus with wildcards and priority ordering:
+
+```js
+const { EventBus } = require('api-bridge-ai');
+
+const bus = new EventBus({
+  recordHistory: true,
+  maxHistory: 100,
+  maxListeners: 100,
+});
+
+// Subscribe to events
+bus.on('api.request', (data) => console.log('Request:', data));
+bus.on('api.response', (data) => console.log('Response:', data));
+
+// Wildcard subscriptions
+bus.on('api.*', (data) => console.log('Any API event:', data));
+
+// Priority ordering (higher runs first)
+bus.on('transform', fn, { priority: 10 });
+
+// Once-only listeners
+bus.once('init', (data) => console.log('Initialized'));
+
+// Emit events
+await bus.emit('api.request', { url: '/users', method: 'GET' });
+
+// Synchronous emit
+bus.emitSync('log', { message: 'fast path' });
+
+// Wait for an event (promise-based)
+const data = await bus.waitFor('ready', 5000); // 5s timeout
+
+// Event history & replay
+const history = bus.getHistory('api.request');
+bus.replay('api.request', (data) => processHistorical(data));
+
+// Unsubscribe
+const unsub = bus.on('event', handler);
+unsub(); // Remove listener
+
+// Statistics
+bus.getStats(); // { totalEmits, totalListeners, totalDeliveries, eventsWithListeners, historySize }
 ```
 
 ---
@@ -1452,7 +1832,7 @@ exportSchemaSuggestions(api.__bridge.learning, '/path/to/suggestions.json');
 
 ## Error Handling
 
-V4 introduces 4 additional structured error classes on top of V3's 9:
+V5 introduces 6 additional structured error classes on top of V4's 13 (19 total):
 
 ```js
 const {
@@ -1469,25 +1849,34 @@ const {
   PipelineError,           // Composable pipeline stage failure (v4)
   WebhookError,            // Webhook processing failure (v4)
   VersioningError,         // API version management failure (v4)
+  RetryError,              // Retry strategy exhaustion (v5)
+  SchemaRegistryError,     // Schema registry failure (v5)
+  DependencyGraphError,    // Dependency graph cycle/execution (v5)
+  MockServerError,         // Mock server matching/handling (v5)
+  HealthCheckError,        // Health check probe failure (v5)
+  EventBusError,           // Event bus subscription/emission (v5)
 } = require('api-bridge-ai');
 
 try {
-  await breaker.execute(() => api.get('/data'));
+  await retry.execute(() => api.get('/data'));
 } catch (err) {
-  if (err instanceof CircuitBreakerError) {
-    console.log(err.details); // { state: 'OPEN', failures: 5 }
+  if (err instanceof RetryError) {
+    console.log(err.details); // { attempt: 4, maxRetries: 3, reason: 'max_retries_exceeded' }
   }
-  if (err instanceof NetworkError) {
-    console.log(err.details); // { url, attempt, maxRetries }
+  if (err instanceof SchemaRegistryError) {
+    console.log(err.details); // { schemaName: 'User', reason: 'not_found' }
   }
-  if (err instanceof PipelineError) {
-    console.log(err.details); // { stage: 'validate', originalMessage: '...' }
+  if (err instanceof DependencyGraphError) {
+    console.log(err.details); // { nodeName: 'fetch', reason: 'cycle_detected' }
   }
-  if (err instanceof WebhookError) {
-    console.log(err.details); // { provider: 'github', reason: '...' }
+  if (err instanceof MockServerError) {
+    console.log(err.details); // { operation: 'handle', reason: 'no_match' }
   }
-  if (err instanceof VersioningError) {
-    console.log(err.details); // { version: 'v99', reason: 'not_registered' }
+  if (err instanceof HealthCheckError) {
+    console.log(err.details); // { endpoint: 'api', reason: 'timeout' }
+  }
+  if (err instanceof EventBusError) {
+    console.log(err.details); // { event: 'test', reason: 'max_listeners' }
   }
 
   // All errors serialize to JSON
@@ -1512,6 +1901,12 @@ try {
 | `PipelineError` | `PIPELINE_ERROR` | v4 | Pipeline stage failure |
 | `WebhookError` | `WEBHOOK_ERROR` | v4 | Webhook processing |
 | `VersioningError` | `VERSIONING_ERROR` | v4 | Version management |
+| `RetryError` | `RETRY_ERROR` | v5 | Retry exhaustion |
+| `SchemaRegistryError` | `SCHEMA_REGISTRY_ERROR` | v5 | Schema registry |
+| `DependencyGraphError` | `DEPENDENCY_GRAPH_ERROR` | v5 | Dependency graph |
+| `MockServerError` | `MOCK_SERVER_ERROR` | v5 | Mock server |
+| `HealthCheckError` | `HEALTH_CHECK_ERROR` | v5 | Health monitoring |
+| `EventBusError` | `EVENT_BUS_ERROR` | v5 | Event bus |
 
 ---
 
@@ -1529,7 +1924,7 @@ Api_bridge/
 │   ├── middleware.js        # Composable before/after pipeline
 │   ├── validator.js         # Schema validation engine
 │   ├── normalizer.js        # Response format normalizer
-│   ├── errors.js            # Custom error class hierarchy (13 types)
+│   ├── errors.js            # Custom error class hierarchy (19 types)
 │   ├── plugins.js           # v3: Plugin system
 │   ├── inference.js         # v3: Schema inference engine
 │   ├── projection.js        # v3: Field projection (pick/omit/rename/reshape)
@@ -1545,8 +1940,16 @@ Api_bridge/
 │   ├── versioning.js        # v4: API version management
 │   ├── webhook.js           # v4: Webhook handler & normalizer
 │   ├── patch.js             # v4: JSON Patch generator (RFC 6902)
-│   └── pipeline.js          # v4: Composable transformation pipeline
-├── test.js                  # 172-test comprehensive test suite
+│   ├── pipeline.js          # v4: Composable transformation pipeline
+│   ├── retry-strategy.js    # v5: Advanced retry strategies
+│   ├── request-logger.js    # v5: Structured request/response logger
+│   ├── schema-registry.js   # v5: Versioned schema registry
+│   ├── response-streamer.js # v5: Chunked response transformer
+│   ├── dependency-graph.js  # v5: API dependency graph orchestrator
+│   ├── mock-server.js       # v5: Built-in mock server for testing
+│   ├── health-check.js      # v5: Endpoint health monitoring
+│   └── event-bus.js         # v5: Typed pub/sub event bus
+├── test.js                  # 258-test comprehensive test suite
 ├── package.json
 ├── .gitignore
 └── README.md
@@ -1560,7 +1963,7 @@ Api_bridge/
 npm test
 ```
 
-This runs 172 tests covering:
+This runs 258 tests covering:
 - Basic transformations (all conventions)
 - Nested objects and arrays
 - Type coercion with schemas
@@ -1576,7 +1979,7 @@ This runs 172 tests covering:
 - Middleware pipeline
 - Schema validation
 - Response normalization
-- Custom error classes (13 types)
+- Custom error classes (19 types)
 - Event emitter
 - Session management
 - **v3: Plugin system** (register, unregister, hooks, error handling)
@@ -1595,62 +1998,74 @@ This runs 172 tests covering:
 - **v4: Webhook handler** (process, normalize, providers, signature verification)
 - **v4: JSON Patch** (generate, apply, validate, test, revert, prototype pollution protection)
 - **v4: Composable pipeline** (stages, conditions, tap, error strategies, insert/remove)
+- **v5: Retry strategy** (linear, exponential, jitter, custom, budget, callbacks)
+- **v5: Request logger** (structured logging, redaction, levels, transports, correlation IDs)
+- **v5: Schema registry** (versioned storage, compatibility, namespaces, search, export/import)
+- **v5: Response streamer** (chunked processing, field filtering, accumulators, progress)
+- **v5: Dependency graph** (DAG execution, parallel, cycle detection, conditional nodes)
+- **v5: Mock server** (endpoint mocking, sequences, wildcards, assertions, recording)
+- **v5: Health check** (probes, status aggregation, recovery, history, callbacks)
+- **v5: Event bus** (pub/sub, wildcards, priority, once, replay, waitFor)
 
 ---
 
-## Migration from V3
+## Migration from V4
 
-V4 is backward compatible. Your V3 code will work without changes.
+V5 is backward compatible. Your V4 code will work without changes.
 
 **Breaking changes:** None.
 
-**Import path change:** None — same as V3.
+**Import path change:** None — same as V4.
 
 ```js
 const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
 ```
 
-**New v4 features you can adopt incrementally:**
+**New v5 features you can adopt incrementally:**
 
 ```js
-// Circuit breaker for fault tolerance
-const { CircuitBreaker } = require('api-bridge-ai');
-const breaker = new CircuitBreaker({ failureThreshold: 5 });
-const data = await breaker.execute(() => fetchData());
+// Advanced retry strategies
+const { RetryStrategy } = require('api-bridge-ai');
+const retry = new RetryStrategy({ strategy: 'exponentialJitter', maxRetries: 5 });
+const data = await retry.execute(() => fetchData());
 
-// Request deduplication
-const { RequestDeduplicator } = require('api-bridge-ai');
-const dedup = new RequestDeduplicator();
-const data = await dedup.dedupe('key', () => fetchData());
+// Structured request logging
+const { RequestLogger } = require('api-bridge-ai');
+const logger = new RequestLogger({ level: 'info' });
+logger.logRequest({ method: 'GET', url: '/api/users' });
 
-// GraphQL support
-const { GraphQLBridge } = require('api-bridge-ai');
-const gql = new GraphQLBridge({ convention: 'camelCase', stripTypename: true });
-const result = gql.transformResponse(graphqlResponse);
+// Schema registry with versioning
+const { SchemaRegistry } = require('api-bridge-ai');
+const registry = new SchemaRegistry();
+registry.register('User', { name: { type: 'string' } });
 
-// OpenAPI schema import
-const { OpenAPIImporter } = require('api-bridge-ai');
-const schemas = new OpenAPIImporter().extractSchemas(openApiSpec);
+// Response streaming with chunked processing
+const { ResponseStreamer } = require('api-bridge-ai');
+const streamer = new ResponseStreamer({ convention: 'camelCase', chunkSize: 50 });
+const result = streamer.process(largeResponse);
 
-// API versioning
-const { APIVersionManager } = require('api-bridge-ai');
-const versions = new APIVersionManager();
-versions.register('v2', { transforms: { response: (d) => d } });
+// Dependency graph for API orchestration
+const { DependencyGraph } = require('api-bridge-ai');
+const graph = new DependencyGraph();
+graph.add('fetch', async () => getData());
+graph.add('transform', async (deps) => transform(deps.fetch), { deps: ['fetch'] });
+const results = await graph.execute();
 
-// Webhook handling
-const { WebhookHandler } = require('api-bridge-ai');
-const webhooks = new WebhookHandler();
-const event = webhooks.process('github', payload, headers);
+// Mock server for testing
+const { MockServer } = require('api-bridge-ai');
+const mock = new MockServer();
+mock.register('GET', '/api/users', { body: [{ id: 1 }] });
 
-// JSON Patch (RFC 6902)
-const { JSONPatchGenerator } = require('api-bridge-ai');
-const patches = new JSONPatchGenerator().generate(oldData, newData);
+// Health monitoring
+const { HealthCheck } = require('api-bridge-ai');
+const health = new HealthCheck({ failureThreshold: 3 });
+health.register('api', () => fetch('/health').then(r => r.ok));
 
-// Composable pipelines
-const { ComposablePipeline } = require('api-bridge-ai');
-const pipe = new ComposablePipeline();
-pipe.pipe('validate', validateFn).pipe('transform', transformFn);
-const { result } = await pipe.execute(data);
+// Event bus for pub/sub
+const { EventBus } = require('api-bridge-ai');
+const bus = new EventBus({ recordHistory: true });
+bus.on('api.*', (data) => console.log(data));
+await bus.emit('api.request', { url: '/users' });
 ```
 
 ---
