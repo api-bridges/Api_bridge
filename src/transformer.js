@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v7 — Core Transformer
+ * APIBridge AI v8 — Core Transformer
  *
  * Multi-level mismatch detection and correction:
  *   Level 1 — Exact match          (skip, already correct)

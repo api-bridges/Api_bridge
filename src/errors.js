@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v6 — Custom Error Classes
+ * APIBridge AI v8 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
  *  - ValidationError        — schema or type mismatch
@@ -23,6 +23,11 @@
  *  - FuzzyMatchError        — fuzzy matching failure                   (v6)
  *  - TypeCoercionError      — type coercion failure                    (v6)
  *  - CrypticResolverError   — cryptic name resolution failure          (v6)
+ *  - FieldAliaserError      — field alias resolution failure           (v8)
+ *  - SchemaMigrationError   — schema migration failure                 (v8)
+ *  - BatchOrchestratorError — batch orchestration failure              (v8)
+ *  - DeepMergeError         — deep merge conflict or depth failure     (v8)
+ *  - InterceptorError       — request interceptor chain failure        (v8)
  */
 
 class ApiBridgeError extends Error {
@@ -201,6 +206,41 @@ class CrypticResolverError extends ApiBridgeError {
   }
 }
 
+class FieldAliaserError extends ApiBridgeError {
+  constructor(message, field, reason) {
+    super(message, 'FIELD_ALIASER_ERROR', { field, reason });
+    this.name = 'FieldAliaserError';
+  }
+}
+
+class SchemaMigrationError extends ApiBridgeError {
+  constructor(message, fromVersion, toVersion, reason) {
+    super(message, 'SCHEMA_MIGRATION_ERROR', { fromVersion, toVersion, reason });
+    this.name = 'SchemaMigrationError';
+  }
+}
+
+class BatchOrchestratorError extends ApiBridgeError {
+  constructor(message, batchId, reason) {
+    super(message, 'BATCH_ORCHESTRATOR_ERROR', { batchId, reason });
+    this.name = 'BatchOrchestratorError';
+  }
+}
+
+class DeepMergeError extends ApiBridgeError {
+  constructor(message, path, reason) {
+    super(message, 'DEEP_MERGE_ERROR', { path, reason });
+    this.name = 'DeepMergeError';
+  }
+}
+
+class InterceptorError extends ApiBridgeError {
+  constructor(message, interceptorName, reason) {
+    super(message, 'INTERCEPTOR_ERROR', { interceptorName, reason });
+    this.name = 'InterceptorError';
+  }
+}
+
 module.exports = {
   ApiBridgeError,
   ValidationError,
@@ -224,4 +264,9 @@ module.exports = {
   FuzzyMatchError,
   TypeCoercionError,
   CrypticResolverError,
+  FieldAliaserError,
+  SchemaMigrationError,
+  BatchOrchestratorError,
+  DeepMergeError,
+  InterceptorError,
 };
