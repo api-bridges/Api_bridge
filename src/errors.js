@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v4 — Custom Error Classes
+ * APIBridge AI v5 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
  *  - ValidationError        — schema or type mismatch
@@ -14,6 +14,12 @@
  *  - PipelineError          — composable pipeline stage failure        (v4)
  *  - WebhookError           — webhook processing failure               (v4)
  *  - VersioningError        — API version management failure           (v4)
+ *  - RetryError             — retry strategy exhaustion                (v5)
+ *  - SchemaRegistryError    — schema registry failure                  (v5)
+ *  - DependencyGraphError   — dependency graph cycle / execution       (v5)
+ *  - MockServerError        — mock server matching / handling          (v5)
+ *  - HealthCheckError       — health check probe failure               (v5)
+ *  - EventBusError          — event bus subscription / emission        (v5)
  */
 
 class ApiBridgeError extends Error {
@@ -129,6 +135,48 @@ class VersioningError extends ApiBridgeError {
   }
 }
 
+class RetryError extends ApiBridgeError {
+  constructor(message, attempt, maxRetries, reason) {
+    super(message, 'RETRY_ERROR', { attempt, maxRetries, reason });
+    this.name = 'RetryError';
+  }
+}
+
+class SchemaRegistryError extends ApiBridgeError {
+  constructor(message, schemaName, reason) {
+    super(message, 'SCHEMA_REGISTRY_ERROR', { schemaName, reason });
+    this.name = 'SchemaRegistryError';
+  }
+}
+
+class DependencyGraphError extends ApiBridgeError {
+  constructor(message, nodeName, reason) {
+    super(message, 'DEPENDENCY_GRAPH_ERROR', { nodeName, reason });
+    this.name = 'DependencyGraphError';
+  }
+}
+
+class MockServerError extends ApiBridgeError {
+  constructor(message, operation, reason) {
+    super(message, 'MOCK_SERVER_ERROR', { operation, reason });
+    this.name = 'MockServerError';
+  }
+}
+
+class HealthCheckError extends ApiBridgeError {
+  constructor(message, endpoint, reason) {
+    super(message, 'HEALTH_CHECK_ERROR', { endpoint, reason });
+    this.name = 'HealthCheckError';
+  }
+}
+
+class EventBusError extends ApiBridgeError {
+  constructor(message, event, reason) {
+    super(message, 'EVENT_BUS_ERROR', { event, reason });
+    this.name = 'EventBusError';
+  }
+}
+
 module.exports = {
   ApiBridgeError,
   ValidationError,
@@ -143,4 +191,10 @@ module.exports = {
   PipelineError,
   WebhookError,
   VersioningError,
+  RetryError,
+  SchemaRegistryError,
+  DependencyGraphError,
+  MockServerError,
+  HealthCheckError,
+  EventBusError,
 };

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v4
+ * APIBridge AI v5
  * Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -33,6 +33,16 @@
  *  - JSON Patch generator (RFC 6902 patch generation & application)
  *  - Composable pipeline (functional stage-based transformation)
  *
+ * v5 features:
+ *  - Advanced retry strategies (linear, exponential, jitter, custom backoff, retry budget)
+ *  - Structured request logger (correlation IDs, field redaction, transports)
+ *  - Schema registry (versioned schema storage, compatibility checks, namespaces)
+ *  - Response streamer (chunked JSON transformation, field filtering, accumulators)
+ *  - API dependency graph (DAG execution, parallel orchestration, cycle detection)
+ *  - Mock server (endpoint mocking, request recording, sequence responses)
+ *  - Health check monitor (configurable probes, aggregated status, alert callbacks)
+ *  - Event bus (typed pub/sub, wildcards, priority listeners, event replay)
+ *
  * Usage:
  *   const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
  *
@@ -63,6 +73,27 @@
  *   const pipe = new ComposablePipeline();
  *   pipe.pipe('validate', validateFn).pipe('transform', transformFn);
  *   const result = await pipe.execute(data);
+ *
+ *   // v5: Retry strategy
+ *   const { RetryStrategy } = require('api-bridge-ai');
+ *   const retry = new RetryStrategy({ strategy: 'exponentialJitter', maxRetries: 5 });
+ *   const data = await retry.execute(() => fetch('/api/users'));
+ *
+ *   // v5: Event bus
+ *   const { EventBus } = require('api-bridge-ai');
+ *   const bus = new EventBus({ recordHistory: true });
+ *   bus.on('api.request', (data) => console.log(data));
+ *   await bus.emit('api.request', { url: '/users' });
+ *
+ *   // v5: Health check
+ *   const { HealthCheck } = require('api-bridge-ai');
+ *   const health = new HealthCheck({ failureThreshold: 3 });
+ *   health.register('api', () => fetch('/health').then(r => r.ok));
+ *
+ *   // v5: Mock server
+ *   const { MockServer } = require('api-bridge-ai');
+ *   const mock = new MockServer();
+ *   mock.register('GET', '/api/users', { body: [{ id: 1 }] });
  */
 
 const { APIBridgeTransformer } = require('./transformer');
@@ -88,6 +119,14 @@ const { APIVersionManager } = require('./versioning');
 const { WebhookHandler } = require('./webhook');
 const { JSONPatchGenerator } = require('./patch');
 const { ComposablePipeline } = require('./pipeline');
+const { RetryStrategy } = require('./retry-strategy');
+const { RequestLogger } = require('./request-logger');
+const { SchemaRegistry } = require('./schema-registry');
+const { ResponseStreamer } = require('./response-streamer');
+const { DependencyGraph } = require('./dependency-graph');
+const { MockServer } = require('./mock-server');
+const { HealthCheck } = require('./health-check');
+const { EventBus } = require('./event-bus');
 const {
   ApiBridgeError,
   ValidationError,
@@ -102,12 +141,18 @@ const {
   PipelineError,
   WebhookError,
   VersioningError,
+  RetryError,
+  SchemaRegistryError,
+  DependencyGraphError,
+  MockServerError,
+  HealthCheckError,
+  EventBusError,
 } = require('./errors');
 
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap an axios instance with APIBridge v4.
+ * Wrap an axios instance with APIBridge v5.
  *
  * @param {object} axiosInstance
  * @param {object} options
@@ -198,7 +243,7 @@ function bridge(axiosInstance, options = {}) {
 // ─── FETCH BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap native fetch with APIBridge v4.
+ * Wrap native fetch with APIBridge v5.
  * Supports all HTTP methods, retry logic, caching, middleware, and normalization.
  *
  * @param {object} options
@@ -403,6 +448,16 @@ module.exports = {
   JSONPatchGenerator,
   ComposablePipeline,
 
+  // v5 classes
+  RetryStrategy,
+  RequestLogger,
+  SchemaRegistry,
+  ResponseStreamer,
+  DependencyGraph,
+  MockServer,
+  HealthCheck,
+  EventBus,
+
   // Exporters
   exportMismatchCSV,
   exportMismatchJSON,
@@ -422,4 +477,10 @@ module.exports = {
   PipelineError,
   WebhookError,
   VersioningError,
+  RetryError,
+  SchemaRegistryError,
+  DependencyGraphError,
+  MockServerError,
+  HealthCheckError,
+  EventBusError,
 };
