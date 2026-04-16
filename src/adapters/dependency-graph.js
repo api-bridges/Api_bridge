@@ -11,7 +11,7 @@
  *  - Execution statistics
  */
 
-const { DependencyGraphError } = require('./errors');
+const { DependencyGraphError } = require('../core/errors');
 
 class DependencyGraph {
   constructor() {

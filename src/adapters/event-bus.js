@@ -12,7 +12,7 @@
  *  - Statistics tracking
  */
 
-const { EventBusError } = require('./errors');
+const { EventBusError } = require('../core/errors');
 
 class EventBus {
   /**

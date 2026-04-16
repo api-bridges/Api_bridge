@@ -10,7 +10,7 @@
  *   { data, direction, schema, path, meta }
  */
 
-const { MiddlewareError } = require('./errors');
+const { MiddlewareError } = require('../core/errors');
 
 class MiddlewarePipeline {
   constructor() {

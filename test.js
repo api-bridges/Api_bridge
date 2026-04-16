@@ -3499,14 +3499,14 @@ test('v7 TypeCoercer handles comma-separated strings as arrays', () => {
 });
 
 test('v7 inferType detects percentage_string', () => {
-  const { inferType } = require('./src/type-coercer');
+  const { inferType } = require('./src/core/type-coercer');
   assertEqual(inferType('50%'), 'percentage_string');
   assertEqual(inferType('100%'), 'percentage_string');
   assertEqual(inferType('-10.5%'), 'percentage_string');
 });
 
 test('v7 inferType detects case-insensitive booleans', () => {
-  const { inferType } = require('./src/type-coercer');
+  const { inferType } = require('./src/core/type-coercer');
   assertEqual(inferType('TRUE'), 'boolean_string');
   assertEqual(inferType('FALSE'), 'boolean_string');
   assertEqual(inferType('Yes'), 'boolean_string');
@@ -3516,7 +3516,7 @@ test('v7 inferType detects case-insensitive booleans', () => {
 });
 
 test('v7 inferType detects comma-separated numbers', () => {
-  const { inferType } = require('./src/type-coercer');
+  const { inferType } = require('./src/core/type-coercer');
   assertEqual(inferType('1,000'), 'float_string');
   assertEqual(inferType('1,234,567'), 'float_string');
 });
@@ -3524,35 +3524,35 @@ test('v7 inferType detects comma-separated numbers', () => {
 // ─── V7 TESTS: EXPANDED SYNONYM DICTIONARY ────────────────────
 
 test('v7 synonym dictionary includes financial terms', () => {
-  const { WORD_TO_GROUP } = require('./src/synonyms');
+  const { WORD_TO_GROUP } = require('./src/core/synonyms');
   assert(WORD_TO_GROUP.has('balance'), 'Should have balance');
   assert(WORD_TO_GROUP.has('credit'), 'Should have credit');
   assert(WORD_TO_GROUP.has('debit'), 'Should have debit');
 });
 
 test('v7 synonym dictionary includes IoT terms', () => {
-  const { WORD_TO_GROUP } = require('./src/synonyms');
+  const { WORD_TO_GROUP } = require('./src/core/synonyms');
   assert(WORD_TO_GROUP.has('sensor'), 'Should have sensor');
   assert(WORD_TO_GROUP.has('firmware'), 'Should have firmware');
   assert(WORD_TO_GROUP.has('battery'), 'Should have battery');
 });
 
 test('v7 synonym dictionary includes education terms', () => {
-  const { WORD_TO_GROUP } = require('./src/synonyms');
+  const { WORD_TO_GROUP } = require('./src/core/synonyms');
   assert(WORD_TO_GROUP.has('student'), 'Should have student');
   assert(WORD_TO_GROUP.has('teacher'), 'Should have teacher');
   assert(WORD_TO_GROUP.has('course'), 'Should have course');
 });
 
 test('v7 synonym dictionary includes social terms', () => {
-  const { WORD_TO_GROUP } = require('./src/synonyms');
+  const { WORD_TO_GROUP } = require('./src/core/synonyms');
   assert(WORD_TO_GROUP.has('follower'), 'Should have follower');
   assert(WORD_TO_GROUP.has('notification'), 'Should have notification');
   assert(WORD_TO_GROUP.has('like'), 'Should have like');
 });
 
 test('v7 synonym groups map related financial terms together', () => {
-  const { WORD_TO_GROUP } = require('./src/synonyms');
+  const { WORD_TO_GROUP } = require('./src/core/synonyms');
   const balanceGroup = WORD_TO_GROUP.get('balance');
   const accountBalanceGroup = WORD_TO_GROUP.get('account_balance');
   assertEqual(balanceGroup, accountBalanceGroup);
@@ -3561,24 +3561,24 @@ test('v7 synonym groups map related financial terms together', () => {
 // ─── V7 TESTS: N-GRAM FUNCTIONS ───────────────────────────────
 
 test('v7 ngramSimilarity returns 1.0 for identical strings', () => {
-  const { ngramSimilarity } = require('./src/fuzzy-matcher');
+  const { ngramSimilarity } = require('./src/core/fuzzy-matcher');
   assertEqual(ngramSimilarity('hello', 'hello'), 1.0);
 });
 
 test('v7 ngramSimilarity returns 0 for completely different strings', () => {
-  const { ngramSimilarity } = require('./src/fuzzy-matcher');
+  const { ngramSimilarity } = require('./src/core/fuzzy-matcher');
   const sim = ngramSimilarity('abc', 'xyz');
   assert(sim < 0.3, `Should be low similarity, got ${sim}`);
 });
 
 test('v7 ngramSimilarity detects similar strings', () => {
-  const { ngramSimilarity } = require('./src/fuzzy-matcher');
+  const { ngramSimilarity } = require('./src/core/fuzzy-matcher');
   const sim = ngramSimilarity('username', 'usrname');
   assert(sim > 0.5, `Should be high similarity, got ${sim}`);
 });
 
 test('v7 ngrams generates correct bigrams', () => {
-  const { ngrams } = require('./src/fuzzy-matcher');
+  const { ngrams } = require('./src/core/fuzzy-matcher');
   const result = ngrams('hello', 2);
   assert(result.length === 4, 'hello should have 4 bigrams');
   assertEqual(result[0], 'he');

@@ -12,7 +12,7 @@
  *  - Statistics
  */
 
-const { HealthCheckError } = require('./errors');
+const { HealthCheckError } = require('../core/errors');
 
 // ─── HEALTH STATES ───────────────────────────────────────────────────────────
 

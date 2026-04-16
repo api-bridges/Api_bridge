@@ -9,7 +9,7 @@
  *  - Statistics tracking
  */
 
-const { RateLimitError } = require('./errors');
+const { RateLimitError } = require('../core/errors');
 
 class RateLimiter {
   /**
