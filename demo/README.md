@@ -20,12 +20,14 @@ A complete single-page application demonstrating how **APIBridge AI** automatica
 
 ## Mismatches Demonstrated
 
-| # | Mismatch Type               | SQL Column         | Frontend Field      |
+The table below shows the SQL column names and what APIBridge AI's `transform()` function resolves them to (camelCase conversion):
+
+| # | Mismatch Type               | SQL Column         | APIBridge Output    |
 |---|-----------------------------|--------------------|---------------------|
-| 1 | Prefix + abbreviation       | `usr_id`           | `userId`            |
+| 1 | Prefix + abbreviation       | `usr_id`           | `usrId`             |
 | 2 | snake_case → camelCase      | `first_name`       | `firstName`         |
 | 3 | snake_case → camelCase      | `last_name`        | `lastName`          |
-| 4 | Synonym resolution          | `email_address`    | `emailAddress`      |
+| 4 | snake_case → camelCase      | `email_address`    | `emailAddress`      |
 | 5 | Abbreviation                | `ph_number`        | `phNumber`          |
 | 6 | Abbreviation                | `dt_of_birth`      | `dtOfBirth`         |
 | 7 | Boolean naming              | `is_active`        | `isActive`          |
@@ -42,6 +44,8 @@ A complete single-page application demonstrating how **APIBridge AI** automatica
 | 18| Abbreviation                | `dept_name`        | `deptName`          |
 | 19| Abbreviation                | `mgr_id`           | `mgrId`             |
 | 20| Abbreviation                | `annual_sal`       | `annualSal`         |
+
+The frontend Create User form demonstrates **reverse mapping**: the developer writes user-friendly names like `firstName`, `email`, `phoneNumber`, `departmentName`, etc. and the server uses APIBridge's bidirectional field map to convert them back to the exact SQL column names.
 
 ## Quick Start
 

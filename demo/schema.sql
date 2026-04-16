@@ -6,28 +6,28 @@
 -- resolution capabilities.
 --
 -- Mismatches demonstrated:
---   SQL Column Name          →  Frontend Expects
---   ─────────────────────────   ──────────────────
---   usr_id                   →  userId
+--   SQL Column Name          →  APIBridge Output (camelCase)
+--   ─────────────────────────   ────────────────────────────
+--   usr_id                   →  usrId
 --   first_name               →  firstName
 --   last_name                →  lastName
---   email_address            →  email
---   ph_number                →  phoneNumber
---   dt_of_birth              →  dateOfBirth
---   is_active                →  active
---   acc_balance              →  accountBalance
+--   email_address            →  emailAddress
+--   ph_number                →  phNumber
+--   dt_of_birth              →  dtOfBirth
+--   is_active                →  isActive
+--   acc_balance              →  accBalance
 --   created_at               →  createdAt
 --   updated_at               →  updatedAt
---   addr_line1               →  addressLine1
---   addr_city                →  city
---   addr_state               →  state
+--   addr_line1               →  addrLine1
+--   addr_city                →  addrCity
+--   addr_state               →  addrState
 --   zip_code                 →  zipCode
---   usr_role                 →  role
---   profile_img_url          →  profileImageUrl
---   emp_id                   →  employeeId
---   dept_name                →  departmentName
---   mgr_id                   →  managerId
---   annual_sal               →  annualSalary
+--   usr_role                 →  usrRole
+--   profile_img_url          →  profileImgUrl
+--   emp_id                   →  empId
+--   dept_name                →  deptName
+--   mgr_id                   →  mgrId
+--   annual_sal               →  annualSal
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS tbl_users (
