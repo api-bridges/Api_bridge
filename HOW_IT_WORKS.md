@@ -79,7 +79,7 @@ Result: "phone"        → recognized as synonym for "phone"
 
 When a schema is provided, APIBridge compares the field against schema keys using a **weighted ensemble of 7 strategies**: Levenshtein distance, token matching, vowel-drop detection, phonetic similarity, abbreviation expansion, n-gram overlap, and substring containment.
 
-In v7, all strategies are combined with tuned weights and the ensemble score is compared against the best individual strategy. Multiple strategies agreeing boosts confidence further. The semantic similarity engine also expands abbreviations (`txn` → `transaction`, `dev` → `device`, etc.) before comparing tokens.
+All strategies are combined with tuned weights and the ensemble score is compared against the best individual strategy. Multiple strategies agreeing boosts confidence further. The semantic similarity engine also expands abbreviations (`txn` → `transaction`, `dev` → `device`, etc.) before comparing tokens.
 
 ```
 Input:  "usr_email"   Schema has: "userEmail"
@@ -109,6 +109,91 @@ Result: "userName"     → database prefix stripped, matched
 
 Input:  "xq_flag"
 Result: "xqFlag"       → converted but flagged for review
+```
+
+---
+
+## V8 New Capabilities
+
+### Multi-Alias Field Resolution
+
+When different APIs use different names for the same concept, the FieldAliaser maps them all to a canonical name:
+
+```js
+const { FieldAliaser } = require('api-bridge-ai');
+const aliaser = new FieldAliaser();
+aliaser.register('userId', ['user_id', 'uid', 'member_id']);
+aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
+```
+
+### Schema Migration
+
+When your API's field names change across versions, the SchemaMigrator upgrades or downgrades data automatically:
+
+```js
+const { SchemaMigrator } = require('api-bridge-ai');
+const migrator = new SchemaMigrator();
+migrator.define('1.0', '2.0', { rename: { user_name: 'username' }, add: { version: '2.0' } });
+migrator.migrate(data, '1.0', '2.0'); // Applies renames, adds, removes, transforms
+```
+
+### Batch Orchestration
+
+Execute multiple API calls with concurrency control, failure handling, and result aggregation:
+
+```js
+const { BatchOrchestrator } = require('api-bridge-ai');
+const batch = new BatchOrchestrator({ concurrency: 5 });
+await batch.executeParallel([
+  { id: 'users', execute: () => fetchUsers() },
+  { id: 'orders', execute: () => fetchOrders() },
+]);
+```
+
+### Deep Merge
+
+Intelligently merge responses from multiple APIs with configurable conflict resolution:
+
+```js
+const { DeepMerge } = require('api-bridge-ai');
+const merger = new DeepMerge({ arrayStrategy: 'union' });
+const combined = merger.merge(apiResponse1, apiResponse2, apiResponse3);
+```
+
+### Conditional Transforms
+
+Apply different transformations based on field values, types, or context:
+
+```js
+const { ConditionalTransform } = require('api-bridge-ai');
+const ct = new ConditionalTransform();
+ct.when('nullToNA', (v) => v === null, () => 'N/A');
+ct.when('vipDiscount', (v, field, ctx) => ctx.isVip, (v) => v * 0.8, { fields: ['price'] });
+```
+
+### Output Formatting
+
+Format transformed data into XML, CSV, key-value pairs, tables, or custom templates:
+
+```js
+const { OutputFormatter } = require('api-bridge-ai');
+const fmt = new OutputFormatter();
+fmt.toXML(data);   // XML output
+fmt.toCSV(data);   // CSV output
+fmt.toTable(data);  // Console table
+fmt.fromTemplate(data, 'Hello {{name}}');
+```
+
+### Request Interceptor Chain
+
+Priority-ordered, groupable interceptors for modifying requests and responses:
+
+```js
+const { RequestInterceptor } = require('api-bridge-ai');
+const interceptor = new RequestInterceptor();
+interceptor.useRequest('addAuth', (ctx) => ({
+  ...ctx, headers: { ...ctx.headers, Authorization: 'Bearer token' }
+}), { priority: 100, group: 'auth' });
 ```
 
 ---
@@ -180,7 +265,7 @@ await api.post('/users', {
 
 ## Enhanced Type Coercion (v7)
 
-APIBridge v7 automatically coerces values when a schema is provided, with support for:
+APIBridge v7+ automatically coerces values when a schema is provided, with support for:
 
 | Input | Target Type | Output |
 |-------|-------------|--------|
@@ -268,3 +353,4 @@ api.exportCSV('./mismatches.csv');
 | It remembers | Learnings saved to `.apibridge/learned.json` |
 | Review flags | `getPending()` shows low-confidence mappings that need your approval |
 | Accuracy | 99%+ for standard fields, 92%+ for synonyms, 70-95% for fuzzy matches |
+| V8 modules | 45 source modules, 27 error types, 462 tests |

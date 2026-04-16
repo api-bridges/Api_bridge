@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v7
+ * APIBridge AI v8
  * Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -65,6 +65,17 @@
  *  - Expanded synonym dictionary (financial, IoT, education, social domains)
  *  - Substring/containment matching for compound keys
  *  - Improved confidence calibration throughout all levels
+ *
+ * v8 features:
+ *  - Multi-alias field resolution (map one canonical field to many aliases across APIs)
+ *  - Schema migration engine (version-to-version field mapping with upgrade/downgrade paths)
+ *  - Batch request orchestrator (parallel/sequential execution with concurrency control)
+ *  - Field analytics collector (per-field usage tracking, accuracy metrics, coverage reports)
+ *  - Conditional transformation rules (value/type/context-based dynamic transforms)
+ *  - Deep merge engine (intelligent object merging with conflict resolution strategies)
+ *  - Output formatter (JSON, XML, CSV, key-value, table, and template output)
+ *  - Request interceptor chain (priority-ordered, groupable, async interceptors)
+ *  - 5 new error classes (FieldAliaserError, SchemaMigrationError, BatchOrchestratorError, DeepMergeError, InterceptorError)
  *
  * Usage:
  *   const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
@@ -132,6 +143,28 @@
  *   const { TypeCoercer } = require('api-bridge-ai');
  *   const coercer = new TypeCoercer();
  *   const coerced = coercer.coerceValue('true', 'boolean', 'isActive');
+ *
+ *   // v8: Field aliaser
+ *   const { FieldAliaser } = require('api-bridge-ai');
+ *   const aliaser = new FieldAliaser();
+ *   aliaser.register('userId', ['user_id', 'uid', 'member_id']);
+ *   const resolved = aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
+ *
+ *   // v8: Schema migrator
+ *   const { SchemaMigrator } = require('api-bridge-ai');
+ *   const migrator = new SchemaMigrator();
+ *   migrator.define('1.0', '2.0', { rename: { user_name: 'username' } });
+ *   const migrated = migrator.migrate(data, '1.0', '2.0');
+ *
+ *   // v8: Deep merge
+ *   const { DeepMerge } = require('api-bridge-ai');
+ *   const merger = new DeepMerge({ arrayStrategy: 'union' });
+ *   const merged = merger.merge(apiResponse1, apiResponse2);
+ *
+ *   // v8: Conditional transform
+ *   const { ConditionalTransform } = require('api-bridge-ai');
+ *   const ct = new ConditionalTransform();
+ *   ct.when('nullToDefault', (v) => v === null, () => 'N/A');
  */
 
 const { APIBridgeTransformer } = require('./transformer');
@@ -168,6 +201,14 @@ const { EventBus } = require('./event-bus');
 const { FuzzyMatcher } = require('./fuzzy-matcher');
 const { CrypticResolver } = require('./cryptic-resolver');
 const { TypeCoercer } = require('./type-coercer');
+const { FieldAliaser } = require('./field-aliaser');
+const { SchemaMigrator } = require('./schema-migrator');
+const { BatchOrchestrator } = require('./batch-orchestrator');
+const { FieldStats } = require('./field-stats');
+const { ConditionalTransform } = require('./conditional-transform');
+const { DeepMerge } = require('./deep-merge');
+const { OutputFormatter } = require('./output-formatter');
+const { RequestInterceptor } = require('./request-interceptor');
 const {
   ApiBridgeError,
   ValidationError,
@@ -191,12 +232,17 @@ const {
   FuzzyMatchError,
   TypeCoercionError,
   CrypticResolverError,
+  FieldAliaserError,
+  SchemaMigrationError,
+  BatchOrchestratorError,
+  DeepMergeError,
+  InterceptorError,
 } = require('./errors');
 
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap an axios instance with APIBridge v7.
+ * Wrap an axios instance with APIBridge v8.
  *
  * @param {object} axiosInstance
  * @param {object} options
@@ -287,7 +333,7 @@ function bridge(axiosInstance, options = {}) {
 // ─── FETCH BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap native fetch with APIBridge v7.
+ * Wrap native fetch with APIBridge v8.
  * Supports all HTTP methods, retry logic, caching, middleware, and normalization.
  *
  * @param {object} options
@@ -507,6 +553,16 @@ module.exports = {
   CrypticResolver,
   TypeCoercer,
 
+  // v8 classes
+  FieldAliaser,
+  SchemaMigrator,
+  BatchOrchestrator,
+  FieldStats,
+  ConditionalTransform,
+  DeepMerge,
+  OutputFormatter,
+  RequestInterceptor,
+
   // Exporters
   exportMismatchCSV,
   exportMismatchJSON,
@@ -535,4 +591,9 @@ module.exports = {
   FuzzyMatchError,
   TypeCoercionError,
   CrypticResolverError,
+  FieldAliaserError,
+  SchemaMigrationError,
+  BatchOrchestratorError,
+  DeepMergeError,
+  InterceptorError,
 };

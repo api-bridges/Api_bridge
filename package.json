@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "7.0.0",
-  "description": "The most powerful API mismatch detector, transformer, and learner — now with weighted ensemble fuzzy matching, context-aware field resolution, n-gram cryptic name resolution, enhanced type coercion, expanded synonym dictionary, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more",
+  "version": "8.0.0",
+  "description": "The most powerful API mismatch detector, transformer, and learner — now with multi-alias field resolution, schema migration engine, batch request orchestration, field analytics, conditional transforms, deep merge engine, output formatters, request interceptor chain, weighted ensemble fuzzy matching, context-aware field resolution, n-gram cryptic name resolution, enhanced type coercion, expanded synonym dictionary, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more",
   "main": "src/index.js",
   "scripts": {
     "test": "node test.js",
@@ -49,7 +49,15 @@
     "context-aware",
     "ensemble-matching",
     "n-gram",
-    "weighted-scoring"
+    "weighted-scoring",
+    "field-aliaser",
+    "schema-migrator",
+    "batch-orchestrator",
+    "field-analytics",
+    "conditional-transform",
+    "deep-merge",
+    "output-formatter",
+    "request-interceptor"
   ],
   "author": "",
   "license": "MIT",

@@ -1,6 +1,6 @@
-# APIBridge AI v7
+# APIBridge AI v8
 
-**The most powerful API mismatch detector, transformer, and learner — now with weighted ensemble fuzzy matching, n-gram similarity, context-aware field resolution, enhanced type coercion, expanded synonym dictionary, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
+**The most powerful API mismatch detector, transformer, and learner — now with multi-alias field resolution, schema migration engine, batch request orchestration, field analytics, conditional transforms, deep merge engine, output formatters, request interceptor chain, weighted ensemble fuzzy matching, n-gram similarity, context-aware field resolution, enhanced type coercion, expanded synonym dictionary, advanced retry strategies, structured logging, schema registry, response streaming, dependency graph orchestration, mock server, health monitoring, event bus, circuit breaker, GraphQL support, OpenAPI import, webhooks, JSON Patch, composable pipelines, and more.**
 
 APIBridge automatically bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
@@ -16,6 +16,15 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
   - [bridgeFetch() — Native Fetch Integration](#bridgefetch--native-fetch-integration)
   - [transform() — Direct Transform](#transform--direct-transform)
   - [createTransformer() — Reusable Instance](#createtransformer--reusable-instance)
+- [V8 Features](#v8-features)
+  - [Multi-Alias Field Resolution](#multi-alias-field-resolution)
+  - [Schema Migration Engine](#schema-migration-engine)
+  - [Batch Request Orchestrator](#batch-request-orchestrator)
+  - [Field Analytics Collector](#field-analytics-collector)
+  - [Conditional Transformation](#conditional-transformation)
+  - [Deep Merge Engine](#deep-merge-engine)
+  - [Output Formatter](#output-formatter)
+  - [Request Interceptor Chain](#request-interceptor-chain)
 - [V7 Features](#v7-features)
   - [Weighted Ensemble Fuzzy Matcher](#weighted-ensemble-fuzzy-matcher)
   - [N-Gram Similarity Matching](#n-gram-similarity-matching)
@@ -80,63 +89,71 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
 
 ## Features
 
-| Feature | v1 | v2 | v3 | v4 | v5 | v6 | v7 |
-|---------|----|----|-----|-----|-----|-----|-----|
-| snake_case → camelCase | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| All 5 naming conventions | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Axios interceptors | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods |
-| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) | ✅ | ✅ | ✅ | ✅ (+ financial, IoT, education, social) |
-| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (enhanced multi-strategy) | ✅ (weighted ensemble 7-strategy) |
-| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) | ✅ | ✅ | ✅ | ✅ |
-| Type coercion | ✅ | ✅ (+ integer, float) | ✅ | ✅ | ✅ | ✅ (schema-based auto-coercion) | ✅ (case-insensitive, %, comma) |
-| CSV export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| JSON export | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Schema validation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Response normalization | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Middleware pipeline | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Retry with backoff | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Batch transformation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Reverse transform | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Event emitter | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Circular reference protection | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) | ✅ (19 types) | ✅ (22 types) | ✅ (22 types) |
-| Session management | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Plugin system | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Schema inference | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Field projection | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Data masking (PII) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Rate limiter | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Schema diff engine | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| TypeScript type generator | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Metrics collector | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Circuit breaker | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Request deduplication | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| GraphQL bridge | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| OpenAPI schema importer | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| API versioning | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Webhook handler | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| JSON Patch generator | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Composable pipeline | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Advanced retry strategies | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Structured request logger | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Schema registry | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Response streamer | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Dependency graph | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Mock server | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Health check monitor | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Event bus | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Enhanced fuzzy matcher | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (weighted ensemble) |
-| Cryptic name resolver | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (+ DB prefix, n-gram) |
-| Schema-based type coercer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (enhanced) |
-| **Weighted ensemble matching** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **N-gram similarity** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Abbreviation-aware semantics** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Database prefix stripping** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Case-insensitive booleans** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Percentage/comma coercion** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Expanded synonym dictionary** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Feature | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 |
+|---------|----|----|-----|-----|-----|-----|-----|-----|
+| snake_case → camelCase | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| All 5 naming conventions | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Axios interceptors | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Native fetch wrapper | GET/POST | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods | All HTTP methods |
+| Semantic synonym matching | ✅ | ✅ (expanded) | ✅ (expanded + healthcare, analytics, DevOps) | ✅ | ✅ | ✅ | ✅ (+ financial, IoT, education, social) | ✅ |
+| Fuzzy Levenshtein matching | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (enhanced multi-strategy) | ✅ (weighted ensemble 7-strategy) | ✅ |
+| Learning engine | ✅ | ✅ (confidence decay) | ✅ (v3 persistence format) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Type coercion | ✅ | ✅ (+ integer, float) | ✅ | ✅ | ✅ | ✅ (schema-based auto-coercion) | ✅ (case-insensitive, %, comma) | ✅ |
+| CSV export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| JSON export | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Schema validation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Response normalization | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Middleware pipeline | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Retry with backoff | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Batch transformation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Reverse transform | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Event emitter | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Circular reference protection | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) | ✅ (19 types) | ✅ (22 types) | ✅ (22 types) | ✅ (27 types) |
+| Session management | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Plugin system | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Schema inference | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Field projection | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Data masking (PII) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Rate limiter | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Schema diff engine | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| TypeScript type generator | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Metrics collector | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Circuit breaker | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Request deduplication | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GraphQL bridge | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| OpenAPI schema importer | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| API versioning | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Webhook handler | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| JSON Patch generator | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Composable pipeline | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Advanced retry strategies | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Structured request logger | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Schema registry | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Response streamer | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Dependency graph | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Mock server | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Health check monitor | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Event bus | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Enhanced fuzzy matcher | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (weighted ensemble) | ✅ |
+| Cryptic name resolver | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (+ DB prefix, n-gram) | ✅ |
+| Schema-based type coercer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (enhanced) | ✅ |
+| Weighted ensemble matching | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| N-gram similarity | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Abbreviation-aware semantics | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Database prefix stripping | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Case-insensitive booleans | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Percentage/comma coercion | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Expanded synonym dictionary | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Multi-alias field resolution** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Schema migration engine** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Batch request orchestrator** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Field analytics collector** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Conditional transforms** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Deep merge engine** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Output formatter** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Request interceptor chain** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -371,6 +388,316 @@ const conflicts = coercer.detectConflicts(data, schema);
 // Statistics
 coercer.getStats();
 // { totalConflicts: 3, coerced: 3, failed: 0, byType: { boolean_string_to_boolean: 1, ... } }
+```
+
+---
+
+## V8 Features
+
+### Multi-Alias Field Resolution
+
+```js
+const { FieldAliaser } = require('api-bridge-ai');
+
+const aliaser = new FieldAliaser();
+
+// Register aliases for a canonical field
+aliaser.register('userId', ['user_id', 'uid', 'member_id']);
+aliaser.register('email', ['email_address', 'mail', 'e_mail']);
+
+// Resolve any alias to canonical
+aliaser.resolve('uid');         // { canonical: 'userId', matched: true, source: 'alias' }
+aliaser.resolve('email_address'); // { canonical: 'email', matched: true }
+
+// API-specific aliases (different APIs use different names)
+aliaser.register('userId', ['usr_id'], { api: 'legacyService' });
+aliaser.register('userId', ['memberId'], { api: 'memberService' });
+aliaser.resolve('usr_id', 'legacyService'); // { canonical: 'userId', source: 'api:legacyService' }
+
+// Get preferred alias for a specific API
+aliaser.getAliasFor('userId', 'legacyService'); // 'usr_id'
+
+// Bulk import/export
+aliaser.bulkImport({ userId: ['uid', 'user_id'], name: ['full_name'] });
+const definitions = aliaser.bulkExport();
+
+// Conflict detection
+const conflicts = aliaser.detectConflicts();
+
+// Statistics
+aliaser.getStats(); // { totalGroups, totalAliases, lookups, hits, misses, hitRate }
+```
+
+### Schema Migration Engine
+
+```js
+const { SchemaMigrator } = require('api-bridge-ai');
+
+const migrator = new SchemaMigrator();
+
+// Define migrations between versions
+migrator.define('1.0', '2.0', {
+  rename: { user_name: 'username', phone_number: 'phone' },
+  add: { version: '2.0', updatedAt: () => new Date().toISOString() },
+  remove: ['legacy_field', 'deprecated_flag'],
+  transform: { price: (v) => v * 100 }, // dollars to cents
+});
+
+migrator.define('2.0', '3.0', {
+  rename: { username: 'displayName' },
+  add: { apiVersion: '3.0' },
+});
+
+// Migrate forward (auto-chains through intermediate versions)
+const result = migrator.migrate(data, '1.0', '3.0');
+// { data: { displayName: 'John', ... }, steps: ['1.0 → 2.0', '2.0 → 3.0'], success: true }
+
+// Migrate backward (auto-reverses)
+migrator.migrate(data, '3.0', '1.0');
+
+// Dry-run to preview changes
+const preview = migrator.dryRun(data, '1.0', '2.0');
+// { changes: [{ type: 'renamed', field: 'user_name', ... }], path: [...], possible: true }
+
+// Rollback last migration
+migrator.rollback(data);
+
+// Version detection
+migrator.registerDetector((data) => data._version || null);
+migrator.detectVersion({ _version: '2.0' }); // '2.0'
+
+// History and stats
+migrator.getHistory();
+migrator.getStats(); // { totalMigrations, historyLength, versions }
+```
+
+### Batch Request Orchestrator
+
+```js
+const { BatchOrchestrator } = require('api-bridge-ai');
+
+const batch = new BatchOrchestrator({
+  concurrency: 5,
+  failureStrategy: 'continue', // 'continue', 'abort', or 'retry'
+  maxRetries: 2,
+});
+
+// Parallel execution with concurrency control
+const result = await batch.executeParallel([
+  { id: 'users', execute: () => fetch('/api/users').then(r => r.json()) },
+  { id: 'orders', execute: () => fetch('/api/orders').then(r => r.json()) },
+  { id: 'products', execute: () => fetch('/api/products').then(r => r.json()) },
+]);
+// { results: [...], successful: 3, failed: 0, duration: 150 }
+
+// Sequential execution (each request receives previous results)
+const sequential = await batch.executeSequential([
+  { id: 'user', execute: () => fetch('/api/user/1').then(r => r.json()) },
+  { id: 'orders', execute: (prev) => fetch(`/api/orders?userId=${prev.user.id}`).then(r => r.json()) },
+]);
+
+// Aggregate results
+const merged = batch.aggregate(result.results, 'merge');    // Merge all into one object
+const collected = batch.aggregate(result.results, 'collect'); // Array of results
+
+// Progress tracking
+const batchWithProgress = new BatchOrchestrator({
+  onProgress: (completed, total, result) => console.log(`${completed}/${total}`),
+});
+
+// Statistics
+batch.getStats(); // { totalBatches, totalRequests, successRate, avgDuration }
+```
+
+### Field Analytics Collector
+
+```js
+const { FieldStats } = require('api-bridge-ai');
+
+const stats = new FieldStats();
+
+// Record field transformations
+stats.record('user_name', { targetKey: 'userName', confidence: 0.97, method: 'pattern_conversion' });
+stats.record('usr_eml', { targetKey: 'userEmail', confidence: 0.72, method: 'fuzzy_abbreviation' });
+
+// Per-field analytics
+stats.getFieldStats('user_name');
+// { count: 1, methods: { pattern_conversion: 1 }, avgConfidence: 0.97, ... }
+
+// Top transformed fields
+stats.getTopFields(10);
+// [{ field: 'user_name', count: 100, primaryMethod: 'pattern_conversion', avgConfidence: 0.97 }, ...]
+
+// Find fields that need schema definitions
+stats.getLowConfidenceFields(0.75);
+// [{ field: 'usr_eml', avgConfidence: 0.72, suggestedAction: 'add_synonym' }, ...]
+
+// Coverage report
+stats.getCoverageReport();
+// { totalTransformations, uniqueFields, confidenceDistribution: { high, medium, low }, autoResolvedRate }
+
+// Export all analytics
+const analytics = stats.export();
+```
+
+### Conditional Transformation
+
+```js
+const { ConditionalTransform } = require('api-bridge-ai');
+
+const ct = new ConditionalTransform();
+
+// Value-based rules
+ct.when('nullToNA', (v) => v === null, () => 'N/A');
+ct.when('trimStrings', (v) => typeof v === 'string' && v !== v.trim(), (v) => v.trim());
+ct.when('roundNumbers', (v) => typeof v === 'number' && !Number.isInteger(v), (v) => Math.round(v * 100) / 100);
+
+// Context-aware rules (access sibling fields)
+ct.when('vipDiscount',
+  (value, field, context) => context.isVip === true,
+  (value) => value * 0.8,
+  { fields: ['price'] }
+);
+
+// Priority ordering
+ct.when('lowPriority', condition, transform, { priority: 1 });
+ct.when('highPriority', condition, transform, { priority: 10 }); // Evaluated first
+
+// Default fallbacks
+ct.otherwise('status', (v) => String(v).toUpperCase());
+
+// Apply to a single field
+const result = ct.apply(null, 'status');
+// { value: 'N/A', rule: 'nullToNA', applied: true }
+
+// Apply to all fields in an object
+const { data, applied } = ct.applyAll({ name: '  John  ', status: null, price: 100 });
+// data: { name: 'John', status: 'N/A', price: 100 }
+
+// Statistics
+ct.getStats(); // { totalRules, totalEvaluations, ruleHits, topRules }
+```
+
+### Deep Merge Engine
+
+```js
+const { DeepMerge } = require('api-bridge-ai');
+
+const merger = new DeepMerge({
+  arrayStrategy: 'union',       // 'concat', 'union', 'replace', 'interleave'
+  conflictStrategy: 'latest',   // 'first', 'latest', 'custom'
+});
+
+// Basic deep merge
+const result = merger.merge(
+  { user: { name: 'John', age: 30 }, tags: ['admin'] },
+  { user: { age: 31, email: 'john@test.com' }, tags: ['editor'] }
+);
+// { user: { name: 'John', age: 31, email: 'john@test.com' }, tags: ['admin', 'editor'] }
+
+// Custom conflict resolution
+const custom = new DeepMerge({
+  conflictStrategy: 'custom',
+  conflictResolver: (key, a, b) => key === 'priority' ? Math.max(a, b) : b,
+});
+
+// Labeled merge with source tracking
+const { result: merged, sources } = merger.mergeLabeled([
+  { label: 'userApi', data: { name: 'John' } },
+  { label: 'orderApi', data: { lastOrder: '2024-01-15' } },
+]);
+// sources: { name: 'userApi', lastOrder: 'orderApi' }
+
+// Multiple sources
+merger.merge(source1, source2, source3, source4);
+
+// Prototype pollution protection built-in
+// Statistics
+merger.getStats(); // { totalMerges, conflicts, fieldsProcessed }
+```
+
+### Output Formatter
+
+```js
+const { OutputFormatter } = require('api-bridge-ai');
+
+const fmt = new OutputFormatter();
+
+// JSON pretty-print
+fmt.toJSON({ name: 'John', age: 30 });
+
+// XML serialization
+fmt.toXML({ name: 'John', age: 30 });
+// <?xml version="1.0" encoding="UTF-8"?><root><name>John</name><age>30</age></root>
+
+// XML with custom root/item names
+fmt.toXML(dataArray, { root: 'users', item: 'user' });
+
+// CSV output
+fmt.toCSV([{ name: 'John', age: 30 }, { name: 'Jane', age: 25 }]);
+// name,age\nJohn,30\nJane,25
+
+// Key-value pairs (great for logging)
+fmt.toKeyValue({ user: { name: 'John' } });
+// user.name: John
+
+// Table format (great for console)
+fmt.toTable([{ name: 'John', age: 30 }, { name: 'Jane', age: 25 }]);
+
+// Template formatting
+fmt.fromTemplate({ name: 'John', age: 30 }, 'Hello {{name}}, you are {{age}} years old');
+// 'Hello John, you are 30 years old'
+
+// Statistics
+fmt.getStats(); // { json: 1, xml: 2, csv: 1, keyvalue: 0, table: 0, template: 1 }
+```
+
+### Request Interceptor Chain
+
+```js
+const { RequestInterceptor } = require('api-bridge-ai');
+
+const interceptor = new RequestInterceptor();
+
+// Add request interceptors (priority-ordered)
+interceptor.useRequest('addAuth', (ctx) => ({
+  ...ctx,
+  headers: { ...ctx.headers, Authorization: 'Bearer ' + getToken() },
+}), { priority: 100, group: 'auth' });
+
+interceptor.useRequest('addCorrelationId', (ctx) => ({
+  ...ctx,
+  headers: { ...ctx.headers, 'X-Correlation-ID': generateId() },
+}), { priority: 50, group: 'logging' });
+
+// Add response interceptors
+interceptor.useResponse('transformBody', (ctx) => ({
+  ...ctx,
+  data: transformFields(ctx.data),
+}));
+
+// Run interceptor chains
+const { context: req } = await interceptor.interceptRequest({ url: '/api/users', headers: {} });
+const { context: res } = await interceptor.interceptResponse({ status: 200, data: rawData });
+
+// Short-circuit (stop chain and return immediately)
+interceptor.useRequest('rateLimit', (ctx) => {
+  if (isRateLimited()) return { ...ctx, _shortCircuit: true, error: 'Rate limited' };
+  return ctx;
+}, { priority: 200 });
+
+// Enable/disable groups
+interceptor.setGroupEnabled('auth', false);  // Disable all auth interceptors
+
+// Per-interceptor error handling
+interceptor.useRequest('risky', handler, {
+  onError: (err, ctx) => ({ ...ctx, fallback: true }),
+});
+
+// List, remove, stats
+interceptor.list();     // { request: [...], response: [...] }
+interceptor.remove('addAuth');
+interceptor.getStats(); // { requestInterceptions, responseInterceptions, shortCircuits, errors }
 ```
 
 ---
@@ -2263,6 +2590,11 @@ try {
 | `FuzzyMatchError` | `FUZZY_MATCH_ERROR` | v6 | Fuzzy matching failure |
 | `TypeCoercionError` | `TYPE_COERCION_ERROR` | v6 | Type coercion failure |
 | `CrypticResolverError` | `CRYPTIC_RESOLVER_ERROR` | v6 | Cryptic name resolution |
+| `FieldAliaserError` | `FIELD_ALIASER_ERROR` | v8 | Field alias resolution failure |
+| `SchemaMigrationError` | `SCHEMA_MIGRATION_ERROR` | v8 | Schema migration failure |
+| `BatchOrchestratorError` | `BATCH_ORCHESTRATOR_ERROR` | v8 | Batch orchestration failure |
+| `DeepMergeError` | `DEEP_MERGE_ERROR` | v8 | Deep merge conflict or depth failure |
+| `InterceptorError` | `INTERCEPTOR_ERROR` | v8 | Request interceptor chain failure |
 
 ---
 
@@ -2271,44 +2603,52 @@ try {
 ```
 Api_bridge/
 ├── src/
-│   ├── index.js            # Main entry — bridge(), bridgeFetch(), transform()
-│   ├── transformer.js      # Core transform engine (7-level detection)
-│   ├── learning.js         # Persistent learning engine
-│   ├── synonyms.js         # 160+ synonym groups dictionary (healthcare, analytics, DevOps, financial, IoT, education, social)
-│   ├── exporter.js         # CSV & JSON report generators
-│   ├── cache.js            # LRU response cache with TTL
-│   ├── middleware.js        # Composable before/after pipeline
-│   ├── validator.js         # Schema validation engine
-│   ├── normalizer.js        # Response format normalizer
-│   ├── errors.js            # Custom error class hierarchy (22 types)
-│   ├── plugins.js           # v3: Plugin system
-│   ├── inference.js         # v3: Schema inference engine
-│   ├── projection.js        # v3: Field projection (pick/omit/rename/reshape)
-│   ├── masking.js           # v3: Data masking (PII protection)
-│   ├── rate-limiter.js      # v3: Rate limiter (token bucket)
-│   ├── diff.js              # v3: Schema diff engine
-│   ├── typegen.js           # v3: TypeScript type generator
-│   ├── metrics.js           # v3: Performance metrics collector
-│   ├── circuit-breaker.js   # v4: Circuit breaker (fault tolerance)
-│   ├── dedup.js             # v4: Request deduplication
-│   ├── graphql.js           # v4: GraphQL response/variable bridge
-│   ├── openapi.js           # v4: OpenAPI/Swagger schema importer
-│   ├── versioning.js        # v4: API version management
-│   ├── webhook.js           # v4: Webhook handler & normalizer
-│   ├── patch.js             # v4: JSON Patch generator (RFC 6902)
-│   ├── pipeline.js          # v4: Composable transformation pipeline
-│   ├── retry-strategy.js    # v5: Advanced retry strategies
-│   ├── request-logger.js    # v5: Structured request/response logger
-│   ├── schema-registry.js   # v5: Versioned schema registry
-│   ├── response-streamer.js # v5: Chunked response transformer
-│   ├── dependency-graph.js  # v5: API dependency graph orchestrator
-│   ├── mock-server.js       # v5: Built-in mock server for testing
-│   ├── health-check.js      # v5: Endpoint health monitoring
-│   ├── event-bus.js         # v5: Typed pub/sub event bus
-│   ├── fuzzy-matcher.js     # v6: Enhanced multi-strategy fuzzy matcher
-│   ├── cryptic-resolver.js  # v6: Cryptic/arbitrary name resolver
-│   └── type-coercer.js      # v6: Schema-based type coercer
-├── test.js                  # 332-test comprehensive test suite
+│   ├── index.js              # Main entry — bridge(), bridgeFetch(), transform()
+│   ├── transformer.js        # Core transform engine (8-level detection)
+│   ├── learning.js           # Persistent learning engine
+│   ├── synonyms.js           # 160+ synonym groups dictionary (healthcare, analytics, DevOps, financial, IoT, education, social)
+│   ├── exporter.js           # CSV & JSON report generators
+│   ├── cache.js              # LRU response cache with TTL
+│   ├── middleware.js          # Composable before/after pipeline
+│   ├── validator.js           # Schema validation engine
+│   ├── normalizer.js          # Response format normalizer
+│   ├── errors.js              # Custom error class hierarchy (27 types)
+│   ├── plugins.js             # v3: Plugin system
+│   ├── inference.js           # v3: Schema inference engine
+│   ├── projection.js          # v3: Field projection (pick/omit/rename/reshape)
+│   ├── masking.js             # v3: Data masking (PII protection)
+│   ├── rate-limiter.js        # v3: Rate limiter (token bucket)
+│   ├── diff.js                # v3: Schema diff engine
+│   ├── typegen.js             # v3: TypeScript type generator
+│   ├── metrics.js             # v3: Performance metrics collector
+│   ├── circuit-breaker.js     # v4: Circuit breaker (fault tolerance)
+│   ├── dedup.js               # v4: Request deduplication
+│   ├── graphql.js             # v4: GraphQL response/variable bridge
+│   ├── openapi.js             # v4: OpenAPI/Swagger schema importer
+│   ├── versioning.js          # v4: API version management
+│   ├── webhook.js             # v4: Webhook handler & normalizer
+│   ├── patch.js               # v4: JSON Patch generator (RFC 6902)
+│   ├── pipeline.js            # v4: Composable transformation pipeline
+│   ├── retry-strategy.js      # v5: Advanced retry strategies
+│   ├── request-logger.js      # v5: Structured request/response logger
+│   ├── schema-registry.js     # v5: Versioned schema registry
+│   ├── response-streamer.js   # v5: Chunked response transformer
+│   ├── dependency-graph.js    # v5: API dependency graph orchestrator
+│   ├── mock-server.js         # v5: Built-in mock server for testing
+│   ├── health-check.js        # v5: Endpoint health monitoring
+│   ├── event-bus.js           # v5: Typed pub/sub event bus
+│   ├── fuzzy-matcher.js       # v6: Enhanced multi-strategy fuzzy matcher
+│   ├── cryptic-resolver.js    # v6: Cryptic/arbitrary name resolver
+│   ├── type-coercer.js        # v6: Schema-based type coercer
+│   ├── field-aliaser.js       # v8: Multi-alias field resolution
+│   ├── schema-migrator.js     # v8: Schema migration engine
+│   ├── batch-orchestrator.js  # v8: Batch request orchestrator
+│   ├── field-stats.js         # v8: Field analytics collector
+│   ├── conditional-transform.js # v8: Conditional transformation rules
+│   ├── deep-merge.js          # v8: Deep merge engine
+│   ├── output-formatter.js    # v8: Output formatter (JSON, XML, CSV, table, template)
+│   └── request-interceptor.js # v8: Request interceptor chain
+├── test.js                    # 462-test comprehensive test suite
 ├── package.json
 ├── .gitignore
 └── README.md
@@ -2322,7 +2662,7 @@ Api_bridge/
 npm test
 ```
 
-This runs 373 tests covering:
+This runs 462 tests covering:
 - Basic transformations (all conventions)
 - Nested objects and arrays
 - Type coercion with schemas
@@ -2338,7 +2678,7 @@ This runs 373 tests covering:
 - Middleware pipeline
 - Schema validation
 - Response normalization
-- Custom error classes (22 types)
+- Custom error classes (27 types)
 - Event emitter
 - Session management
 - **v3: Plugin system** (register, unregister, hooks, error handling)
@@ -2375,50 +2715,87 @@ This runs 373 tests covering:
 - **v7: Database prefix stripping** (tbl_, fk_, pk_, vw_, sp_, idx_ prefix removal)
 - **v7: Expanded synonym dictionary** (financial, IoT, education, social domain groups)
 - **v7: Transformer accuracy** (abbreviation-aware semantics, backward compatibility, nested objects)
+- **v8: Field aliaser** (register, resolve, API-specific, bulk import/export, conflicts, unregister, stats)
+- **v8: Schema migrator** (forward, backward, chained, transforms, dry-run, rollback, version detection, history)
+- **v8: Batch orchestrator** (parallel, sequential, aggregation, failure strategies, progress, stats)
+- **v8: Field stats** (record, per-field analytics, top fields, low confidence, coverage report, export)
+- **v8: Conditional transform** (rules, priority, context-aware, otherwise, applyAll, remove, stats)
+- **v8: Deep merge** (basic, nested, array strategies, conflict strategies, prototype pollution, source tracking, stats)
+- **v8: Output formatter** (JSON, XML, CSV, key-value, table, template, XML escaping, stats)
+- **v8: Request interceptor** (request/response chains, priority, short-circuit, groups, enable/disable, error handling, stats)
+- **v8: Error classes** (FieldAliaserError, SchemaMigrationError, BatchOrchestratorError, DeepMergeError, InterceptorError)
+- **v8: Backward compatibility** (all v7 exports available, all v8 exports available, transform still works)
 
 ---
 
-## Migration from V6
+## Migration from V7
 
-V7 is backward compatible. Your V6 code will work without changes.
+V8 is backward compatible. Your V7 code will work without changes.
 
 **Breaking changes:** None.
 
-**Import path change:** None — same as V6.
+**Import path change:** None — same as V7.
 
 ```js
 const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
 ```
 
-**New v7 features you can adopt incrementally:**
+**New v8 features you can adopt incrementally:**
 
 ```js
-// Weighted ensemble fuzzy matching (7 strategies combined)
-const { FuzzyMatcher } = require('api-bridge-ai');
-const fuzzy = new FuzzyMatcher();
-const match = fuzzy.findBestMatch('usr_email', ['user_email', 'user_name']);
-// { match: 'user_email', confidence: 0.92, method: 'fuzzy_ensemble' }
+// Multi-alias field resolution
+const { FieldAliaser } = require('api-bridge-ai');
+const aliaser = new FieldAliaser();
+aliaser.register('userId', ['user_id', 'uid', 'member_id']);
+aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
 
-// Tune strategy weights for your use case
-fuzzy.setWeights({ levenshtein: 0.5, tokenMatch: 0.3 });
+// API-specific aliases
+aliaser.register('userId', ['usr_id'], { api: 'legacyService' });
+aliaser.resolve('usr_id', 'legacyService'); // { canonical: 'userId' }
 
-// N-gram similarity for short/garbled names
-const { ngramSimilarity } = require('api-bridge-ai/src/fuzzy-matcher');
-ngramSimilarity('username', 'usrname'); // ~0.67
+// Schema migration engine
+const { SchemaMigrator } = require('api-bridge-ai');
+const migrator = new SchemaMigrator();
+migrator.define('1.0', '2.0', { rename: { user_name: 'username' } });
+migrator.migrate(data, '1.0', '2.0');
 
-// Database prefix stripping in cryptic resolver
-const { CrypticResolver } = require('api-bridge-ai');
-const resolver = new CrypticResolver();
-resolver.resolve('tbl_user_name', ['user_name']);
-// { match: 'user_name', confidence: 0.70, method: 'db_prefix_strip' }
+// Batch request orchestrator
+const { BatchOrchestrator } = require('api-bridge-ai');
+const batch = new BatchOrchestrator({ concurrency: 5 });
+await batch.executeParallel([
+  { id: 'users', execute: () => fetchUsers() },
+  { id: 'orders', execute: () => fetchOrders() },
+]);
 
-// Enhanced type coercion
-const { TypeCoercer } = require('api-bridge-ai');
-const coercer = new TypeCoercer();
-coercer.coerceValue('TRUE', 'boolean', 'flag');    // { value: true }
-coercer.coerceValue('50%', 'float', 'rate');        // { value: 0.5 }
-coercer.coerceValue('1,000', 'integer', 'count');   // { value: 1000 }
-coercer.coerceValue('red,green,blue', 'array', 'c');// { value: ['red','green','blue'] }
+// Field analytics
+const { FieldStats } = require('api-bridge-ai');
+const stats = new FieldStats();
+stats.record('user_name', { confidence: 0.97, method: 'pattern_conversion' });
+stats.getLowConfidenceFields(); // Find fields that need schema definitions
+
+// Conditional transforms
+const { ConditionalTransform } = require('api-bridge-ai');
+const ct = new ConditionalTransform();
+ct.when('nullToNA', (v) => v === null, () => 'N/A');
+ct.applyAll({ name: 'John', status: null });
+
+// Deep merge
+const { DeepMerge } = require('api-bridge-ai');
+const merger = new DeepMerge({ arrayStrategy: 'union' });
+merger.merge(apiResponse1, apiResponse2);
+
+// Output formatter
+const { OutputFormatter } = require('api-bridge-ai');
+const fmt = new OutputFormatter();
+fmt.toXML(data);   // XML output
+fmt.toCSV(data);   // CSV output
+fmt.toTable(data);  // Table output
+fmt.fromTemplate(data, 'Hello {{name}}');
+
+// Request interceptor chain
+const { RequestInterceptor } = require('api-bridge-ai');
+const interceptor = new RequestInterceptor();
+interceptor.useRequest('addAuth', (ctx) => ({ ...ctx, headers: { Authorization: 'Bearer token' } }));
 ```
 
 ---
