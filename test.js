@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v4 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2, v3, and v4 features.
+ * APIBridge AI v5 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2, v3, v4, and v5 features.
  */
 
 const {
@@ -30,6 +30,14 @@ const {
   WebhookHandler,
   JSONPatchGenerator,
   ComposablePipeline,
+  RetryStrategy,
+  RequestLogger,
+  SchemaRegistry,
+  ResponseStreamer,
+  DependencyGraph,
+  MockServer,
+  HealthCheck,
+  EventBus,
   ApiBridgeError,
   ValidationError,
   TransformError,
@@ -41,6 +49,12 @@ const {
   PipelineError,
   WebhookError,
   VersioningError,
+  RetryError,
+  SchemaRegistryError,
+  DependencyGraphError,
+  MockServerError,
+  HealthCheckError,
+  EventBusError,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -1802,6 +1816,846 @@ test('v4 errors serialize to JSON', () => {
   const json = err.toJSON();
   assertEqual(json.name, 'CircuitBreakerError');
   assertEqual(json.code, 'CIRCUIT_BREAKER_ERROR');
+  assert(json.timestamp !== undefined, 'Should have timestamp');
+});
+
+// ═════════════════════════════════════════════════════════════════════
+//  V5 FEATURES
+// ═════════════════════════════════════════════════════════════════════
+
+console.log('\n── V5: Retry Strategy ──');
+
+test('RetryStrategy executes successfully on first try', async () => {
+  const retry = new RetryStrategy({ maxRetries: 3, baseDelay: 10 });
+  let calls = 0;
+  const result = await retry.execute(() => { calls++; return Promise.resolve('ok'); });
+  assertEqual(result, 'ok');
+  assertEqual(calls, 1);
+  assertEqual(retry.getStats().totalSuccesses, 1);
+});
+
+test('RetryStrategy retries on failure and eventually succeeds', async () => {
+  const retry = new RetryStrategy({ maxRetries: 3, baseDelay: 10, strategy: 'constant' });
+  let calls = 0;
+  const result = await retry.execute(() => {
+    calls++;
+    if (calls < 3) throw new Error('fail');
+    return Promise.resolve('recovered');
+  });
+  assertEqual(result, 'recovered');
+  assertEqual(calls, 3);
+  assertEqual(retry.getStats().totalRetries, 2);
+});
+
+test('RetryStrategy throws RetryError after max retries', async () => {
+  const retry = new RetryStrategy({ maxRetries: 2, baseDelay: 10, strategy: 'constant' });
+  try {
+    await retry.execute(() => { throw new Error('always fail'); });
+    assert(false, 'Should have thrown');
+  } catch (e) {
+    assert(e instanceof RetryError, 'Should be RetryError');
+    assert(e.message.includes('All 3 attempts failed'), 'Should mention all attempts');
+  }
+});
+
+test('RetryStrategy getDelay calculates correctly for exponential', () => {
+  const retry = new RetryStrategy({ baseDelay: 100, strategy: 'exponential' });
+  assertEqual(retry.getDelay(1), 100);
+  assertEqual(retry.getDelay(2), 200);
+  assertEqual(retry.getDelay(3), 400);
+});
+
+test('RetryStrategy respects maxDelay cap', () => {
+  const retry = new RetryStrategy({ baseDelay: 100, maxDelay: 250, strategy: 'exponential' });
+  assertEqual(retry.getDelay(5), 250);
+});
+
+test('RetryStrategy linear strategy', () => {
+  const retry = new RetryStrategy({ baseDelay: 100, strategy: 'linear' });
+  assertEqual(retry.getDelay(1), 100);
+  assertEqual(retry.getDelay(2), 200);
+  assertEqual(retry.getDelay(3), 300);
+});
+
+test('RetryStrategy isRetryable checks status codes', () => {
+  const retry = new RetryStrategy();
+  assert(retry.isRetryable(503), '503 should be retryable');
+  assert(retry.isRetryable(429), '429 should be retryable');
+  assert(!retry.isRetryable(404), '404 should not be retryable');
+});
+
+test('RetryStrategy custom shouldRetry predicate', async () => {
+  const retry = new RetryStrategy({
+    maxRetries: 5,
+    baseDelay: 10,
+    strategy: 'constant',
+    shouldRetry: (err, attempt) => attempt <= 1,
+  });
+  let calls = 0;
+  try {
+    await retry.execute(() => { calls++; throw new Error('fail'); });
+    assert(false, 'Should have thrown');
+  } catch (e) {
+    assertEqual(calls, 2);
+  }
+});
+
+test('RetryStrategy onRetry callback fires', async () => {
+  const retryLog = [];
+  const retry = new RetryStrategy({
+    maxRetries: 2,
+    baseDelay: 10,
+    strategy: 'constant',
+    onRetry: (attempt, delay, err) => retryLog.push({ attempt, delay }),
+  });
+  let calls = 0;
+  const result = await retry.execute(() => {
+    calls++;
+    if (calls < 2) throw new Error('fail');
+    return Promise.resolve('ok');
+  });
+  assertEqual(retryLog.length, 1);
+  assertEqual(retryLog[0].attempt, 1);
+});
+
+test('RetryStrategy reset clears stats', () => {
+  const retry = new RetryStrategy();
+  retry._stats.totalExecutions = 10;
+  retry.reset();
+  assertEqual(retry.getStats().totalExecutions, 0);
+});
+
+console.log('\n── V5: Request Logger ──');
+
+test('RequestLogger logs requests and responses', () => {
+  const logger = new RequestLogger({ level: 'debug' });
+  const reqEntry = logger.logRequest({ method: 'GET', url: '/api/users' });
+  assertEqual(reqEntry.type, 'request');
+  assert(reqEntry.correlationId.startsWith('req_'), 'Should have correlation ID');
+
+  const resEntry = logger.logResponse({ status: 200, url: '/api/users', correlationId: reqEntry.correlationId });
+  assertEqual(resEntry.type, 'response');
+  assertEqual(resEntry.correlationId, reqEntry.correlationId);
+});
+
+test('RequestLogger redacts sensitive fields', () => {
+  const logger = new RequestLogger();
+  const redacted = logger.redact({ username: 'john', password: 'secret123', token: 'abc' });
+  assertEqual(redacted.username, 'john');
+  assertEqual(redacted.password, '[REDACTED]');
+  assertEqual(redacted.token, '[REDACTED]');
+});
+
+test('RequestLogger respects log level', () => {
+  const logger = new RequestLogger({ level: 'error' });
+  logger.logRequest({ method: 'GET', url: '/test' }); // info level, should be filtered
+  assertEqual(logger.getEntries().length, 0);
+
+  logger.logError({ message: 'Server error' }); // error level, should be recorded
+  assertEqual(logger.getEntries().length, 1);
+});
+
+test('RequestLogger getEntries with filters', () => {
+  const logger = new RequestLogger({ level: 'debug' });
+  const req = logger.logRequest({ method: 'GET', url: '/a' });
+  logger.logResponse({ status: 200, url: '/a', correlationId: req.correlationId });
+  logger.logError({ message: 'err' });
+
+  const requests = logger.getEntries({ type: 'request' });
+  assertEqual(requests.length, 1);
+
+  const errors = logger.getEntries({ type: 'error' });
+  assertEqual(errors.length, 1);
+
+  const byCorrelation = logger.getEntries({ correlationId: req.correlationId });
+  assertEqual(byCorrelation.length, 2);
+});
+
+test('RequestLogger tracks stats', () => {
+  const logger = new RequestLogger({ level: 'debug' });
+  logger.logRequest({ method: 'GET', url: '/a' });
+  logger.logResponse({ status: 500, url: '/a' });
+  const stats = logger.getStats();
+  assertEqual(stats.totalLogs, 2);
+  assertEqual(stats.byLevel.info, 1);
+  assertEqual(stats.byLevel.error, 1);
+});
+
+test('RequestLogger custom transport', () => {
+  const entries = [];
+  const logger = new RequestLogger({ level: 'debug', transport: (entry) => entries.push(entry) });
+  logger.logRequest({ method: 'GET', url: '/test' });
+  assertEqual(entries.length, 1);
+});
+
+test('RequestLogger reset clears state', () => {
+  const logger = new RequestLogger({ level: 'debug' });
+  logger.logRequest({ method: 'GET', url: '/test' });
+  logger.reset();
+  assertEqual(logger.getEntries().length, 0);
+  assertEqual(logger.getStats().totalLogs, 0);
+});
+
+test('RequestLogger deep-redacts nested objects', () => {
+  const logger = new RequestLogger();
+  const redacted = logger.redact({ user: { name: 'John', password: 'secret' } });
+  assertEqual(redacted.user.name, 'John');
+  assertEqual(redacted.user.password, '[REDACTED]');
+});
+
+console.log('\n── V5: Schema Registry ──');
+
+test('SchemaRegistry registers and retrieves schemas', () => {
+  const registry = new SchemaRegistry();
+  registry.register('User', { name: { type: 'string' }, email: { type: 'string' } });
+  const schema = registry.get('User');
+  assertEqual(schema.name.type, 'string');
+  assertEqual(schema.email.type, 'string');
+});
+
+test('SchemaRegistry auto-increments versions', () => {
+  const registry = new SchemaRegistry();
+  const v1 = registry.register('User', { name: { type: 'string' } });
+  assertEqual(v1.version, 1);
+  const v2 = registry.register('User', { name: { type: 'string' }, age: { type: 'number' } });
+  assertEqual(v2.version, 2);
+});
+
+test('SchemaRegistry retrieves specific versions', () => {
+  const registry = new SchemaRegistry();
+  registry.register('User', { name: { type: 'string' } });
+  registry.register('User', { name: { type: 'string' }, age: { type: 'number' } });
+  const v1 = registry.getVersion('User', 1);
+  assert(v1.age === undefined, 'v1 should not have age');
+  const v2 = registry.getVersion('User', 2);
+  assertEqual(v2.age.type, 'number');
+});
+
+test('SchemaRegistry namespace support', () => {
+  const registry = new SchemaRegistry();
+  registry.register('User', { a: 1 }, { namespace: 'serviceA' });
+  registry.register('User', { b: 2 }, { namespace: 'serviceB' });
+  const a = registry.get('User', { namespace: 'serviceA' });
+  assertEqual(a.a, 1);
+  const b = registry.get('User', { namespace: 'serviceB' });
+  assertEqual(b.b, 2);
+});
+
+test('SchemaRegistry checkCompatibility detects breaking changes', () => {
+  const registry = new SchemaRegistry();
+  const old = { name: { type: 'string' }, email: { type: 'string' } };
+  const newer = { name: { type: 'number' } }; // changed type + removed email
+  const compat = registry.checkCompatibility(old, newer);
+  assert(!compat.backward, 'Should not be backward compatible');
+  assert(compat.breakingChanges.length > 0, 'Should have breaking changes');
+});
+
+test('SchemaRegistry search finds fields', () => {
+  const registry = new SchemaRegistry();
+  registry.register('User', { userName: { type: 'string' }, email: { type: 'string' } });
+  registry.register('Order', { orderId: { type: 'number' } });
+  const results = registry.search('name');
+  assert(results.length >= 1, 'Should find userName');
+  assert(results.some(r => r.field === 'userName'), 'Should match userName');
+});
+
+test('SchemaRegistry export/import round-trip', () => {
+  const registry = new SchemaRegistry();
+  registry.register('User', { name: { type: 'string' } });
+  const exported = registry.export();
+
+  const registry2 = new SchemaRegistry();
+  registry2.import(exported);
+  const schema = registry2.get('User');
+  assertEqual(schema.name.type, 'string');
+});
+
+test('SchemaRegistry list and has', () => {
+  const registry = new SchemaRegistry();
+  registry.register('User', { name: { type: 'string' } });
+  assert(registry.has('User'), 'Should have User');
+  assert(!registry.has('Order'), 'Should not have Order');
+  const list = registry.list();
+  assertEqual(list.length, 1);
+  assertEqual(list[0].name, 'User');
+});
+
+test('SchemaRegistry remove', () => {
+  const registry = new SchemaRegistry();
+  registry.register('User', { name: { type: 'string' } });
+  assert(registry.has('User'), 'Should exist before remove');
+  registry.remove('User');
+  assert(!registry.has('User'), 'Should not exist after remove');
+});
+
+test('SchemaRegistry strict mode throws on missing', () => {
+  const registry = new SchemaRegistry({ strict: true });
+  try {
+    registry.get('NonExistent');
+    assert(false, 'Should have thrown');
+  } catch (e) {
+    assert(e instanceof SchemaRegistryError, 'Should be SchemaRegistryError');
+  }
+});
+
+console.log('\n── V5: Response Streamer ──');
+
+test('ResponseStreamer transforms object keys', () => {
+  const streamer = new ResponseStreamer({ convention: 'camelCase' });
+  const result = streamer.process({ first_name: 'John', last_name: 'Doe' });
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+});
+
+test('ResponseStreamer processes in chunks', () => {
+  const chunks = [];
+  const streamer = new ResponseStreamer({
+    convention: 'camelCase',
+    chunkSize: 2,
+    onChunk: (chunk, idx) => chunks.push({ chunk, idx }),
+  });
+  const data = { first_name: 'a', last_name: 'b', user_age: 1, phone_number: '123' };
+  const result = streamer.process(data);
+  assertEqual(chunks.length, 2);
+  assertEqual(result.firstName, 'a');
+  assertEqual(result.phoneNumber, '123');
+});
+
+test('ResponseStreamer field filtering with includeFields', () => {
+  const streamer = new ResponseStreamer({ includeFields: ['first_name'] });
+  const result = streamer.process({ first_name: 'John', last_name: 'Doe' });
+  assertEqual(result.firstName, 'John');
+  assert(result.lastName === undefined, 'Should not include last_name');
+});
+
+test('ResponseStreamer field filtering with excludeFields', () => {
+  const streamer = new ResponseStreamer({ excludeFields: ['password'] });
+  const result = streamer.process({ name: 'John', password: 'secret' });
+  assertEqual(result.name, 'John');
+  assert(result.password === undefined, 'Should exclude password');
+});
+
+test('ResponseStreamer processArray', () => {
+  const streamer = new ResponseStreamer({ convention: 'camelCase' });
+  const result = streamer.processArray([
+    { first_name: 'John' },
+    { first_name: 'Jane' },
+  ]);
+  assertEqual(result.length, 2);
+  assertEqual(result[0].firstName, 'John');
+  assertEqual(result[1].firstName, 'Jane');
+});
+
+test('ResponseStreamer progress callback', () => {
+  const progress = [];
+  const streamer = new ResponseStreamer({
+    chunkSize: 1,
+    onProgress: (p) => progress.push(p),
+  });
+  streamer.process({ a: 1, b: 2, c: 3 });
+  assert(progress.length >= 3, 'Should have progress updates');
+  assertEqual(progress[progress.length - 1].percent, 100);
+});
+
+test('ResponseStreamer accumulator mode', () => {
+  const streamer = new ResponseStreamer({ convention: 'camelCase' });
+  const acc = streamer.createAccumulator();
+  acc.add({ first_name: 'John' });
+  acc.add({ last_name: 'Doe' });
+  const result = acc.getResult();
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+});
+
+test('ResponseStreamer deep nested transform', () => {
+  const streamer = new ResponseStreamer({ convention: 'camelCase' });
+  const result = streamer.process({ user_data: { first_name: 'John', address_info: { zip_code: '12345' } } });
+  assertEqual(result.userData.firstName, 'John');
+  assertEqual(result.userData.addressInfo.zipCode, '12345');
+});
+
+test('ResponseStreamer tracks stats', () => {
+  const streamer = new ResponseStreamer();
+  streamer.process({ a: 1, b: 2 });
+  const stats = streamer.getStats();
+  assert(stats.streamsCompleted >= 1, 'Should count streams');
+  assert(stats.keysTransformed >= 2, 'Should count keys');
+});
+
+console.log('\n── V5: Dependency Graph ──');
+
+test('DependencyGraph executes independent nodes in parallel', async () => {
+  const graph = new DependencyGraph();
+  const order = [];
+  graph.add('a', async () => { order.push('a'); return 1; });
+  graph.add('b', async () => { order.push('b'); return 2; });
+  const results = await graph.execute();
+  assertEqual(results.a, 1);
+  assertEqual(results.b, 2);
+  assertEqual(order.length, 2);
+});
+
+test('DependencyGraph respects dependencies', async () => {
+  const graph = new DependencyGraph();
+  graph.add('fetch', async () => ({ userId: 1 }));
+  graph.add('transform', async (deps) => ({ ...deps.fetch, name: 'John' }), { deps: ['fetch'] });
+  const results = await graph.execute();
+  assertEqual(results.transform.userId, 1);
+  assertEqual(results.transform.name, 'John');
+});
+
+test('DependencyGraph detects cycles', () => {
+  const graph = new DependencyGraph();
+  graph.add('a', async () => 1, { deps: ['b'] });
+  graph.add('b', async () => 2, { deps: ['a'] });
+  try {
+    graph.getOrder();
+    assert(false, 'Should have thrown');
+  } catch (e) {
+    assert(e instanceof DependencyGraphError, 'Should be DependencyGraphError');
+    assert(e.message.includes('Cycle'), 'Should mention cycle');
+  }
+});
+
+test('DependencyGraph validates missing dependencies', () => {
+  const graph = new DependencyGraph();
+  graph.add('a', async () => 1, { deps: ['nonexistent'] });
+  const validation = graph.validate();
+  assert(!validation.valid, 'Should be invalid');
+  assert(validation.errors.length > 0, 'Should have errors');
+});
+
+test('DependencyGraph conditional node execution', async () => {
+  const graph = new DependencyGraph();
+  graph.add('check', async () => false);
+  graph.add('skip', async () => 'should not run', {
+    deps: ['check'],
+    condition: (results) => results.check === true,
+    defaultValue: 'skipped',
+  });
+  const results = await graph.execute();
+  assertEqual(results.skip, 'skipped');
+});
+
+test('DependencyGraph getOrder returns topological order', () => {
+  const graph = new DependencyGraph();
+  graph.add('c', async () => 3, { deps: ['b'] });
+  graph.add('a', async () => 1);
+  graph.add('b', async () => 2, { deps: ['a'] });
+  const order = graph.getOrder();
+  const aIdx = order.indexOf('a');
+  const bIdx = order.indexOf('b');
+  const cIdx = order.indexOf('c');
+  assert(aIdx < bIdx, 'a should come before b');
+  assert(bIdx < cIdx, 'b should come before c');
+});
+
+test('DependencyGraph list and size', () => {
+  const graph = new DependencyGraph();
+  graph.add('a', async () => 1);
+  graph.add('b', async () => 2, { deps: ['a'] });
+  assertEqual(graph.size(), 2);
+  const list = graph.list();
+  assertEqual(list.length, 2);
+  assert(list.some(n => n.name === 'a'), 'Should list node a');
+});
+
+test('DependencyGraph remove node', () => {
+  const graph = new DependencyGraph();
+  graph.add('a', async () => 1);
+  graph.add('b', async () => 2, { deps: ['a'] });
+  graph.remove('a');
+  assertEqual(graph.size(), 1);
+  assert(!graph.has('a'), 'Should not have a');
+});
+
+console.log('\n── V5: Mock Server ──');
+
+test('MockServer registers and handles requests', async () => {
+  const mock = new MockServer();
+  mock.register('GET', '/api/users', { body: [{ id: 1, name: 'John' }] });
+  const response = await mock.handle('GET', '/api/users');
+  assertEqual(response.status, 200);
+  assertEqual(response.body.length, 1);
+  assertEqual(response.body[0].name, 'John');
+});
+
+test('MockServer returns 404 for unregistered routes', async () => {
+  const mock = new MockServer();
+  const response = await mock.handle('GET', '/unknown');
+  assertEqual(response.status, 404);
+});
+
+test('MockServer strict mode throws on unmatched', async () => {
+  const mock = new MockServer({ strict: true });
+  try {
+    await mock.handle('GET', '/unknown');
+    assert(false, 'Should have thrown');
+  } catch (e) {
+    assert(e instanceof MockServerError, 'Should be MockServerError');
+  }
+});
+
+test('MockServer records requests', async () => {
+  const mock = new MockServer();
+  mock.register('POST', '/api/users', { status: 201, body: { id: 1 } });
+  await mock.handle('POST', '/api/users', { body: { name: 'John' } });
+  const requests = mock.getRequests();
+  assertEqual(requests.length, 1);
+  assertEqual(requests[0].method, 'POST');
+  assertEqual(requests[0].body.name, 'John');
+});
+
+test('MockServer assertCalled checks', async () => {
+  const mock = new MockServer();
+  mock.register('GET', '/api/users', { body: [] });
+  await mock.handle('GET', '/api/users');
+  await mock.handle('GET', '/api/users');
+  const result = mock.assertCalled('GET', '/api/users', { times: 2 });
+  assert(result.passed, 'Should have been called 2 times');
+  assertEqual(result.count, 2);
+});
+
+test('MockServer wildcard patterns', async () => {
+  const mock = new MockServer();
+  mock.register('GET', '/api/users/*', { body: { id: 1 } });
+  const response = await mock.handle('GET', '/api/users/123');
+  assertEqual(response.status, 200);
+  assertEqual(response.body.id, 1);
+});
+
+test('MockServer sequence responses', async () => {
+  const mock = new MockServer();
+  mock.registerSequence('GET', '/api/data', [
+    { status: 200, body: { attempt: 1 } },
+    { status: 500, body: { error: 'fail' } },
+    { status: 200, body: { attempt: 3 } },
+  ]);
+  const r1 = await mock.handle('GET', '/api/data');
+  assertEqual(r1.status, 200);
+  assertEqual(r1.body.attempt, 1);
+  const r2 = await mock.handle('GET', '/api/data');
+  assertEqual(r2.status, 500);
+  const r3 = await mock.handle('GET', '/api/data');
+  assertEqual(r3.status, 200);
+  assertEqual(r3.body.attempt, 3);
+});
+
+test('MockServer dynamic handler', async () => {
+  const mock = new MockServer();
+  mock.register('POST', '/api/echo', {
+    handler: (req) => ({ status: 200, body: { echo: req.body } }),
+  });
+  const response = await mock.handle('POST', '/api/echo', { body: { msg: 'hello' } });
+  assertEqual(response.body.echo.msg, 'hello');
+});
+
+test('MockServer list and unregister', () => {
+  const mock = new MockServer();
+  mock.register('GET', '/a', { body: 1 });
+  mock.register('POST', '/b', { body: 2 });
+  assertEqual(mock.list().length, 2);
+  mock.unregister('GET', '/a');
+  assertEqual(mock.list().length, 1);
+});
+
+test('MockServer stats tracking', async () => {
+  const mock = new MockServer();
+  mock.register('GET', '/api', { body: 'ok' });
+  await mock.handle('GET', '/api');
+  await mock.handle('GET', '/missing');
+  const stats = mock.getStats();
+  assertEqual(stats.totalRequests, 2);
+  assertEqual(stats.matchedRequests, 1);
+  assertEqual(stats.unmatchedRequests, 1);
+});
+
+console.log('\n── V5: Health Check ──');
+
+test('HealthCheck registers and checks endpoints', async () => {
+  const health = new HealthCheck({ successThreshold: 1 });
+  health.register('api', async () => true);
+  const result = await health.check('api');
+  assertEqual(result.status, 'HEALTHY');
+  assert(result.duration >= 0, 'Should track duration');
+});
+
+test('HealthCheck detects unhealthy endpoints', async () => {
+  const health = new HealthCheck({ failureThreshold: 2, degradedThreshold: 1, successThreshold: 1 });
+  health.register('db', async () => { throw new Error('Connection refused'); });
+  await health.check('db');
+  assertEqual(health.getStatus('db'), 'DEGRADED');
+  await health.check('db');
+  assertEqual(health.getStatus('db'), 'UNHEALTHY');
+});
+
+test('HealthCheck overall status aggregation', async () => {
+  const health = new HealthCheck({ successThreshold: 1, failureThreshold: 1 });
+  health.register('api', async () => true);
+  health.register('db', async () => { throw new Error('down'); });
+  await health.checkAll();
+  const overall = health.getOverallStatus();
+  assertEqual(overall.status, 'UNHEALTHY');
+  assertEqual(overall.endpoints.api, 'HEALTHY');
+  assertEqual(overall.endpoints.db, 'UNHEALTHY');
+});
+
+test('HealthCheck tracks history', async () => {
+  const health = new HealthCheck({ successThreshold: 1 });
+  health.register('api', async () => true);
+  await health.check('api');
+  await health.check('api');
+  const history = health.getHistory('api');
+  assertEqual(history.length, 2);
+  assert(history[0].success, 'First check should be successful');
+});
+
+test('HealthCheck recovery from unhealthy', async () => {
+  let healthy = false;
+  const health = new HealthCheck({ failureThreshold: 1, successThreshold: 2, degradedThreshold: 1 });
+  health.register('api', async () => { if (!healthy) throw new Error('down'); return true; });
+
+  await health.check('api');
+  assertEqual(health.getStatus('api'), 'UNHEALTHY');
+
+  healthy = true;
+  await health.check('api');
+  await health.check('api');
+  assertEqual(health.getStatus('api'), 'HEALTHY');
+});
+
+test('HealthCheck status change callback', async () => {
+  const changes = [];
+  const health = new HealthCheck({
+    failureThreshold: 1,
+    successThreshold: 1,
+    degradedThreshold: 1,
+    onStatusChange: (name, prev, next) => changes.push({ name, prev, next }),
+  });
+  health.register('api', async () => { throw new Error('fail'); });
+  await health.check('api');
+  assert(changes.length >= 1, 'Should have status changes');
+});
+
+test('HealthCheck list and isHealthy', async () => {
+  const health = new HealthCheck({ successThreshold: 1 });
+  health.register('api', async () => true);
+  health.register('db', async () => true);
+  await health.checkAll();
+  const list = health.list();
+  assertEqual(list.length, 2);
+  assert(health.isHealthy('api'), 'api should be healthy');
+});
+
+test('HealthCheck unregister', () => {
+  const health = new HealthCheck();
+  health.register('api', async () => true);
+  assert(health.unregister('api'), 'Should return true');
+  assertEqual(health.list().length, 0);
+});
+
+test('HealthCheck stats', async () => {
+  const health = new HealthCheck({ successThreshold: 1 });
+  health.register('api', async () => true);
+  await health.check('api');
+  const stats = health.getStats();
+  assertEqual(stats.totalChecks, 1);
+  assertEqual(stats.totalSuccesses, 1);
+});
+
+console.log('\n── V5: Event Bus ──');
+
+test('EventBus subscribe and emit', async () => {
+  const bus = new EventBus();
+  let received = null;
+  bus.on('test', (data) => { received = data; });
+  await bus.emit('test', { msg: 'hello' });
+  assertEqual(received.msg, 'hello');
+});
+
+test('EventBus once listener fires only once', async () => {
+  const bus = new EventBus();
+  let count = 0;
+  bus.once('event', () => { count++; });
+  await bus.emit('event', {});
+  await bus.emit('event', {});
+  assertEqual(count, 1);
+});
+
+test('EventBus off removes listener', async () => {
+  const bus = new EventBus();
+  let count = 0;
+  const fn = () => { count++; };
+  bus.on('event', fn);
+  await bus.emit('event', {});
+  bus.off('event', fn);
+  await bus.emit('event', {});
+  assertEqual(count, 1);
+});
+
+test('EventBus wildcard subscriptions', async () => {
+  const bus = new EventBus();
+  let received = [];
+  bus.on('api.*', (data) => { received.push(data); });
+  await bus.emit('api.request', { type: 'req' });
+  await bus.emit('api.response', { type: 'res' });
+  await bus.emit('other.event', { type: 'other' });
+  assertEqual(received.length, 2);
+});
+
+test('EventBus priority ordering', async () => {
+  const bus = new EventBus();
+  const order = [];
+  bus.on('event', () => { order.push('low'); }, { priority: 1 });
+  bus.on('event', () => { order.push('high'); }, { priority: 10 });
+  bus.on('event', () => { order.push('mid'); }, { priority: 5 });
+  await bus.emit('event', {});
+  assertEqual(order[0], 'high');
+  assertEqual(order[1], 'mid');
+  assertEqual(order[2], 'low');
+});
+
+test('EventBus event history', async () => {
+  const bus = new EventBus({ recordHistory: true });
+  await bus.emit('a', { x: 1 });
+  await bus.emit('b', { x: 2 });
+  const history = bus.getHistory();
+  assertEqual(history.length, 2);
+  const filtered = bus.getHistory('a');
+  assertEqual(filtered.length, 1);
+});
+
+test('EventBus emitSync works synchronously', () => {
+  const bus = new EventBus({ async: false });
+  let received = null;
+  bus.on('test', (data) => { received = data; });
+  bus.emitSync('test', 42);
+  assertEqual(received, 42);
+});
+
+test('EventBus listenerCount', () => {
+  const bus = new EventBus();
+  bus.on('a', () => {});
+  bus.on('a', () => {});
+  bus.on('b', () => {});
+  assertEqual(bus.listenerCount('a'), 2);
+  assertEqual(bus.listenerCount('b'), 1);
+  assertEqual(bus.listenerCount('c'), 0);
+});
+
+test('EventBus list events', () => {
+  const bus = new EventBus();
+  bus.on('a', () => {});
+  bus.on('b', () => {});
+  const list = bus.list();
+  assertEqual(list.length, 2);
+});
+
+test('EventBus removeAll', () => {
+  const bus = new EventBus();
+  bus.on('a', () => {});
+  bus.on('b', () => {});
+  bus.removeAll('a');
+  assertEqual(bus.listenerCount('a'), 0);
+  assertEqual(bus.listenerCount('b'), 1);
+});
+
+test('EventBus replay', async () => {
+  const bus = new EventBus({ recordHistory: true });
+  await bus.emit('event', 1);
+  await bus.emit('event', 2);
+  const replayed = [];
+  bus.replay('event', (data) => replayed.push(data));
+  assertEqual(replayed.length, 2);
+  assertEqual(replayed[0], 1);
+  assertEqual(replayed[1], 2);
+});
+
+test('EventBus waitFor resolves on emit', async () => {
+  const bus = new EventBus();
+  const promise = bus.waitFor('signal', 1000);
+  setTimeout(() => bus.emit('signal', 'done'), 10);
+  const result = await promise;
+  assertEqual(result, 'done');
+});
+
+test('EventBus stats tracking', async () => {
+  const bus = new EventBus();
+  bus.on('a', () => {});
+  await bus.emit('a', {});
+  const stats = bus.getStats();
+  assert(stats.totalEmits >= 1, 'Should track emits');
+  assert(stats.totalDeliveries >= 1, 'Should track deliveries');
+});
+
+test('EventBus unsubscribe function returned from on', async () => {
+  const bus = new EventBus();
+  let count = 0;
+  const unsub = bus.on('event', () => { count++; });
+  await bus.emit('event', {});
+  unsub();
+  await bus.emit('event', {});
+  assertEqual(count, 1);
+});
+
+console.log('\n── V5: Error Classes ──');
+
+test('RetryError has attempt info', () => {
+  const err = new RetryError('Exhausted', 3, 3, 'max_retries_exceeded');
+  assertEqual(err.name, 'RetryError');
+  assertEqual(err.code, 'RETRY_ERROR');
+  assertEqual(err.details.attempt, 3);
+  assertEqual(err.details.reason, 'max_retries_exceeded');
+});
+
+test('SchemaRegistryError has schema info', () => {
+  const err = new SchemaRegistryError('Not found', 'User', 'not_found');
+  assertEqual(err.name, 'SchemaRegistryError');
+  assertEqual(err.code, 'SCHEMA_REGISTRY_ERROR');
+  assertEqual(err.details.schemaName, 'User');
+});
+
+test('DependencyGraphError has node info', () => {
+  const err = new DependencyGraphError('Cycle detected', 'nodeA', 'cycle_detected');
+  assertEqual(err.name, 'DependencyGraphError');
+  assertEqual(err.code, 'DEPENDENCY_GRAPH_ERROR');
+  assertEqual(err.details.nodeName, 'nodeA');
+});
+
+test('MockServerError has operation info', () => {
+  const err = new MockServerError('No match', 'handle', 'no_match');
+  assertEqual(err.name, 'MockServerError');
+  assertEqual(err.code, 'MOCK_SERVER_ERROR');
+});
+
+test('HealthCheckError has endpoint info', () => {
+  const err = new HealthCheckError('Timeout', 'api', 'timeout');
+  assertEqual(err.name, 'HealthCheckError');
+  assertEqual(err.code, 'HEALTH_CHECK_ERROR');
+  assertEqual(err.details.endpoint, 'api');
+});
+
+test('EventBusError has event info', () => {
+  const err = new EventBusError('Max listeners', 'test.event', 'max_listeners');
+  assertEqual(err.name, 'EventBusError');
+  assertEqual(err.code, 'EVENT_BUS_ERROR');
+  assertEqual(err.details.event, 'test.event');
+});
+
+test('all v5 errors extend ApiBridgeError', () => {
+  assert(new RetryError('test', 1, 3) instanceof ApiBridgeError, 'RetryError should extend ApiBridgeError');
+  assert(new SchemaRegistryError('test', 'User') instanceof ApiBridgeError, 'SchemaRegistryError should extend ApiBridgeError');
+  assert(new DependencyGraphError('test', 'node') instanceof ApiBridgeError, 'DependencyGraphError should extend ApiBridgeError');
+  assert(new MockServerError('test', 'op') instanceof ApiBridgeError, 'MockServerError should extend ApiBridgeError');
+  assert(new HealthCheckError('test', 'ep') instanceof ApiBridgeError, 'HealthCheckError should extend ApiBridgeError');
+  assert(new EventBusError('test', 'ev') instanceof ApiBridgeError, 'EventBusError should extend ApiBridgeError');
+});
+
+test('v5 errors serialize to JSON', () => {
+  const err = new RetryError('test', 3, 3, 'max_retries_exceeded');
+  const json = err.toJSON();
+  assertEqual(json.name, 'RetryError');
+  assertEqual(json.code, 'RETRY_ERROR');
   assert(json.timestamp !== undefined, 'Should have timestamp');
 });
 
