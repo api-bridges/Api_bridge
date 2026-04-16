@@ -324,10 +324,11 @@ class MockServer {
       if (route.pattern instanceof RegExp) {
         if (route.pattern.test(url)) return route;
       } else if (route.pattern.includes('*')) {
-        // Wildcard matching
-        const regex = new RegExp(
-          '^' + route.pattern.replace(/\*/g, '[^/]+') + '$'
-        );
+        // Wildcard matching — escape regex metacharacters first, then replace * with [^/]+
+        const escaped = route.pattern
+          .replace(/[\\^$+?.()|[\]{}]/g, '\\$&')
+          .replace(/\*/g, '[^/]+');
+        const regex = new RegExp('^' + escaped + '$');
         if (regex.test(url)) return route;
       } else {
         if (route.pattern === url) return route;
