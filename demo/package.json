@@ -1,0 +1,14 @@
+{
+  "name": "api-bridge-demo",
+  "version": "1.0.0",
+  "description": "Full-stack demo showcasing APIBridge AI mismatch resolution between SQL, backend, and frontend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "setup-db": "node -e \"require('./server').setupDb && require('./server').setupDb()\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0"
+  }
+}
