@@ -23,6 +23,8 @@ const {
   APIBridgeClient, ClientError, createClient, buildURL,
   all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
   VERSION,
+  // v12: Axios aliases
+  Axios, AxiosError, isAxiosError,
 } = require('./client');
 const { InterceptorManager, InterceptorChain } = require('./interceptors');
 const {
@@ -179,4 +181,9 @@ module.exports = {
 
   // Error classes
   ...errors,
+
+  // v12: Axios aliases
+  Axios,
+  AxiosError,
+  isAxiosError,
 };

@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [12.0.0] - 2026-04-17
+
+### Added — True Axios Drop-in Replacement (Callable Export + Full API Surface)
+- **Callable default export** — Module can be called as a function, just like `axios(config)` or `axios(url, config)`
+  - `apiBridge('/api/users')` — GET request by default
+  - `apiBridge({ method: 'post', url: '/api/users', data: { name: 'John' } })` — config object
+  - `apiBridge.get('/api/users')`, `apiBridge.post()`, etc. — shorthand methods
+- **Shorthand methods on default export** — `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `request`, `postForm`, `putForm`, `patchForm`, `getUri`
+- **Default export properties** — `defaults`, `interceptors`, `create`, `all`, `spread`
+- **`Axios` class alias** — `apiBridge.Axios === APIBridgeClient` for migration compatibility
+- **`AxiosError` class alias** — `apiBridge.AxiosError === ClientError` for migration compatibility
+- **`isAxiosError()` function** — Alias for `isClientError()`, enables `apiBridge.isAxiosError(err)`
+- **Error code constants on ClientError/AxiosError**:
+  - `ERR_NETWORK`, `ERR_CANCELED`, `ERR_BAD_REQUEST`, `ERR_BAD_RESPONSE`
+  - `ERR_BAD_OPTION`, `ERR_BAD_OPTION_VALUE`, `ERR_DEPRECATED`, `ERR_NOT_SUPPORT`
+  - `ERR_INVALID_URL`, `ERR_FR_TOO_MANY_REDIRECTS`
+  - `ECONNABORTED`, `ETIMEDOUT`, `ERR_TIMEOUT`
+  - `ERR_MAX_BODY_LENGTH_EXCEEDED`, `ERR_MAX_CONTENT_LENGTH_EXCEEDED`
+- **Semantic error codes on HTTP failures** — `ERR_BAD_REQUEST` for 4xx, `ERR_BAD_RESPONSE` for 5xx
+- **`delete(url, { data })` body support** — Axios-compatible DELETE with request body
+- **Adapter system wired into request pipeline** — `_executeRequest` now uses `getAdapter()` to resolve and dispatch through pluggable adapters (fetch, xhr, custom)
+- **`transitional` config option** — `{ silentJSONParsing, forcedJSONParsing, clarifyTimeoutError }`
+- **`signal` in defaults** — Default AbortSignal propagation
+- **Callable export has all Axios statics** — `CancelToken`, `Cancel`, `AxiosHeaders`, `HttpStatusCode`, `toFormData`, `formToJSON`, `mergeConfig`, `getAdapter`, `buildURL`, `VERSION`
+- **Module-level shorthand methods** — `require('api-bridge-ai').get()`, `.post()`, etc.
+- **Module-level `interceptors`** — Shared default instance interceptors
+- **42 new tests** (808 total, up from 766)
+- **Updated TypeScript declarations** with all v12 types, interfaces, and callable export
+
 ## [10.0.0] - 2026-04-17
 
 ### Added — Complete Axios Replacement

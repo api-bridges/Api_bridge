@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v11 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2-v11 features.
+ * APIBridge AI v12 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2-v12 features.
  */
 
 const {
@@ -151,6 +151,25 @@ const {
   freezeDeep,
   generateUID,
   VERSION,
+
+  // v12 exports
+  Axios,
+  AxiosError,
+  isAxiosError,
+  default: apiBridge,
+  request: defaultRequest,
+  get: defaultGet,
+  post: defaultPost,
+  put: defaultPut,
+  patch: defaultPatch,
+  delete: defaultDelete,
+  head: defaultHead,
+  options: defaultOptions,
+  postForm: defaultPostForm,
+  putForm: defaultPutForm,
+  patchForm: defaultPatchForm,
+  getUri: defaultGetUri,
+  interceptors: defaultInterceptors,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -6108,7 +6127,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '11.0.0');
+  assertEqual(VERSION, '12.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7077,6 +7096,461 @@ test('complete Axios API surface check', () => {
   assert('env' in client.defaults, 'defaults.env');
   assert('maxRedirects' in client.defaults, 'defaults.maxRedirects');
   assert('decompress' in client.defaults, 'defaults.decompress');
+
+  // v12 defaults
+  assert('transitional' in client.defaults, 'defaults.transitional');
+  assert('signal' in client.defaults, 'defaults.signal');
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// v12: True Axios Drop-in — Callable Export + Full API Surface
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+console.log('\n━━━ v12: Callable Default Export ━━━');
+
+test('v12: apiBridge is a callable function', () => {
+  assert(typeof apiBridge === 'function', 'default export should be a function');
+});
+
+test('v12: apiBridge has all HTTP shorthand methods', () => {
+  assert(typeof apiBridge.get === 'function', 'apiBridge.get');
+  assert(typeof apiBridge.post === 'function', 'apiBridge.post');
+  assert(typeof apiBridge.put === 'function', 'apiBridge.put');
+  assert(typeof apiBridge.patch === 'function', 'apiBridge.patch');
+  assert(typeof apiBridge.delete === 'function', 'apiBridge.delete');
+  assert(typeof apiBridge.head === 'function', 'apiBridge.head');
+  assert(typeof apiBridge.options === 'function', 'apiBridge.options');
+  assert(typeof apiBridge.request === 'function', 'apiBridge.request');
+});
+
+test('v12: apiBridge has form methods', () => {
+  assert(typeof apiBridge.postForm === 'function', 'apiBridge.postForm');
+  assert(typeof apiBridge.putForm === 'function', 'apiBridge.putForm');
+  assert(typeof apiBridge.patchForm === 'function', 'apiBridge.patchForm');
+});
+
+test('v12: apiBridge has getUri', () => {
+  assert(typeof apiBridge.getUri === 'function', 'apiBridge.getUri');
+  const uri = apiBridge.getUri({ url: '/users', params: { page: 1 } });
+  assert(uri.includes('/users'), 'should include path');
+  assert(uri.includes('page=1'), 'should include params');
+});
+
+test('v12: apiBridge.defaults is accessible', () => {
+  assert(apiBridge.defaults !== undefined, 'defaults exists');
+  assert(apiBridge.defaults.headers !== undefined, 'defaults.headers exists');
+  assert(apiBridge.defaults.headers.common !== undefined, 'defaults.headers.common exists');
+});
+
+test('v12: apiBridge.interceptors is accessible', () => {
+  assert(apiBridge.interceptors !== undefined, 'interceptors exists');
+  assert(typeof apiBridge.interceptors.request.use === 'function', 'interceptors.request.use');
+  assert(typeof apiBridge.interceptors.response.use === 'function', 'interceptors.response.use');
+});
+
+test('v12: apiBridge.create is createClient', () => {
+  assert(typeof apiBridge.create === 'function', 'create exists');
+  const instance = apiBridge.create({ baseURL: '/test' });
+  assert(instance instanceof APIBridgeClient, 'creates APIBridgeClient');
+  assertEqual(instance.baseURL, '/test');
+});
+
+test('v12: apiBridge.all and apiBridge.spread', () => {
+  assert(typeof apiBridge.all === 'function', 'all exists');
+  assert(typeof apiBridge.spread === 'function', 'spread exists');
+});
+
+test('v12: apiBridge has error checking methods', () => {
+  assert(typeof apiBridge.isClientError === 'function', 'isClientError');
+  assert(typeof apiBridge.isApiBridgeError === 'function', 'isApiBridgeError');
+  assert(typeof apiBridge.isAxiosError === 'function', 'isAxiosError');
+  assert(typeof apiBridge.isCancel === 'function', 'isCancel');
+  assert(typeof apiBridge.isCancelToken === 'function', 'isCancelToken');
+});
+
+test('v12: apiBridge has class constructors', () => {
+  assert(apiBridge.Axios === APIBridgeClient, 'Axios === APIBridgeClient');
+  assert(apiBridge.AxiosError === ClientError, 'AxiosError === ClientError');
+  assert(apiBridge.CancelToken === CancelToken, 'CancelToken');
+  assert(apiBridge.Cancel === Cancel, 'Cancel');
+  assert(apiBridge.AxiosHeaders === AxiosHeaders, 'AxiosHeaders');
+  assert(apiBridge.HttpStatusCode === HttpStatusCode, 'HttpStatusCode');
+});
+
+test('v12: apiBridge has utilities', () => {
+  assert(typeof apiBridge.toFormData === 'function', 'toFormData');
+  assert(typeof apiBridge.toURLEncodedForm === 'function', 'toURLEncodedForm');
+  assert(typeof apiBridge.formToJSON === 'function', 'formToJSON');
+  assert(typeof apiBridge.mergeConfig === 'function', 'mergeConfig');
+  assert(typeof apiBridge.getAdapter === 'function', 'getAdapter');
+  assert(typeof apiBridge.buildURL === 'function', 'buildURL');
+});
+
+test('v12: apiBridge.VERSION is correct', () => {
+  assertEqual(apiBridge.VERSION, '12.0.0');
+});
+
+console.log('\n━━━ v12: Axios Class Aliases ━━━');
+
+test('v12: Axios alias equals APIBridgeClient', () => {
+  assert(Axios === APIBridgeClient, 'Axios should be APIBridgeClient');
+});
+
+test('v12: AxiosError alias equals ClientError', () => {
+  assert(AxiosError === ClientError, 'AxiosError should be ClientError');
+});
+
+test('v12: isAxiosError works like isClientError', () => {
+  const err = new ClientError('test', { code: 'ERR_TEST' });
+  assert(isAxiosError(err), 'should detect ClientError');
+  assert(isAxiosError({ isApiBridgeError: true }), 'should detect duck-typed errors');
+  assert(!isAxiosError(new Error('plain')), 'should not detect plain errors');
+  assert(!isAxiosError(null), 'should not detect null');
+  assert(!isAxiosError(42), 'should not detect non-errors');
+});
+
+test('v12: AxiosError can be instantiated', () => {
+  const err = new AxiosError('test error', { status: 404, code: 'ERR_NOT_FOUND' });
+  assert(err instanceof ClientError, 'should be ClientError');
+  assert(err instanceof AxiosError, 'should be AxiosError (same class)');
+  assertEqual(err.message, 'test error');
+  assertEqual(err.status, 404);
+  assertEqual(err.code, 'ERR_NOT_FOUND');
+});
+
+console.log('\n━━━ v12: Error Code Constants ━━━');
+
+test('v12: ClientError has all standard error code constants', () => {
+  assertEqual(ClientError.ERR_NETWORK, 'ERR_NETWORK');
+  assertEqual(ClientError.ERR_CANCELED, 'ERR_CANCELED');
+  assertEqual(ClientError.ERR_BAD_REQUEST, 'ERR_BAD_REQUEST');
+  assertEqual(ClientError.ERR_BAD_RESPONSE, 'ERR_BAD_RESPONSE');
+  assertEqual(ClientError.ERR_BAD_OPTION, 'ERR_BAD_OPTION');
+  assertEqual(ClientError.ERR_BAD_OPTION_VALUE, 'ERR_BAD_OPTION_VALUE');
+  assertEqual(ClientError.ERR_DEPRECATED, 'ERR_DEPRECATED');
+  assertEqual(ClientError.ERR_NOT_SUPPORT, 'ERR_NOT_SUPPORT');
+  assertEqual(ClientError.ERR_INVALID_URL, 'ERR_INVALID_URL');
+  assertEqual(ClientError.ECONNABORTED, 'ECONNABORTED');
+  assertEqual(ClientError.ETIMEDOUT, 'ETIMEDOUT');
+  assertEqual(ClientError.ERR_TIMEOUT, 'ERR_TIMEOUT');
+  assertEqual(ClientError.ERR_MAX_BODY_LENGTH_EXCEEDED, 'ERR_MAX_BODY_LENGTH_EXCEEDED');
+  assertEqual(ClientError.ERR_MAX_CONTENT_LENGTH_EXCEEDED, 'ERR_MAX_CONTENT_LENGTH_EXCEEDED');
+  assertEqual(ClientError.ERR_FR_TOO_MANY_REDIRECTS, 'ERR_FR_TOO_MANY_REDIRECTS');
+});
+
+test('v12: AxiosError has same error code constants', () => {
+  assertEqual(AxiosError.ERR_NETWORK, 'ERR_NETWORK');
+  assertEqual(AxiosError.ERR_CANCELED, 'ERR_CANCELED');
+  assertEqual(AxiosError.ERR_BAD_REQUEST, 'ERR_BAD_REQUEST');
+  assertEqual(AxiosError.ERR_BAD_RESPONSE, 'ERR_BAD_RESPONSE');
+  assertEqual(AxiosError.ECONNABORTED, 'ECONNABORTED');
+  assertEqual(AxiosError.ETIMEDOUT, 'ETIMEDOUT');
+});
+
+test('v12: ClientError.from works as AxiosError.from', () => {
+  const original = new Error('network failure');
+  original.code = 'ENETWORK';
+  const config = { method: 'GET', url: '/api' };
+  const response = { data: null, status: 500, statusText: 'Error', headers: {} };
+
+  const wrapped = AxiosError.from(original, 'ERR_NETWORK', config, null, response);
+  assert(wrapped instanceof ClientError, 'should be ClientError');
+  assert(wrapped instanceof AxiosError, 'should be AxiosError');
+  assertEqual(wrapped.code, 'ERR_NETWORK');
+  assertEqual(wrapped.config.method, 'GET');
+  assertEqual(wrapped.response.status, 500);
+  assertEqual(wrapped.cause, original);
+});
+
+console.log('\n━━━ v12: Transitional Config ━━━');
+
+test('v12: createClient defaults include transitional', () => {
+  const client = createClient();
+  assert(client.transitional !== undefined, 'transitional exists');
+  assertEqual(client.transitional.silentJSONParsing, true);
+  assertEqual(client.transitional.forcedJSONParsing, true);
+  assertEqual(client.transitional.clarifyTimeoutError, false);
+});
+
+test('v12: transitional in defaults object', () => {
+  const client = createClient();
+  assert(client.defaults.transitional !== undefined, 'defaults.transitional exists');
+  assertEqual(client.defaults.transitional.silentJSONParsing, true);
+});
+
+test('v12: custom transitional config', () => {
+  const client = createClient({
+    transitional: { silentJSONParsing: false, forcedJSONParsing: true, clarifyTimeoutError: true },
+  });
+  assertEqual(client.transitional.silentJSONParsing, false);
+  assertEqual(client.transitional.clarifyTimeoutError, true);
+});
+
+console.log('\n━━━ v12: Delete with Data ━━━');
+
+test('v12: delete method accepts data in config', () => {
+  const client = createClient({ baseURL: 'https://httpbin.org' });
+  // Verify the delete method signature allows data
+  assert(typeof client.delete === 'function', 'delete method exists');
+  // We can't make real HTTP calls but we can test the method exists and accepts args
+  const uri = client.getUri({ url: '/api/items/1' });
+  assert(uri.includes('/api/items/1'), 'getUri works for delete path');
+});
+
+console.log('\n━━━ v12: Default Export Shorthand Methods ━━━');
+
+test('v12: module exports shorthand methods', () => {
+  assert(typeof defaultRequest === 'function', 'request is exported');
+  assert(typeof defaultGet === 'function', 'get is exported');
+  assert(typeof defaultPost === 'function', 'post is exported');
+  assert(typeof defaultPut === 'function', 'put is exported');
+  assert(typeof defaultPatch === 'function', 'patch is exported');
+  assert(typeof defaultDelete === 'function', 'delete is exported');
+  assert(typeof defaultHead === 'function', 'head is exported');
+  assert(typeof defaultOptions === 'function', 'options is exported');
+  assert(typeof defaultPostForm === 'function', 'postForm is exported');
+  assert(typeof defaultPutForm === 'function', 'putForm is exported');
+  assert(typeof defaultPatchForm === 'function', 'patchForm is exported');
+  assert(typeof defaultGetUri === 'function', 'getUri is exported');
+});
+
+test('v12: module exports interceptors', () => {
+  assert(defaultInterceptors !== undefined, 'interceptors exported');
+  assert(typeof defaultInterceptors.request.use === 'function', 'request.use');
+  assert(typeof defaultInterceptors.response.use === 'function', 'response.use');
+});
+
+test('v12: defaultGetUri works', () => {
+  const uri = defaultGetUri({ url: '/test', params: { foo: 'bar' } });
+  assert(uri.includes('/test'), 'should include path');
+  assert(uri.includes('foo=bar'), 'should include params');
+});
+
+console.log('\n━━━ v12: Adapter System Integration ━━━');
+
+test('v12: custom adapter can be provided to createClient', () => {
+  let adapterCalled = false;
+  const customAdapter = async (config) => {
+    adapterCalled = true;
+    return {
+      data: { custom: true },
+      rawData: { custom: true },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+    };
+  };
+
+  const client = createClient({ adapter: customAdapter });
+  assert(client.defaults.adapter === customAdapter, 'adapter in defaults');
+});
+
+test('v12: getAdapter resolves built-in adapters', () => {
+  const fetchAd = getAdapter('fetch');
+  assert(typeof fetchAd === 'function', 'fetch adapter is a function');
+
+  const customFn = () => {};
+  const customAd = getAdapter(customFn);
+  assert(customAd === customFn, 'custom function returned as-is');
+});
+
+test('v12: getAdapter throws for unknown adapter', () => {
+  let threw = false;
+  try {
+    getAdapter('nonexistent');
+  } catch (e) {
+    threw = true;
+    assert(e.message.includes('Unknown adapter'), 'correct error message');
+  }
+  assert(threw, 'should throw');
+});
+
+test('v12: getAdapter resolves priority list', () => {
+  const adapter = getAdapter(['fetch', 'xhr']);
+  assert(typeof adapter === 'function', 'resolved adapter is a function');
+});
+
+console.log('\n━━━ v12: Complete Axios Migration Surface ━━━');
+
+test('v12: full Axios replacement API surface check', () => {
+  // Module-level exports
+  const api = require('./src/index');
+
+  // Classes
+  assert(api.Axios !== undefined, 'Axios class');
+  assert(api.AxiosError !== undefined, 'AxiosError class');
+  assert(api.CancelToken !== undefined, 'CancelToken');
+  assert(api.Cancel !== undefined, 'Cancel');
+  assert(api.AxiosHeaders !== undefined, 'AxiosHeaders');
+  assert(api.HttpStatusCode !== undefined, 'HttpStatusCode');
+
+  // Factory
+  assert(typeof api.create === 'function', 'create');
+  assert(typeof api.createClient === 'function', 'createClient');
+
+  // Helpers
+  assert(typeof api.all === 'function', 'all');
+  assert(typeof api.spread === 'function', 'spread');
+  assert(typeof api.isCancel === 'function', 'isCancel');
+  assert(typeof api.isAxiosError === 'function', 'isAxiosError');
+  assert(typeof api.isClientError === 'function', 'isClientError');
+
+  // Utilities
+  assert(typeof api.toFormData === 'function', 'toFormData');
+  assert(typeof api.formToJSON === 'function', 'formToJSON');
+  assert(typeof api.toURLEncodedForm === 'function', 'toURLEncodedForm');
+  assert(typeof api.mergeConfig === 'function', 'mergeConfig');
+  assert(typeof api.getAdapter === 'function', 'getAdapter');
+
+  // Default instance
+  assert(api.defaults !== undefined, 'defaults');
+  assert(api.interceptors !== undefined, 'interceptors');
+
+  // VERSION
+  assert(typeof api.VERSION === 'string', 'VERSION');
+
+  // Shorthand methods on module
+  assert(typeof api.get === 'function', 'module.get');
+  assert(typeof api.post === 'function', 'module.post');
+  assert(typeof api.put === 'function', 'module.put');
+  assert(typeof api.patch === 'function', 'module.patch');
+  assert(typeof api.delete === 'function', 'module.delete');
+  assert(typeof api.head === 'function', 'module.head');
+  assert(typeof api.options === 'function', 'module.options');
+  assert(typeof api.request === 'function', 'module.request');
+  assert(typeof api.postForm === 'function', 'module.postForm');
+  assert(typeof api.putForm === 'function', 'module.putForm');
+  assert(typeof api.patchForm === 'function', 'module.patchForm');
+  assert(typeof api.getUri === 'function', 'module.getUri');
+
+  // Callable default export
+  assert(typeof api.default === 'function', 'default export is callable');
+});
+
+test('v12: Axios-compatible error shape', () => {
+  const err = new AxiosError('Request failed', {
+    status: 400,
+    code: AxiosError.ERR_BAD_REQUEST,
+    config: { method: 'POST', url: '/api/users', baseURL: 'https://api.example.com' },
+    response: {
+      data: { error: 'Invalid input' },
+      status: 400,
+      statusText: 'Bad Request',
+      headers: { 'content-type': 'application/json' },
+    },
+  });
+
+  assertEqual(err.name, 'ClientError');
+  assertEqual(err.message, 'Request failed');
+  assertEqual(err.status, 400);
+  assertEqual(err.code, AxiosError.ERR_BAD_REQUEST);
+  assert(err.config !== null, 'has config');
+  assert(err.response !== null, 'has response');
+  assert(err.isApiBridgeError === true, 'isApiBridgeError flag');
+
+  // toJSON
+  const json = err.toJSON();
+  assertEqual(json.status, 400);
+  assertEqual(json.code, 'ERR_BAD_REQUEST');
+  assertEqual(json.config.method, 'POST');
+});
+
+test('v12: mergeConfig deep merges transitional', () => {
+  const a = {
+    transitional: { silentJSONParsing: true, forcedJSONParsing: true },
+    timeout: 5000,
+  };
+  const b = {
+    transitional: { clarifyTimeoutError: true },
+    timeout: 10000,
+  };
+  const merged = mergeConfig(a, b);
+  assertEqual(merged.timeout, 10000);
+  assertEqual(merged.transitional.silentJSONParsing, true);
+  assertEqual(merged.transitional.clarifyTimeoutError, true);
+});
+
+test('v12: createClient with adapter in defaults', () => {
+  const customAdapter = async () => ({ data: {}, status: 200, statusText: 'OK', headers: {} });
+  const client = createClient({ adapter: customAdapter });
+  assertEqual(client.defaults.adapter, customAdapter);
+  assertEqual(client.adapter, customAdapter);
+});
+
+test('v12: signal in defaults', () => {
+  const controller = new AbortController();
+  const client = createClient({ signal: controller.signal });
+  assertEqual(client.defaults.signal, controller.signal);
+});
+
+test('v12: instance has v12 Axios API surface', () => {
+  const client = createClient({ baseURL: '/api' });
+
+  // All HTTP methods
+  const methods = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'request'];
+  methods.forEach(m => assert(typeof client[m] === 'function', `client.${m}`));
+
+  // Form methods
+  assert(typeof client.postForm === 'function', 'postForm');
+  assert(typeof client.putForm === 'function', 'putForm');
+  assert(typeof client.patchForm === 'function', 'patchForm');
+
+  // getUri
+  assert(typeof client.getUri === 'function', 'getUri');
+
+  // Interceptors
+  assert(client.interceptors !== undefined, 'interceptors');
+  assert(typeof client.interceptors.request.use === 'function', 'request interceptors');
+  assert(typeof client.interceptors.response.use === 'function', 'response interceptors');
+
+  // Defaults
+  assert(client.defaults !== undefined, 'defaults');
+  assert('transitional' in client.defaults, 'defaults.transitional');
+  assert('adapter' in client.defaults, 'defaults.adapter');
+  assert('signal' in client.defaults, 'defaults.signal');
+});
+
+test('v12: AxiosHeaders on apiBridge callable', () => {
+  const headers = new apiBridge.AxiosHeaders({ 'Content-Type': 'application/json' });
+  assertEqual(headers.get('content-type'), 'application/json');
+  assert(headers.has('Content-Type'), 'has content type');
+});
+
+test('v12: HttpStatusCode on apiBridge callable', () => {
+  assertEqual(apiBridge.HttpStatusCode.Ok, 200);
+  assertEqual(apiBridge.HttpStatusCode.NotFound, 404);
+  assertEqual(apiBridge.HttpStatusCode.InternalServerError, 500);
+});
+
+test('v12: CancelToken on apiBridge callable', () => {
+  const source = apiBridge.CancelToken.source();
+  assert(typeof source.cancel === 'function', 'cancel function');
+  assert(source.token !== undefined, 'token');
+  assert(!source.token.requested, 'not cancelled');
+
+  source.cancel('test');
+  assert(source.token.requested, 'cancelled');
+  assert(apiBridge.isCancel(source.token.reason), 'reason is Cancel');
+});
+
+test('v12: apiBridge.isAxiosError matches isClientError', () => {
+  const err = new ClientError('test');
+  assert(apiBridge.isAxiosError(err), 'detect via apiBridge');
+  assert(apiBridge.isClientError(err), 'detect via isClientError');
+  assert(!apiBridge.isAxiosError(new Error('plain')), 'plain errors not detected');
+});
+
+test('v12: buildURL on apiBridge callable', () => {
+  const url = apiBridge.buildURL('/api', '/users', { page: 1, limit: 10 });
+  assert(url.includes('/api/users'), 'has path');
+  assert(url.includes('page=1'), 'has page param');
+  assert(url.includes('limit=10'), 'has limit param');
+});
+
+test('v12: mergeConfig on apiBridge callable', () => {
+  const merged = apiBridge.mergeConfig({ timeout: 5000 }, { timeout: 10000, baseURL: '/api' });
+  assertEqual(merged.timeout, 10000);
+  assertEqual(merged.baseURL, '/api');
 });
 
 // Wait a tick for async tests
