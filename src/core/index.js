@@ -18,8 +18,11 @@ const { SchemaMigrator } = require('./schema-migrator');
 const { WORD_TO_GROUP, SYNONYM_GROUPS } = require('./synonyms');
 const errors = require('./errors');
 
-// v9 modules
-const { APIBridgeClient, ClientError, createClient, buildURL } = require('./client');
+// v9/v10 modules
+const {
+  APIBridgeClient, ClientError, createClient, buildURL,
+  all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
+} = require('./client');
 const { InterceptorManager, InterceptorChain } = require('./interceptors');
 const {
   validateExpect,
@@ -31,6 +34,8 @@ const {
   HEADER_NAME,
 } = require('./expectation');
 const { smartProxy, tokenize: proxyTokenize, generateCandidates } = require('./proxy');
+const { CancelToken, Cancel, isCancel } = require('./cancel');
+const { toFormData, isFormData, isBlob, isFile, isBuffer, isStream, isArrayBufferView, isURLSearchParams } = require('./form-data');
 
 module.exports = {
   // Classes
@@ -46,11 +51,34 @@ module.exports = {
   ConditionalTransform,
   SchemaMigrator,
 
-  // v9 classes
+  // v9/v10 classes
   APIBridgeClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,
+
+  // v10 cancellation
+  CancelToken,
+  Cancel,
+  isCancel,
+
+  // v10 FormData utilities
+  toFormData,
+  isFormData,
+  isBlob,
+  isFile,
+  isBuffer,
+  isStream,
+  isArrayBufferView,
+  isURLSearchParams,
+
+  // v10 helpers
+  all,
+  spread,
+  isClientError,
+  isApiBridgeError,
+  mergeConfig,
+  defaultParamsSerializer,
 
   // v9 factory
   createClient,

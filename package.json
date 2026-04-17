@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "9.0.0",
-  "description": "Production-ready API client library with intelligent data alignment, schema awareness, smart proxy, and 50+ modules — a next-generation alternative to Axios",
+  "version": "10.0.0",
+  "description": "Production-ready complete Axios replacement with intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 55+ modules — a next-generation API client",
   "main": "src/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -84,7 +84,18 @@
     "expectation-engine",
     "data-alignment",
     "createClient",
-    "abort-controller"
+    "abort-controller",
+    "cancel-token",
+    "form-data",
+    "axios-replacement",
+    "drop-in",
+    "concurrent-requests",
+    "basic-auth",
+    "response-type",
+    "validate-status",
+    "params-serializer",
+    "transform-request",
+    "transform-response"
   ],
   "engines": {
     "node": ">=16.0.0"
