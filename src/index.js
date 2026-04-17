@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v8
+ * APIBridge AI v9
  * Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -77,8 +77,37 @@
  *  - Request interceptor chain (priority-ordered, groupable, async interceptors)
  *  - 5 new error classes (FieldAliaserError, SchemaMigrationError, BatchOrchestratorError, DeepMergeError, InterceptorError)
  *
+ * v9 features:
+ *  - HTTP client engine (createClient) — full-featured fetch-based HTTP client
+ *  - Axios-compatible interceptor system (client.interceptors.request.use / response.use)
+ *  - Expectation-aware system (declare expected response format, auto-align)
+ *  - Smart Proxy mode (dynamic field resolution via Proxy)
+ *  - Auto data alignment engine (snake_case → camelCase, fuzzy, nested)
+ *  - Type coercion in responses (string → number/boolean/date)
+ *  - Schema-aware mode (setSchema for improved accuracy)
+ *  - AbortController + timeout support
+ *  - Retries with exponential backoff + jitter
+ *  - Debug mode (enableDebug) with raw/expected/transformed logging
+ *  - Auto-learning with endpoint mapping cache
+ *  - Standardized error objects { message, status, code, details }
+ *  - ClientError class
+ *
  * Usage:
- *   const { bridge, bridgeFetch, transform } = require('api-bridge-ai');
+ *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');
+ *
+ *   // v9: Next-gen client
+ *   const api = createClient({ baseURL: '/api', timeout: 5000 });
+ *   const res = await api.get('/user', { expect: { userName: 'string' } });
+ *   console.log(res.data.userName); // auto-aligned from user_name, usr_nm, etc.
+ *
+ *   // v9: Interceptors
+ *   api.interceptors.request.use(config => { config.headers.Auth = 'token'; return config; });
+ *   api.interceptors.response.use(res => { res.timestamp = Date.now(); return res; });
+ *
+ *   // v9: Smart Proxy mode
+ *   const proxyApi = createClient({ baseURL: '/api', proxyMode: true });
+ *   const { data } = await proxyApi.get('/user');
+ *   data.userName; // resolves from user_name, USER_NAME, usr_nm dynamically
  *
  *   // Axios
  *   const api = bridge(axiosInstance, { schema: mySchema });
@@ -208,6 +237,20 @@ const {
   DeepMergeError,
   InterceptorError,
 } = require('./core/errors');
+
+// ─── v9 Core ──────────────────────────────────────────────────────────────────
+const { APIBridgeClient, ClientError, createClient, buildURL } = require('./core/client');
+const { InterceptorManager, InterceptorChain } = require('./core/interceptors');
+const {
+  validateExpect,
+  serializeExpect,
+  deserializeExpect,
+  extractExpect,
+  injectExpectHeader,
+  flattenExpect,
+  HEADER_NAME,
+} = require('./core/expectation');
+const { smartProxy } = require('./core/proxy');
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const { ResponseCache } = require('./utils/cache');
@@ -514,6 +557,7 @@ module.exports = {
   bridgeFetch,
   transform,
   createTransformer,
+  createClient,
 
   // Core classes
   APIBridgeTransformer,
@@ -567,6 +611,27 @@ module.exports = {
   DeepMerge,
   OutputFormatter,
   RequestInterceptor,
+
+  // v9 classes
+  APIBridgeClient,
+  ClientError,
+  InterceptorManager,
+  InterceptorChain,
+
+  // v9 expectation helpers
+  validateExpect,
+  serializeExpect,
+  deserializeExpect,
+  extractExpect,
+  injectExpectHeader,
+  flattenExpect,
+  HEADER_NAME,
+
+  // v9 proxy
+  smartProxy,
+
+  // v9 URL builder
+  buildURL,
 
   // Exporters
   exportMismatchCSV,

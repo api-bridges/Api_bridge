@@ -18,6 +18,20 @@ const { SchemaMigrator } = require('./schema-migrator');
 const { WORD_TO_GROUP, SYNONYM_GROUPS } = require('./synonyms');
 const errors = require('./errors');
 
+// v9 modules
+const { APIBridgeClient, ClientError, createClient, buildURL } = require('./client');
+const { InterceptorManager, InterceptorChain } = require('./interceptors');
+const {
+  validateExpect,
+  serializeExpect,
+  deserializeExpect,
+  extractExpect,
+  injectExpectHeader,
+  flattenExpect,
+  HEADER_NAME,
+} = require('./expectation');
+const { smartProxy, tokenize: proxyTokenize, generateCandidates } = require('./proxy');
+
 module.exports = {
   // Classes
   APIBridgeTransformer,
@@ -31,6 +45,31 @@ module.exports = {
   FieldAliaser,
   ConditionalTransform,
   SchemaMigrator,
+
+  // v9 classes
+  APIBridgeClient,
+  ClientError,
+  InterceptorManager,
+  InterceptorChain,
+
+  // v9 factory
+  createClient,
+
+  // v9 expectation helpers
+  validateExpect,
+  serializeExpect,
+  deserializeExpect,
+  extractExpect,
+  injectExpectHeader,
+  flattenExpect,
+  HEADER_NAME,
+
+  // v9 proxy
+  smartProxy,
+  generateCandidates,
+
+  // v9 URL builder
+  buildURL,
 
   // Matching helpers
   expandTokens,
