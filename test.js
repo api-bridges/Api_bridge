@@ -1,10 +1,12 @@
 /**
- * APIBridge AI v8 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, v6, v7, and v8 features.
+ * APIBridge AI v9 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, v6, v7, v8, and v9 features.
  */
 
 const {
   APIBridgeTransformer,
+  bridge,
+  bridgeFetch,
   transform,
   createTransformer,
   exportMismatchCSV,
@@ -74,6 +76,22 @@ const {
   BatchOrchestratorError,
   DeepMergeError,
   InterceptorError,
+
+  // v9 exports
+  createClient,
+  APIBridgeClient,
+  ClientError,
+  InterceptorManager,
+  InterceptorChain,
+  validateExpect,
+  serializeExpect,
+  deserializeExpect,
+  extractExpect,
+  injectExpectHeader,
+  flattenExpect,
+  HEADER_NAME,
+  smartProxy,
+  buildURL,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -4504,6 +4522,709 @@ test('v8 backward compatibility — transform still works', () => {
   assertEqual(result.firstName, 'John');
   assertEqual(result.lastName, 'Doe');
   assertEqual(result.isActive, true);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v9 TEST SUITE — Next-Gen API Client
+// ═══════════════════════════════════════════════════════════════════════════
+
+console.log('\n━━━ v9: Interceptor System ━━━');
+
+test('InterceptorChain — use and eject', () => {
+  const chain = new InterceptorChain();
+  const id1 = chain.use((x) => x);
+  const id2 = chain.use((x) => x);
+  assertEqual(chain.size, 2);
+  assert(chain.eject(id1), 'should eject existing');
+  assertEqual(chain.size, 1);
+  assert(!chain.eject(999), 'should not eject non-existing');
+});
+
+test('InterceptorChain — use rejects non-function', () => {
+  const chain = new InterceptorChain();
+  let threw = false;
+  try { chain.use('not a function'); } catch (e) { threw = true; }
+  assert(threw, 'should throw for non-function');
+});
+
+test('InterceptorChain — clear', () => {
+  const chain = new InterceptorChain();
+  chain.use((x) => x);
+  chain.use((x) => x);
+  chain.clear();
+  assertEqual(chain.size, 0);
+});
+
+test('InterceptorManager — request interceptors', async () => {
+  const manager = new InterceptorManager();
+  manager.request.use((config) => {
+    config.modified = true;
+    return config;
+  });
+  manager.request.use((config) => {
+    config.count = (config.count || 0) + 1;
+    return config;
+  });
+  const result = await manager.runRequest({ url: '/test' });
+  assert(result.modified, 'should be modified');
+  assertEqual(result.count, 1);
+});
+
+test('InterceptorManager — response interceptors', async () => {
+  const manager = new InterceptorManager();
+  manager.response.use((res) => {
+    res.timestamp = 12345;
+    return res;
+  });
+  const result = await manager.runResponse({ data: 'hello' });
+  assertEqual(result.timestamp, 12345);
+  assertEqual(result.data, 'hello');
+});
+
+test('InterceptorManager — error recovery in response chain', async () => {
+  const manager = new InterceptorManager();
+  manager.response.use(
+    (res) => res,
+    (err) => ({ recovered: true, original: err.message }),
+  );
+  const result = await manager.runError(new Error('test error'));
+  assert(result.recovered, 'should be recovered');
+  assertEqual(result.original, 'test error');
+});
+
+test('InterceptorManager — clear all', () => {
+  const manager = new InterceptorManager();
+  manager.request.use((x) => x);
+  manager.response.use((x) => x);
+  manager.clear();
+  assertEqual(manager.request.size, 0);
+  assertEqual(manager.response.size, 0);
+});
+
+test('InterceptorManager — async interceptors', async () => {
+  const manager = new InterceptorManager();
+  manager.request.use(async (config) => {
+    await new Promise(r => setTimeout(r, 1));
+    config.async = true;
+    return config;
+  });
+  const result = await manager.runRequest({});
+  assert(result.async, 'should support async interceptors');
+});
+
+console.log('\n━━━ v9: Expectation Engine ━━━');
+
+test('validateExpect — valid schema', () => {
+  const result = validateExpect({ userName: 'string', age: 'number' });
+  assert(result.valid, 'should be valid');
+});
+
+test('validateExpect — nested schema', () => {
+  const result = validateExpect({
+    user: { name: 'string', email: 'string' },
+    balance: 'number',
+  });
+  assert(result.valid, 'nested should be valid');
+});
+
+test('validateExpect — rejects null', () => {
+  const result = validateExpect(null);
+  assert(!result.valid, 'null should be invalid');
+});
+
+test('validateExpect — rejects array', () => {
+  const result = validateExpect([1, 2, 3]);
+  assert(!result.valid, 'array should be invalid');
+});
+
+test('validateExpect — rejects __proto__', () => {
+  // Must use Object.create(null) since { __proto__: x } sets prototype, not a key
+  const schema = Object.create(null);
+  schema['__proto__'] = 'string';
+  const result = validateExpect(schema);
+  assert(!result.valid, 'should reject __proto__');
+  assert(result.error.includes('dangerous'), 'error message mentions dangerous');
+});
+
+test('validateExpect — rejects constructor', () => {
+  const result = validateExpect({ constructor: 'string' });
+  assert(!result.valid, 'should reject constructor');
+});
+
+test('validateExpect — rejects prototype', () => {
+  const result = validateExpect({ prototype: 'string' });
+  assert(!result.valid, 'should reject prototype');
+});
+
+test('validateExpect — rejects unknown type', () => {
+  const result = validateExpect({ field: 'foobar' });
+  assert(!result.valid, 'unknown type should be invalid');
+});
+
+test('validateExpect — accepts all valid types', () => {
+  const schema = {
+    a: 'string', b: 'number', c: 'boolean',
+    d: 'date', e: 'object', f: 'array', g: 'any',
+  };
+  const result = validateExpect(schema);
+  assert(result.valid, 'all valid types should pass');
+});
+
+test('serializeExpect / deserializeExpect roundtrip', () => {
+  const schema = { userName: 'string', age: 'number' };
+  const encoded = serializeExpect(schema);
+  assert(typeof encoded === 'string', 'should be string');
+  const decoded = deserializeExpect(encoded);
+  assertEqual(decoded.userName, 'string');
+  assertEqual(decoded.age, 'number');
+});
+
+test('deserializeExpect — invalid base64 returns null', () => {
+  const result = deserializeExpect('!!!not-valid!!!');
+  assertEqual(result, null);
+});
+
+test('extractExpect — extracts expect from config', () => {
+  const config = { headers: { auth: 'token' }, expect: { userName: 'string' } };
+  const result = extractExpect(config);
+  assertEqual(result.expect.userName, 'string');
+  assert(!result.config.expect, 'expect removed from config');
+  assertEqual(result.config.headers.auth, 'token');
+});
+
+test('extractExpect — no expect returns null', () => {
+  const result = extractExpect({ headers: {} });
+  assertEqual(result.expect, null);
+});
+
+test('extractExpect — invalid expect returns null with error', () => {
+  const schema = Object.create(null);
+  schema['__proto__'] = 'string';
+  const result = extractExpect({ expect: schema });
+  assertEqual(result.expect, null);
+  assert(result.error, 'should have error message');
+});
+
+test('extractExpect — handles null config', () => {
+  const result = extractExpect(null);
+  assertEqual(result.expect, null);
+});
+
+test('injectExpectHeader — adds header', () => {
+  const expect = { userName: 'string' };
+  const headers = injectExpectHeader({ 'Content-Type': 'application/json' }, expect);
+  assert(headers[HEADER_NAME], 'should have expect header');
+  assertEqual(headers['Content-Type'], 'application/json');
+  // Verify it's decodable
+  const decoded = deserializeExpect(headers[HEADER_NAME]);
+  assertEqual(decoded.userName, 'string');
+});
+
+test('injectExpectHeader — null expect returns original', () => {
+  const headers = injectExpectHeader({ foo: 'bar' }, null);
+  assertEqual(headers.foo, 'bar');
+  assert(!headers[HEADER_NAME], 'should not have header');
+});
+
+test('flattenExpect — flat schema', () => {
+  const map = flattenExpect({ userName: 'string', age: 'number' });
+  assertEqual(map.get('userName'), 'string');
+  assertEqual(map.get('age'), 'number');
+});
+
+test('flattenExpect — nested schema', () => {
+  const map = flattenExpect({
+    user: { name: 'string', email: 'string' },
+  });
+  assertEqual(map.get('user'), 'object');
+  assertEqual(map.get('user.name'), 'string');
+  assertEqual(map.get('user.email'), 'string');
+});
+
+test('HEADER_NAME constant', () => {
+  assertEqual(HEADER_NAME, 'x-api-bridge-expect');
+});
+
+console.log('\n━━━ v9: Smart Proxy ━━━');
+
+test('smartProxy — direct access', () => {
+  const data = smartProxy({ userName: 'John', age: 30 });
+  assertEqual(data.userName, 'John');
+  assertEqual(data.age, 30);
+});
+
+test('smartProxy — snake_case resolution', () => {
+  const data = smartProxy({ user_name: 'John' });
+  assertEqual(data.userName, 'John');
+});
+
+test('smartProxy — SCREAMING_SNAKE resolution', () => {
+  const data = smartProxy({ USER_NAME: 'John' });
+  assertEqual(data.userName, 'John');
+});
+
+test('smartProxy — PascalCase resolution', () => {
+  const data = smartProxy({ UserName: 'John' });
+  assertEqual(data.userName, 'John');
+});
+
+test('smartProxy — kebab-case resolution', () => {
+  const data = smartProxy({ 'user-name': 'John' });
+  assertEqual(data.userName, 'John');
+});
+
+test('smartProxy — case-insensitive fallback', () => {
+  const data = smartProxy({ USERNAME: 'John' });
+  assertEqual(data.username, 'John');
+});
+
+test('smartProxy — returns undefined for missing', () => {
+  const data = smartProxy({ foo: 'bar' });
+  assertEqual(data.completelyDifferent, undefined);
+});
+
+test('smartProxy — handles null', () => {
+  assertEqual(smartProxy(null), null);
+});
+
+test('smartProxy — handles primitive', () => {
+  assertEqual(smartProxy(42), 42);
+});
+
+test('smartProxy — handles arrays', () => {
+  const data = smartProxy([{ user_name: 'John' }, { user_name: 'Jane' }]);
+  assert(Array.isArray(data), 'should be array');
+  assertEqual(data[0].userName, 'John');
+  assertEqual(data[1].userName, 'Jane');
+});
+
+test('smartProxy — nested object resolution', () => {
+  const data = smartProxy({ user: { first_name: 'John' } });
+  assertEqual(data.user.firstName, 'John');
+});
+
+test('smartProxy — has() trap works for snake_case', () => {
+  const data = smartProxy({ user_name: 'John' });
+  assert('userName' in data, 'should find via has trap');
+});
+
+test('smartProxy — ownKeys returns original keys', () => {
+  const data = smartProxy({ user_name: 'John', age: 30 });
+  const keys = Object.keys(data);
+  assert(keys.includes('user_name'), 'should have original key');
+  assert(keys.includes('age'), 'should have age key');
+});
+
+test('smartProxy — fuzzy matching with FuzzyMatcher', () => {
+  const fuzzy = new FuzzyMatcher();
+  const data = smartProxy({ usr_email: 'john@example.com' }, { fuzzyMatcher: fuzzy });
+  assertEqual(data.userEmail, 'john@example.com');
+});
+
+test('smartProxy — auto-learning integration', () => {
+  const learning = new LearningEngine({ storePath: null });
+  const data = smartProxy({ user_name: 'John' }, { learningEngine: learning });
+  // Trigger resolution — should auto-learn the mapping
+  const resolved = data.userName;
+  assertEqual(resolved, 'John');
+});
+
+test('smartProxy — rejects __proto__ access safely', () => {
+  const data = smartProxy({ normal: 'value' });
+  // __proto__ access should not resolve to any data field or crash
+  assertEqual(data.normal, 'value');
+  // Verify no extra keys are exposed
+  const keys = Object.keys(data);
+  assertEqual(keys.length, 1);
+  assertEqual(keys[0], 'normal');
+});
+
+console.log('\n━━━ v9: URL Builder ━━━');
+
+test('buildURL — base + path', () => {
+  assertEqual(buildURL('/api', '/users'), '/api/users');
+});
+
+test('buildURL — base with trailing slash', () => {
+  assertEqual(buildURL('/api/', '/users'), '/api/users');
+});
+
+test('buildURL — base without slash, path without slash', () => {
+  assertEqual(buildURL('/api', 'users'), '/api/users');
+});
+
+test('buildURL — with params', () => {
+  const url = buildURL('/api', '/users', { page: 1, limit: 10 });
+  assert(url.includes('page=1'), 'should have page param');
+  assert(url.includes('limit=10'), 'should have limit param');
+});
+
+test('buildURL — params skip null/undefined', () => {
+  const url = buildURL('/api', '/users', { page: 1, filter: null, search: undefined });
+  assert(url.includes('page=1'), 'should have page');
+  assert(!url.includes('filter'), 'should skip null');
+  assert(!url.includes('search'), 'should skip undefined');
+});
+
+test('buildURL — empty base', () => {
+  assertEqual(buildURL('', '/users'), '/users');
+});
+
+test('buildURL — no path', () => {
+  assertEqual(buildURL('/api', ''), '/api');
+});
+
+test('buildURL — encodes param values', () => {
+  const url = buildURL('/api', '/search', { q: 'hello world' });
+  assert(url.includes('q=hello%20world'), 'should encode spaces');
+});
+
+console.log('\n━━━ v9: ClientError ━━━');
+
+test('ClientError — basic construction', () => {
+  const err = new ClientError('something went wrong');
+  assertEqual(err.message, 'something went wrong');
+  assertEqual(err.name, 'ClientError');
+  assertEqual(err.code, 'ERR_CLIENT');
+  assertEqual(err.status, null);
+  assertEqual(err.details, null);
+});
+
+test('ClientError — with details', () => {
+  const err = new ClientError('not found', {
+    status: 404,
+    code: 'ERR_HTTP_404',
+    details: { resource: 'user' },
+  });
+  assertEqual(err.status, 404);
+  assertEqual(err.code, 'ERR_HTTP_404');
+  assertEqual(err.details.resource, 'user');
+});
+
+test('ClientError — toJSON', () => {
+  const err = new ClientError('bad request', { status: 400, code: 'ERR_BAD_REQUEST', details: 'invalid' });
+  const json = err.toJSON();
+  assertEqual(json.message, 'bad request');
+  assertEqual(json.status, 400);
+  assertEqual(json.code, 'ERR_BAD_REQUEST');
+  assertEqual(json.details, 'invalid');
+});
+
+test('ClientError — is ApiBridgeError', () => {
+  const err = new ClientError('test');
+  assert(err instanceof ApiBridgeError, 'should extend ApiBridgeError');
+  assert(err instanceof Error, 'should extend Error');
+});
+
+console.log('\n━━━ v9: APIBridgeClient ━━━');
+
+test('createClient — returns APIBridgeClient', () => {
+  const client = createClient({ baseURL: '/api' });
+  assert(client instanceof APIBridgeClient, 'should be APIBridgeClient');
+});
+
+test('APIBridgeClient — default options', () => {
+  const client = createClient();
+  assertEqual(client.baseURL, '');
+  assertEqual(client.timeout, 0);
+  assertEqual(client.retries, 0);
+  assertEqual(client.proxyMode, false);
+  assertEqual(client.autoAlign, true);
+  assertEqual(client.autoCoerce, true);
+  assertEqual(client._debug, false);
+});
+
+test('APIBridgeClient — custom options', () => {
+  const client = createClient({
+    baseURL: 'https://api.example.com',
+    timeout: 5000,
+    retries: 3,
+    retryDelay: 500,
+    proxyMode: true,
+    debug: true,
+    headers: { 'Authorization': 'Bearer token' },
+  });
+  assertEqual(client.baseURL, 'https://api.example.com');
+  assertEqual(client.timeout, 5000);
+  assertEqual(client.retries, 3);
+  assertEqual(client.retryDelay, 500);
+  assert(client.proxyMode, 'proxy mode should be on');
+  assert(client._debug, 'debug should be on');
+  assertEqual(client.defaultHeaders['Authorization'], 'Bearer token');
+});
+
+test('APIBridgeClient — setSchema', () => {
+  const client = createClient();
+  client.setSchema({ userName: 'string', age: 'number' });
+  assertEqual(client._schema.userName, 'string');
+});
+
+test('APIBridgeClient — setSchema rejects invalid', () => {
+  const client = createClient();
+  let threw = false;
+  const schema = Object.create(null);
+  schema['__proto__'] = 'string';
+  try { client.setSchema(schema); } catch (e) { threw = true; }
+  assert(threw, 'should throw for invalid schema');
+});
+
+test('APIBridgeClient — enableDebug', () => {
+  const client = createClient();
+  assert(!client._debug, 'debug off by default');
+  client.enableDebug(true);
+  assert(client._debug, 'debug should be on');
+  client.enableDebug(false);
+  assert(!client._debug, 'debug should be off again');
+});
+
+test('APIBridgeClient — enableProxy', () => {
+  const client = createClient();
+  assert(!client.proxyMode, 'proxy off by default');
+  client.enableProxy(true);
+  assert(client.proxyMode, 'proxy should be on');
+});
+
+test('APIBridgeClient — interceptors accessible', () => {
+  const client = createClient();
+  assert(client.interceptors instanceof InterceptorManager, 'should have interceptors');
+  assert(client.interceptors.request instanceof InterceptorChain, 'should have request chain');
+  assert(client.interceptors.response instanceof InterceptorChain, 'should have response chain');
+});
+
+test('APIBridgeClient — interceptors.request.use returns id', () => {
+  const client = createClient();
+  const id = client.interceptors.request.use((config) => config);
+  assertEqual(typeof id, 'number');
+});
+
+test('APIBridgeClient — interceptors.request.eject', () => {
+  const client = createClient();
+  const id = client.interceptors.request.use((config) => config);
+  assert(client.interceptors.request.eject(id), 'should eject');
+  assertEqual(client.interceptors.request.size, 0);
+});
+
+test('APIBridgeClient — getStats', () => {
+  const client = createClient();
+  const stats = client.getStats();
+  assertEqual(stats.requests, 0);
+  assertEqual(stats.successes, 0);
+  assertEqual(stats.failures, 0);
+  assert(stats.transformer, 'should have transformer stats');
+  assert(stats.learning, 'should have learning stats');
+});
+
+test('APIBridgeClient — clearCache', () => {
+  const client = createClient();
+  client._endpointCache.set('test', true);
+  assertEqual(client._endpointCache.size, 1);
+  client.clearCache();
+  assertEqual(client._endpointCache.size, 0);
+});
+
+test('APIBridgeClient — reset', () => {
+  const client = createClient();
+  client.interceptors.request.use((x) => x);
+  client._endpointCache.set('test', true);
+  client._stats.requests = 5;
+  client.reset();
+  assertEqual(client.interceptors.request.size, 0);
+  assertEqual(client._endpointCache.size, 0);
+  assertEqual(client._stats.requests, 0);
+});
+
+test('APIBridgeClient — has HTTP method shortcuts', () => {
+  const client = createClient();
+  assertEqual(typeof client.get, 'function');
+  assertEqual(typeof client.post, 'function');
+  assertEqual(typeof client.put, 'function');
+  assertEqual(typeof client.patch, 'function');
+  assertEqual(typeof client.delete, 'function');
+  assertEqual(typeof client.head, 'function');
+  assertEqual(typeof client.options, 'function');
+  assertEqual(typeof client.request, 'function');
+});
+
+test('APIBridgeClient — _coerceValue string→number', () => {
+  const client = createClient();
+  assertEqual(client._coerceValue('5000', 'number'), 5000);
+  assertEqual(client._coerceValue('3.14', 'number'), 3.14);
+  assertEqual(client._coerceValue(42, 'number'), 42);
+});
+
+test('APIBridgeClient — _coerceValue string→boolean', () => {
+  const client = createClient();
+  assertEqual(client._coerceValue('true', 'boolean'), true);
+  assertEqual(client._coerceValue('false', 'boolean'), false);
+  assertEqual(client._coerceValue('yes', 'boolean'), true);
+  assertEqual(client._coerceValue('no', 'boolean'), false);
+  assertEqual(client._coerceValue('1', 'boolean'), true);
+  assertEqual(client._coerceValue('0', 'boolean'), false);
+});
+
+test('APIBridgeClient — _coerceValue string→date', () => {
+  const client = createClient();
+  const result = client._coerceValue('2024-01-15', 'date');
+  assert(result instanceof Date, 'should be Date');
+  assertEqual(result.getFullYear(), 2024);
+});
+
+test('APIBridgeClient — _coerceValue number→string', () => {
+  const client = createClient();
+  assertEqual(client._coerceValue(42, 'string'), '42');
+});
+
+test('APIBridgeClient — _coerceValue passthrough for any', () => {
+  const client = createClient();
+  assertEqual(client._coerceValue('hello', 'any'), 'hello');
+  assertEqual(client._coerceValue(42, 'any'), 42);
+});
+
+test('APIBridgeClient — _coerceToExpect with expect map', () => {
+  const client = createClient();
+  const expectMap = new Map([['balance', 'number'], ['active', 'boolean'], ['name', 'string']]);
+  const data = { balance: '5000', active: 'true', name: 'John' };
+  const result = client._coerceToExpect(data, expectMap);
+  assertEqual(result.balance, 5000);
+  assertEqual(result.active, true);
+  assertEqual(result.name, 'John');
+});
+
+test('APIBridgeClient — _coerceToExpect handles arrays', () => {
+  const client = createClient();
+  const expectMap = new Map([['score', 'number']]);
+  const data = [{ score: '100' }, { score: '200' }];
+  const result = client._coerceToExpect(data, expectMap);
+  assertEqual(result[0].score, 100);
+  assertEqual(result[1].score, 200);
+});
+
+test('APIBridgeClient — _coerceToExpect handles nested objects', () => {
+  const client = createClient();
+  const expectMap = new Map([['age', 'number']]);
+  const data = { user: { age: '25' } };
+  const result = client._coerceToExpect(data, expectMap);
+  assertEqual(result.user.age, 25);
+});
+
+console.log('\n━━━ v9: Backward Compatibility ━━━');
+
+test('v9 backward compatibility — all v9 exports available', () => {
+  assert(typeof createClient === 'function', 'createClient');
+  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient');
+  assert(typeof ClientError === 'function', 'ClientError');
+  assert(typeof InterceptorManager === 'function', 'InterceptorManager');
+  assert(typeof InterceptorChain === 'function', 'InterceptorChain');
+  assert(typeof validateExpect === 'function', 'validateExpect');
+  assert(typeof serializeExpect === 'function', 'serializeExpect');
+  assert(typeof deserializeExpect === 'function', 'deserializeExpect');
+  assert(typeof extractExpect === 'function', 'extractExpect');
+  assert(typeof injectExpectHeader === 'function', 'injectExpectHeader');
+  assert(typeof flattenExpect === 'function', 'flattenExpect');
+  assert(typeof smartProxy === 'function', 'smartProxy');
+  assert(typeof buildURL === 'function', 'buildURL');
+  assertEqual(HEADER_NAME, 'x-api-bridge-expect');
+});
+
+test('v9 backward compatibility — all v8 exports still work', () => {
+  assert(typeof bridge === 'function', 'bridge');
+  assert(typeof bridgeFetch === 'function', 'bridgeFetch');
+  assert(typeof transform === 'function', 'transform');
+  assert(typeof createTransformer === 'function', 'createTransformer');
+  assert(typeof FieldAliaser === 'function', 'FieldAliaser');
+  assert(typeof SchemaMigrator === 'function', 'SchemaMigrator');
+  assert(typeof BatchOrchestrator === 'function', 'BatchOrchestrator');
+  assert(typeof FieldStats === 'function', 'FieldStats');
+  assert(typeof ConditionalTransform === 'function', 'ConditionalTransform');
+  assert(typeof DeepMerge === 'function', 'DeepMerge');
+  assert(typeof OutputFormatter === 'function', 'OutputFormatter');
+  assert(typeof RequestInterceptor === 'function', 'RequestInterceptor');
+});
+
+test('v9 backward compatibility — transform still works as before', () => {
+  const result = transform({
+    first_name: 'John',
+    last_name: 'Doe',
+    is_active: true,
+    account_balance: 1000,
+  });
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+  assertEqual(result.isActive, true);
+  assertEqual(result.accountBalance, 1000);
+});
+
+console.log('\n━━━ v9: Integration Tests ━━━');
+
+test('createClient + interceptors + schema integration', () => {
+  const client = createClient({ baseURL: '/api' });
+
+  // Add request interceptor
+  let interceptorCalled = false;
+  client.interceptors.request.use((config) => {
+    interceptorCalled = true;
+    config.headers = config.headers || {};
+    config.headers['X-Custom'] = 'test';
+    return config;
+  });
+
+  // Set schema
+  client.setSchema({ userName: 'string', userAge: 'number' });
+
+  assert(client._schema.userName === 'string', 'schema should be set');
+  assert(client.interceptors.request.size === 1, 'should have 1 interceptor');
+});
+
+test('expectation → header → decode roundtrip', () => {
+  const expect = { userName: 'string', accountBalance: 'number', isActive: 'boolean' };
+  const { config, expect: extracted } = extractExpect({ expect, headers: {} });
+  assert(extracted, 'should extract expect');
+  const headers = injectExpectHeader(config.headers || {}, extracted);
+  const decoded = deserializeExpect(headers[HEADER_NAME]);
+  assertEqual(decoded.userName, 'string');
+  assertEqual(decoded.accountBalance, 'number');
+  assertEqual(decoded.isActive, 'boolean');
+});
+
+test('smart proxy + transform integration', () => {
+  // Simulate what the client does: transform then proxy
+  const raw = { user_name: 'John', user_email: 'john@example.com', account_balance: 5000 };
+  const transformed = transform(raw);
+  assertEqual(transformed.userName, 'John');
+  assertEqual(transformed.userEmail, 'john@example.com');
+  assertEqual(transformed.accountBalance, 5000);
+});
+
+test('smart proxy resolves multiple naming conventions simultaneously', () => {
+  const data = smartProxy({
+    user_name: 'Snake',
+    UserEmail: 'pascal@test.com',
+    'account-balance': 100,
+    IS_ACTIVE: true,
+  });
+  assertEqual(data.userName, 'Snake');
+  assertEqual(data.userEmail, 'pascal@test.com');
+  assertEqual(data.accountBalance, 100);
+  assertEqual(data.isActive, true);
+});
+
+test('validateExpect — depth limit protection', () => {
+  // Build a deeply nested schema
+  let schema = { leaf: 'string' };
+  for (let i = 0; i < 15; i++) {
+    schema = { nested: schema };
+  }
+  const result = validateExpect(schema);
+  assert(!result.valid, 'deeply nested should be invalid');
+  assert(result.error.includes('depth'), 'error mentions depth');
+});
+
+test('createClient — transformer has correct options', () => {
+  const client = createClient({ schema: { userName: 'string' } });
+  assert(client.transformer instanceof APIBridgeTransformer, 'should have transformer');
+  assert(client.learning, 'should have learning engine');
+  assert(client.fuzzyMatcher instanceof FuzzyMatcher, 'should have fuzzy matcher');
+  assert(client.typeCoercer instanceof TypeCoercer, 'should have type coercer');
 });
 // Wait a tick for async tests
 setTimeout(() => {

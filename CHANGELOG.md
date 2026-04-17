@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.0] - 2026-04-17
+
+### Added
+- **HTTP Client Engine (`createClient`)** — Full-featured fetch-based HTTP client that replaces Axios
+  - `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS` methods
+  - `baseURL`, headers, query params, body support
+  - Timeout support via `AbortController`
+  - Request cancellation via user-supplied `AbortSignal`
+  - Retries with exponential backoff + jitter
+  - Configurable retryable status codes
+- **Axios-Compatible Interceptor System** — `client.interceptors.request.use(fn)` / `client.interceptors.response.use(fn)`
+  - `InterceptorManager` and `InterceptorChain` classes
+  - Request, response, and error interceptors
+  - Async execution support
+  - Ejection by ID, clear all
+- **Expectation-Aware System** — Declare expected response format inline
+  - `expect` property in request config: `client.get("/user", { expect: { userName: "string" } })`
+  - Automatic extraction, validation, serialization as `x-api-bridge-expect` header
+  - Schema validation with prototype pollution protection (depth/size limits)
+  - `validateExpect`, `serializeExpect`, `deserializeExpect`, `extractExpect`, `injectExpectHeader`, `flattenExpect`
+- **Smart Proxy Mode** — Response data wrapped in `Proxy` for dynamic field resolution
+  - `data.userName` resolves from `user_name`, `USER_NAME`, `usr_nm`, etc.
+  - Convention-based lookup (camelCase ↔ snake_case ↔ PascalCase ↔ kebab-case)
+  - Case-insensitive fallback
+  - Fuzzy matching integration
+  - Auto-learning integration (resolved mappings remembered)
+  - Nested object proxy wrapping
+  - Array element proxying
+- **Auto Data Alignment** — Automatic response transformation
+  - `snake_case` → `camelCase`
+  - `PascalCase` → `camelCase`
+  - `kebab-case` → `camelCase`
+  - Fuzzy matching (e.g. `usr_nm` → `userName`)
+  - Nested and array transformation
+- **Type Coercion in Responses** — Based on `expect` schema
+  - `"5000"` → `5000` (string → number)
+  - `"true"` → `true` (string → boolean)
+  - Date strings → `Date` objects
+- **Schema-Aware Mode** — `client.setSchema({ userName: String })` for improved mapping accuracy
+- **Debug Mode** — `client.enableDebug(true)` logs raw response, expected schema, and transformed output
+- **Standardized Error Object** — `ClientError` with `{ message, status, code, details }` and `toJSON()`
+- **URL Builder** — `buildURL(base, path, params)` with proper encoding and null/undefined filtering
+- **Endpoint Mapping Cache** — Per-endpoint caching of field mappings
+- 1 new error class: `ClientError`
+- 87 new tests (549 total)
+
+### Changed
+- Updated package description for next-gen API client positioning
+- Added new keywords: `http-client`, `smart-proxy`, `expectation-engine`, `data-alignment`, `createClient`, `abort-controller`
+
 ## [8.0.0] - 2024-01-15
 
 ### Added

@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "8.0.1",
-  "description": "Production-ready API mismatch detector, transformer, and intelligent field mapping SDK — with fuzzy matching, schema migration, circuit breakers, GraphQL support, plugins, and 45+ modules",
+  "version": "9.0.0",
+  "description": "Production-ready API client library with intelligent data alignment, schema awareness, smart proxy, and 50+ modules — a next-generation alternative to Axios",
   "main": "src/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -78,7 +78,13 @@
     "conditional-transform",
     "deep-merge",
     "output-formatter",
-    "request-interceptor"
+    "request-interceptor",
+    "http-client",
+    "smart-proxy",
+    "expectation-engine",
+    "data-alignment",
+    "createClient",
+    "abort-controller"
   ],
   "engines": {
     "node": ">=16.0.0"
