@@ -47,7 +47,8 @@ function validateExpect(schema, depth = 0) {
     return { valid: false, error: `Expect schema exceeds max depth of ${MAX_EXPECT_DEPTH}` };
   }
 
-  const keys = Object.keys(schema);
+  // Use getOwnPropertyNames to catch __proto__ even in literal objects
+  const keys = Object.getOwnPropertyNames(schema);
   if (keys.length > MAX_EXPECT_KEYS) {
     return { valid: false, error: `Expect schema exceeds max keys of ${MAX_EXPECT_KEYS}` };
   }
