@@ -4824,18 +4824,19 @@ test('smartProxy — fuzzy matching with FuzzyMatcher', () => {
 test('smartProxy — auto-learning integration', () => {
   const learning = new LearningEngine({ storePath: null });
   const data = smartProxy({ user_name: 'John' }, { learningEngine: learning });
-  // Trigger resolution
-  data.userName;
-  // Check that it was auto-learned
-  const lookup = learning.lookup('userName');
-  assert(lookup !== null || true, 'learning engine should have been called');
+  // Trigger resolution — should auto-learn the mapping
+  const resolved = data.userName;
+  assertEqual(resolved, 'John');
 });
 
-test('smartProxy — rejects __proto__ access', () => {
+test('smartProxy — rejects __proto__ access safely', () => {
   const data = smartProxy({ normal: 'value' });
-  // __proto__ should be handled safely
-  const proto = data.__proto__;
-  assert(proto !== undefined || proto === undefined, 'should not crash on __proto__');
+  // __proto__ access should not resolve to any data field or crash
+  assertEqual(data.normal, 'value');
+  // Verify no extra keys are exposed
+  const keys = Object.keys(data);
+  assertEqual(keys.length, 1);
+  assertEqual(keys[0], 'normal');
 });
 
 console.log('\n━━━ v9: URL Builder ━━━');
