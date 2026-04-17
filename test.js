@@ -77,6 +77,9 @@ const {
 } = require('./src/index');
 
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const TEMP_DIR = os.tmpdir();
 
 let passed = 0;
 let failed = 0;
@@ -341,13 +344,13 @@ test('stats tracking', () => {
 });
 
 test('bulk import/export mappings', () => {
-  const le = new LearningEngine({ storePath: '/tmp/apibridge_test_bulk1.json' });
+  const le = new LearningEngine({ storePath: path.join(TEMP_DIR, 'apibridge_test_bulk1.json') });
   le.reset();
   le.learn('test_src', 'testDst', true);
   const exported = le.bulkExport();
   assert(exported['test_src'] === 'testDst', 'Should export learned mapping');
 
-  const le2 = new LearningEngine({ storePath: '/tmp/apibridge_test_bulk2.json' });
+  const le2 = new LearningEngine({ storePath: path.join(TEMP_DIR, 'apibridge_test_bulk2.json') });
   le2.reset();
   const count = le2.bulkImport({ 'foo_bar': 'fooBar', 'baz_qux': 'bazQux' });
   assertEqual(count, 2);
@@ -355,7 +358,7 @@ test('bulk import/export mappings', () => {
 });
 
 test('learning engine stats', () => {
-  const le = new LearningEngine({ storePath: '/tmp/apibridge_test_stats.json' });
+  const le = new LearningEngine({ storePath: path.join(TEMP_DIR, 'apibridge_test_stats.json') });
   le.reset();
   le.learn('x_key', 'xKey', true);
   le.learn('y_key', 'badKey', false);
@@ -391,7 +394,7 @@ test('CSV file exported to disk', () => {
 
   const filePath = exportMismatchCSV(
     csvTransformer.mismatches,
-    '/tmp/apibridge_test_export.csv'
+    path.join(TEMP_DIR, 'apibridge_test_export.csv')
   );
   assert(fs.existsSync(filePath), 'CSV file should exist');
 
@@ -406,7 +409,7 @@ test('JSON export generates valid file', () => {
 
   const filePath = exportMismatchJSON(
     jt.mismatches,
-    '/tmp/apibridge_test_export.json'
+    path.join(TEMP_DIR, 'apibridge_test_export.json')
   );
   assert(fs.existsSync(filePath), 'JSON file should exist');
 
