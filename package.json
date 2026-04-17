@@ -1,6 +1,6 @@
 {
   "name": "api-bridge-ai",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "Production-ready API mismatch detector, transformer, and intelligent field mapping SDK — with fuzzy matching, schema migration, circuit breakers, GraphQL support, plugins, and 45+ modules",
   "main": "src/index.js",
   "types": "types/index.d.ts",
