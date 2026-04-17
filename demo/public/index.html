@@ -787,6 +787,12 @@
     `;
   }
 
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
   async function resolveAlias() {
     const input = document.getElementById('aliasInput').value.trim();
     const resultDiv = document.getElementById('aliasResult');
@@ -799,13 +805,15 @@
         body: JSON.stringify({ field: input }),
       });
       const data = await res.json();
+      const safeInput = escapeHTML(input);
       if (data.resolved && data.resolved.matched) {
-        resultDiv.innerHTML = `<div class="alert alert-success">✅ <code>${input}</code> → canonical: <strong>${data.resolved.canonical}</strong></div>`;
+        const safeCanonical = escapeHTML(data.resolved.canonical);
+        resultDiv.innerHTML = `<div class="alert alert-success">✅ <code>${safeInput}</code> → canonical: <strong>${safeCanonical}</strong></div>`;
       } else {
-        resultDiv.innerHTML = `<div class="alert alert-error">❌ <code>${input}</code> did not match any registered alias.</div>`;
+        resultDiv.innerHTML = `<div class="alert alert-error">❌ <code>${safeInput}</code> did not match any registered alias.</div>`;
       }
     } catch (err) {
-      resultDiv.innerHTML = `<div class="alert alert-error">Error: ${err.message}</div>`;
+      resultDiv.innerHTML = `<div class="alert alert-error">Error: ${escapeHTML(err.message)}</div>`;
     }
   }
 
