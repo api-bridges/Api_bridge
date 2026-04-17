@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v10 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2-v10 features.
+ * APIBridge AI v11 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2-v11 features.
  */
 
 const {
@@ -112,6 +112,45 @@ const {
   mergeConfig,
   defaultParamsSerializer,
   create,
+
+  // v11 exports
+  isCancelToken,
+  toURLEncodedForm,
+  formToJSON,
+  isTypedArray,
+  isFileList,
+  AxiosHeaders,
+  normalizeHeaderName,
+  HttpStatusCode,
+  fetchAdapter,
+  xhrAdapter,
+  adapters,
+  getAdapter,
+  isAbsoluteURL,
+  combineURLs,
+  isURLSameOrigin,
+  parseURL,
+  kindOf,
+  isPlainObject,
+  isObject,
+  isFunction,
+  isString,
+  isNumber,
+  isBoolean,
+  isUndefined,
+  isDate,
+  isRegExp,
+  isArrayBuffer,
+  forEach: forEachUtil,
+  merge: mergeUtil,
+  extend,
+  stripBOM,
+  findKey,
+  isBrowser,
+  isNode,
+  freezeDeep,
+  generateUID,
+  VERSION,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -6060,6 +6099,986 @@ test('mergeConfig + defaults integration', () => {
   assertEqual(merged.timeout, 10000);
   assertEqual(merged.headers.common['X-Test'], 'yes');
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// v11: NEW TESTS — Complete Axios Drop-in Replacement
+// ═══════════════════════════════════════════════════════════════════════════════
+
+console.log('\n━━━ v11: VERSION ━━━');
+
+test('VERSION is exported and correct', () => {
+  assert(typeof VERSION === 'string', 'VERSION should be a string');
+  assertEqual(VERSION, '11.0.0');
+});
+
+console.log('\n━━━ v11: AxiosHeaders ━━━');
+
+test('AxiosHeaders — constructor with object', () => {
+  const h = new AxiosHeaders({ 'Content-Type': 'application/json', 'Authorization': 'Bearer abc' });
+  assertEqual(h.get('content-type'), 'application/json');
+  assertEqual(h.get('Authorization'), 'Bearer abc');
+  assertEqual(h.size, 2);
+});
+
+test('AxiosHeaders — case-insensitive get/set/has/delete', () => {
+  const h = new AxiosHeaders();
+  h.set('content-type', 'text/html');
+  assertEqual(h.get('Content-Type'), 'text/html');
+  assertEqual(h.get('CONTENT-TYPE'), 'text/html');
+  assert(h.has('content-TYPE'), 'has should be case-insensitive');
+  assert(h.delete('Content-Type'), 'delete should work case-insensitive');
+  assert(!h.has('content-type'), 'should be deleted');
+});
+
+test('AxiosHeaders — set with rewrite=false', () => {
+  const h = new AxiosHeaders({ 'Content-Type': 'application/json' });
+  h.set('content-type', 'text/html', false);
+  assertEqual(h.get('Content-Type'), 'application/json');
+});
+
+test('AxiosHeaders — set null deletes header', () => {
+  const h = new AxiosHeaders({ 'Content-Type': 'application/json' });
+  h.set('Content-Type', null);
+  assert(!h.has('Content-Type'), 'should be deleted');
+});
+
+test('AxiosHeaders — forEach iterates all headers', () => {
+  const h = new AxiosHeaders({ 'X-A': '1', 'X-B': '2' });
+  const collected = [];
+  h.forEach((value, name) => collected.push({ name, value }));
+  assertEqual(collected.length, 2);
+  assert(collected.some(c => c.value === '1'), 'should have X-A');
+  assert(collected.some(c => c.value === '2'), 'should have X-B');
+});
+
+test('AxiosHeaders — keys/values/entries', () => {
+  const h = new AxiosHeaders({ 'Accept': 'text/html' });
+  const keys = h.keys();
+  const values = h.values();
+  const entries = h.entries();
+  assertEqual(keys.length, 1);
+  assertEqual(values[0], 'text/html');
+  assertEqual(entries[0][1], 'text/html');
+});
+
+test('AxiosHeaders — merge', () => {
+  const h = new AxiosHeaders({ 'X-A': '1' });
+  h.merge({ 'X-B': '2', 'X-C': '3' });
+  assertEqual(h.size, 3);
+  assertEqual(h.get('X-B'), '2');
+});
+
+test('AxiosHeaders — toJSON', () => {
+  const h = new AxiosHeaders({ 'content-type': 'text/html' });
+  const json = h.toJSON();
+  assertEqual(json['Content-Type'], 'text/html');
+});
+
+test('AxiosHeaders — toString', () => {
+  const h = new AxiosHeaders({ 'Accept': 'application/json' });
+  const str = h.toString();
+  assert(str.includes('Accept: application/json'), 'should format correctly');
+});
+
+test('AxiosHeaders — from another AxiosHeaders', () => {
+  const h1 = new AxiosHeaders({ 'X-Test': 'abc' });
+  const h2 = AxiosHeaders.from(h1);
+  assertEqual(h2.get('X-Test'), 'abc');
+});
+
+test('AxiosHeaders — concat multiple sources', () => {
+  const h = AxiosHeaders.concat(
+    { 'X-A': '1' },
+    new AxiosHeaders({ 'X-B': '2' }),
+    { 'X-C': '3' },
+  );
+  assertEqual(h.size, 3);
+  assertEqual(h.get('X-A'), '1');
+  assertEqual(h.get('X-C'), '3');
+});
+
+test('AxiosHeaders — clear', () => {
+  const h = new AxiosHeaders({ 'X-A': '1', 'X-B': '2' });
+  h.clear();
+  assertEqual(h.size, 0);
+});
+
+test('AxiosHeaders — normalize', () => {
+  const h = new AxiosHeaders({ 'content-type': 'text/html' });
+  h.normalize();
+  const json = h.toJSON();
+  assert('Content-Type' in json, 'should be normalized');
+});
+
+test('AxiosHeaders — accessor methods', () => {
+  const h = new AxiosHeaders({ 'Content-Type': 'application/json' });
+  assertEqual(h.getContentType(), 'application/json');
+  h.setContentType('text/html');
+  assertEqual(h.getContentType(), 'text/html');
+  assert(h.hasContentType(), 'should have Content-Type');
+});
+
+test('AxiosHeaders — iterable with Symbol.iterator', () => {
+  const h = new AxiosHeaders({ 'X-A': '1' });
+  const entries = [...h];
+  assertEqual(entries.length, 1);
+  assertEqual(entries[0][1], '1');
+});
+
+test('AxiosHeaders — rejects dangerous keys', () => {
+  const h = new AxiosHeaders({ '__proto__': 'evil', 'constructor': 'bad' });
+  assertEqual(h.size, 0);
+});
+
+test('AxiosHeaders — get with asParsed for JSON', () => {
+  const h = new AxiosHeaders();
+  h.set('X-Data', '{"key":"value"}');
+  const parsed = h.get('X-Data', true);
+  assert(typeof parsed === 'object', 'should parse JSON');
+  assertEqual(parsed.key, 'value');
+});
+
+test('AxiosHeaders — merge with rewrite=false', () => {
+  const h = new AxiosHeaders({ 'X-A': '1' });
+  h.merge({ 'X-A': '2', 'X-B': '3' }, false);
+  assertEqual(h.get('X-A'), '1');
+  assertEqual(h.get('X-B'), '3');
+});
+
+test('normalizeHeaderName utility', () => {
+  assertEqual(normalizeHeaderName('content-type'), 'Content-Type');
+  assertEqual(normalizeHeaderName('x-custom-header'), 'X-Custom-Header');
+  assertEqual(normalizeHeaderName(''), '');
+});
+
+console.log('\n━━━ v11: HttpStatusCode ━━━');
+
+test('HttpStatusCode — has all common codes', () => {
+  assertEqual(HttpStatusCode.Ok, 200);
+  assertEqual(HttpStatusCode.Created, 201);
+  assertEqual(HttpStatusCode.NoContent, 204);
+  assertEqual(HttpStatusCode.BadRequest, 400);
+  assertEqual(HttpStatusCode.Unauthorized, 401);
+  assertEqual(HttpStatusCode.Forbidden, 403);
+  assertEqual(HttpStatusCode.NotFound, 404);
+  assertEqual(HttpStatusCode.RequestTimeout, 408);
+  assertEqual(HttpStatusCode.TooManyRequests, 429);
+  assertEqual(HttpStatusCode.InternalServerError, 500);
+  assertEqual(HttpStatusCode.BadGateway, 502);
+  assertEqual(HttpStatusCode.ServiceUnavailable, 503);
+  assertEqual(HttpStatusCode.GatewayTimeout, 504);
+});
+
+test('HttpStatusCode — has informational codes', () => {
+  assertEqual(HttpStatusCode.Continue, 100);
+  assertEqual(HttpStatusCode.SwitchingProtocols, 101);
+  assertEqual(HttpStatusCode.Processing, 102);
+  assertEqual(HttpStatusCode.EarlyHints, 103);
+});
+
+test('HttpStatusCode — has redirect codes', () => {
+  assertEqual(HttpStatusCode.MovedPermanently, 301);
+  assertEqual(HttpStatusCode.Found, 302);
+  assertEqual(HttpStatusCode.SeeOther, 303);
+  assertEqual(HttpStatusCode.NotModified, 304);
+  assertEqual(HttpStatusCode.TemporaryRedirect, 307);
+  assertEqual(HttpStatusCode.PermanentRedirect, 308);
+});
+
+test('HttpStatusCode — has extended 4xx codes', () => {
+  assertEqual(HttpStatusCode.Conflict, 409);
+  assertEqual(HttpStatusCode.Gone, 410);
+  assertEqual(HttpStatusCode.PayloadTooLarge, 413);
+  assertEqual(HttpStatusCode.UnsupportedMediaType, 415);
+  assertEqual(HttpStatusCode.UnprocessableEntity, 422);
+  assertEqual(HttpStatusCode.Locked, 423);
+  assertEqual(HttpStatusCode.ImATeapot, 418);
+});
+
+test('HttpStatusCode — has extended 5xx codes', () => {
+  assertEqual(HttpStatusCode.NotImplemented, 501);
+  assertEqual(HttpStatusCode.HttpVersionNotSupported, 505);
+  assertEqual(HttpStatusCode.InsufficientStorage, 507);
+  assertEqual(HttpStatusCode.LoopDetected, 508);
+  assertEqual(HttpStatusCode.NetworkAuthenticationRequired, 511);
+});
+
+test('HttpStatusCode — is frozen (immutable)', () => {
+  assert(Object.isFrozen(HttpStatusCode), 'should be frozen');
+});
+
+console.log('\n━━━ v11: Adapter System ━━━');
+
+test('fetchAdapter is a function', () => {
+  assert(typeof fetchAdapter === 'function', 'should be a function');
+});
+
+test('xhrAdapter is a function', () => {
+  assert(typeof xhrAdapter === 'function', 'should be a function');
+});
+
+test('adapters registry has fetch and xhr', () => {
+  assert(typeof adapters.fetch === 'function', 'should have fetch adapter');
+  assert(typeof adapters.xhr === 'function', 'should have xhr adapter');
+  assert(typeof adapters.http === 'function', 'should have http adapter');
+});
+
+test('getAdapter — returns fetch adapter by name', () => {
+  const adapter = getAdapter('fetch');
+  assertEqual(adapter, fetchAdapter);
+});
+
+test('getAdapter — returns xhr adapter by name', () => {
+  const adapter = getAdapter('xhr');
+  assertEqual(adapter, xhrAdapter);
+});
+
+test('getAdapter — returns custom function as-is', () => {
+  const custom = () => {};
+  const adapter = getAdapter(custom);
+  assertEqual(adapter, custom);
+});
+
+test('getAdapter — priority list selects first available', () => {
+  const adapter = getAdapter(['fetch', 'xhr']);
+  assertEqual(adapter, fetchAdapter);
+});
+
+test('getAdapter — throws on unknown adapter', () => {
+  let threw = false;
+  try {
+    getAdapter('nonexistent');
+  } catch (e) {
+    threw = true;
+    assert(e.message.includes('Unknown adapter'), 'should mention unknown adapter');
+  }
+  assert(threw, 'should throw');
+});
+
+test('getAdapter — auto-detect returns fetch if available', () => {
+  const adapter = getAdapter(undefined);
+  assertEqual(adapter, fetchAdapter);
+});
+
+test('createClient — accepts adapter option', () => {
+  const client = createClient({ adapter: 'fetch' });
+  assertEqual(client.adapter, 'fetch');
+  assertEqual(client.defaults.adapter, 'fetch');
+});
+
+console.log('\n━━━ v11: URL Utilities ━━━');
+
+test('isAbsoluteURL — detects absolute URLs', () => {
+  assert(isAbsoluteURL('https://example.com/api'), 'https is absolute');
+  assert(isAbsoluteURL('http://localhost:3000'), 'http is absolute');
+  assert(isAbsoluteURL('//cdn.example.com/image.png'), '// is absolute');
+  assert(isAbsoluteURL('ftp://files.example.com'), 'ftp is absolute');
+});
+
+test('isAbsoluteURL — detects relative URLs', () => {
+  assert(!isAbsoluteURL('/api/users'), '/ is relative');
+  assert(!isAbsoluteURL('api/users'), 'no prefix is relative');
+  assert(!isAbsoluteURL(''), 'empty is not absolute');
+  assert(!isAbsoluteURL(null), 'null is not absolute');
+});
+
+test('combineURLs — combines base and relative', () => {
+  assertEqual(combineURLs('https://example.com', '/api/users'), 'https://example.com/api/users');
+  assertEqual(combineURLs('https://example.com/', '/api/users'), 'https://example.com/api/users');
+  assertEqual(combineURLs('https://example.com/', 'api/users'), 'https://example.com/api/users');
+});
+
+test('combineURLs — returns relative if absolute', () => {
+  assertEqual(combineURLs('https://old.com', 'https://new.com/api'), 'https://new.com/api');
+});
+
+test('combineURLs — handles empty inputs', () => {
+  assertEqual(combineURLs('', '/api'), '/api');
+  assertEqual(combineURLs('https://example.com', ''), 'https://example.com');
+  assertEqual(combineURLs('', ''), '');
+});
+
+test('isURLSameOrigin — same origin returns true', () => {
+  assert(isURLSameOrigin('/api/users'), 'relative URLs are same origin');
+  assert(isURLSameOrigin(''), 'empty is same origin');
+});
+
+test('parseURL — parses full URL', () => {
+  const parsed = parseURL('https://example.com:8080/api/users?page=1#section');
+  assert(parsed !== null, 'should parse');
+  assertEqual(parsed.protocol, 'https:');
+  assertEqual(parsed.host, 'example.com:8080');
+  assertEqual(parsed.pathname, '/api/users');
+  assertEqual(parsed.search, '?page=1');
+  assertEqual(parsed.hash, '#section');
+});
+
+test('parseURL — returns null for invalid input', () => {
+  assertEqual(parseURL(null), null);
+  assertEqual(parseURL(''), null);
+});
+
+console.log('\n━━━ v11: Type Helpers ━━━');
+
+test('kindOf — detects types correctly', () => {
+  assertEqual(kindOf(null), 'null');
+  assertEqual(kindOf(undefined), 'undefined');
+  assertEqual(kindOf('hello'), 'string');
+  assertEqual(kindOf(42), 'number');
+  assertEqual(kindOf(true), 'boolean');
+  assertEqual(kindOf([]), 'array');
+  assertEqual(kindOf({}), 'object');
+  assertEqual(kindOf(new Date()), 'date');
+  assertEqual(kindOf(/regex/), 'regexp');
+});
+
+test('isPlainObject — true for plain objects', () => {
+  assert(isPlainObject({}), '{} is plain');
+  assert(isPlainObject({ a: 1 }), 'literal is plain');
+  assert(isPlainObject(Object.create(null)), 'null proto is plain');
+});
+
+test('isPlainObject — false for non-plain objects', () => {
+  assert(!isPlainObject([]), 'array is not plain');
+  assert(!isPlainObject(new Date()), 'date is not plain');
+  assert(!isPlainObject(null), 'null is not plain');
+  assert(!isPlainObject('str'), 'string is not plain');
+});
+
+test('isObject — detects objects', () => {
+  assert(isObject({}), '{} is object');
+  assert(isObject([]), 'array is object');
+  assert(isObject(new Date()), 'date is object');
+  assert(!isObject(null), 'null is not object');
+  assert(!isObject('str'), 'string is not object');
+  assert(!isObject(42), 'number is not object');
+});
+
+test('isFunction — detects functions', () => {
+  assert(isFunction(() => {}), 'arrow is function');
+  assert(isFunction(function() {}), 'function declaration');
+  assert(isFunction(Math.max), 'built-in is function');
+  assert(!isFunction('str'), 'string is not function');
+  assert(!isFunction(42), 'number is not function');
+});
+
+test('isString — detects strings', () => {
+  assert(isString('hello'), 'string literal');
+  assert(isString(''), 'empty string');
+  assert(!isString(42), 'number is not string');
+  assert(!isString(null), 'null is not string');
+});
+
+test('isNumber — detects numbers', () => {
+  assert(isNumber(42), '42 is number');
+  assert(isNumber(0), '0 is number');
+  assert(isNumber(NaN), 'NaN is number');
+  assert(!isNumber('42'), 'string is not number');
+});
+
+test('isBoolean — detects booleans', () => {
+  assert(isBoolean(true), 'true is boolean');
+  assert(isBoolean(false), 'false is boolean');
+  assert(!isBoolean(1), '1 is not boolean');
+  assert(!isBoolean('true'), 'string is not boolean');
+});
+
+test('isUndefined — detects undefined', () => {
+  assert(isUndefined(undefined), 'undefined is undefined');
+  assert(!isUndefined(null), 'null is not undefined');
+  assert(!isUndefined(0), '0 is not undefined');
+  assert(!isUndefined(''), 'empty string is not undefined');
+});
+
+test('isDate — detects dates', () => {
+  assert(isDate(new Date()), 'Date instance');
+  assert(!isDate('2024-01-01'), 'string is not date');
+  assert(!isDate(Date.now()), 'timestamp is not date');
+});
+
+test('isRegExp — detects regexps', () => {
+  assert(isRegExp(/test/), 'literal regexp');
+  assert(isRegExp(new RegExp('test')), 'RegExp constructor');
+  assert(!isRegExp('test'), 'string is not regexp');
+});
+
+test('isArrayBuffer — detects ArrayBuffer', () => {
+  assert(isArrayBuffer(new ArrayBuffer(8)), 'ArrayBuffer instance');
+  assert(!isArrayBuffer(Buffer.alloc(8)), 'Buffer is not ArrayBuffer');
+  assert(!isArrayBuffer([]), 'array is not ArrayBuffer');
+});
+
+test('isTypedArray — detects typed arrays', () => {
+  assert(isTypedArray(new Uint8Array(4)), 'Uint8Array');
+  assert(isTypedArray(new Int32Array(4)), 'Int32Array');
+  assert(isTypedArray(new Float64Array(4)), 'Float64Array');
+  assert(!isTypedArray([]), 'array is not typed array');
+  assert(!isTypedArray({}), 'object is not typed array');
+});
+
+console.log('\n━━━ v11: Utility Helpers ━━━');
+
+test('forEachUtil — iterates arrays', () => {
+  const collected = [];
+  forEachUtil([1, 2, 3], (val) => collected.push(val));
+  assertEqual(collected.length, 3);
+  assertEqual(collected[0], 1);
+});
+
+test('forEachUtil — iterates objects', () => {
+  const collected = {};
+  forEachUtil({ a: 1, b: 2 }, (val, key) => { collected[key] = val; });
+  assertEqual(collected.a, 1);
+  assertEqual(collected.b, 2);
+});
+
+test('forEachUtil — handles null/undefined', () => {
+  forEachUtil(null, () => { throw new Error('should not call'); });
+  forEachUtil(undefined, () => { throw new Error('should not call'); });
+});
+
+test('mergeUtil — deep merges objects', () => {
+  const result = mergeUtil({ a: { x: 1 } }, { a: { y: 2 }, b: 3 });
+  assertEqual(result.a.x, 1);
+  assertEqual(result.a.y, 2);
+  assertEqual(result.b, 3);
+});
+
+test('mergeUtil — handles arrays', () => {
+  const result = mergeUtil({ items: [1, 2] }, { items: [3, 4] });
+  assertEqual(result.items.length, 2);
+  assertEqual(result.items[0], 3);
+});
+
+test('extend — copies properties', () => {
+  const a = { x: 1 };
+  const b = { y: 2, z: 3 };
+  extend(a, b);
+  assertEqual(a.y, 2);
+  assertEqual(a.z, 3);
+});
+
+test('stripBOM — removes BOM', () => {
+  assertEqual(stripBOM('\uFEFFhello'), 'hello');
+  assertEqual(stripBOM('hello'), 'hello');
+});
+
+test('findKey — case insensitive key lookup', () => {
+  const obj = { 'Content-Type': 'json', 'Accept': 'html' };
+  assertEqual(findKey(obj, 'content-type'), 'Content-Type');
+  assertEqual(findKey(obj, 'ACCEPT'), 'Accept');
+  assertEqual(findKey(obj, 'nonexistent'), undefined);
+  assertEqual(findKey(null, 'key'), undefined);
+});
+
+test('isBrowser — returns boolean', () => {
+  assert(typeof isBrowser() === 'boolean', 'should return boolean');
+  // In Node.js test environment, should be false
+  assertEqual(isBrowser(), false);
+});
+
+test('isNode — returns boolean', () => {
+  assert(typeof isNode() === 'boolean', 'should return boolean');
+  // In Node.js test environment, should be true
+  assertEqual(isNode(), true);
+});
+
+test('freezeDeep — deeply freezes objects', () => {
+  const obj = { a: { b: { c: 1 } } };
+  freezeDeep(obj);
+  assert(Object.isFrozen(obj), 'root should be frozen');
+  assert(Object.isFrozen(obj.a), 'nested should be frozen');
+  assert(Object.isFrozen(obj.a.b), 'deep nested should be frozen');
+});
+
+test('freezeDeep — handles null and primitives', () => {
+  freezeDeep(null);
+  freezeDeep(42);
+  freezeDeep('str');
+});
+
+test('generateUID — returns string of correct length', () => {
+  const uid = generateUID();
+  assertEqual(uid.length, 21);
+  assert(/^[a-zA-Z0-9]+$/.test(uid), 'should be alphanumeric');
+});
+
+test('generateUID — custom size', () => {
+  const uid = generateUID(10);
+  assertEqual(uid.length, 10);
+});
+
+test('generateUID — unique values', () => {
+  const uid1 = generateUID();
+  const uid2 = generateUID();
+  assert(uid1 !== uid2, 'should generate unique IDs');
+});
+
+console.log('\n━━━ v11: Enhanced CancelToken ━━━');
+
+test('isCancelToken — detects CancelToken', () => {
+  const source = CancelToken.source();
+  assert(isCancelToken(source.token), 'should detect CancelToken');
+  assert(!isCancelToken({}), 'plain object is not CancelToken');
+  assert(!isCancelToken(null), 'null is not CancelToken');
+});
+
+test('CancelToken.isCancel static method', () => {
+  assert(typeof CancelToken.isCancel === 'function', 'static method exists');
+  const source = CancelToken.source();
+  source.cancel('test');
+  assert(CancelToken.isCancel(source.token.reason), 'should detect cancel');
+});
+
+test('CancelToken.isCancelToken static method', () => {
+  assert(typeof CancelToken.isCancelToken === 'function', 'static method exists');
+  const source = CancelToken.source();
+  assert(CancelToken.isCancelToken(source.token), 'should detect token');
+});
+
+console.log('\n━━━ v11: Enhanced FormData Utilities ━━━');
+
+test('toURLEncodedForm — converts object to URLSearchParams', () => {
+  const params = toURLEncodedForm({ name: 'John', age: 30 });
+  assert(params instanceof URLSearchParams, 'should return URLSearchParams');
+  assertEqual(params.get('name'), 'John');
+  assertEqual(params.get('age'), '30');
+});
+
+test('toURLEncodedForm — handles arrays', () => {
+  const params = toURLEncodedForm({ tags: ['a', 'b'] });
+  const all = params.getAll('tags[]');
+  assertEqual(all.length, 2);
+  assertEqual(all[0], 'a');
+  assertEqual(all[1], 'b');
+});
+
+test('toURLEncodedForm — handles null values', () => {
+  const params = toURLEncodedForm({ key: null });
+  assertEqual(params.get('key'), '');
+});
+
+test('toURLEncodedForm — handles dates', () => {
+  const date = new Date('2024-01-01T00:00:00Z');
+  const params = toURLEncodedForm({ date });
+  assert(params.get('date').includes('2024'), 'should contain year');
+});
+
+test('toURLEncodedForm — passes through URLSearchParams', () => {
+  const original = new URLSearchParams('a=1&b=2');
+  const result = toURLEncodedForm(original);
+  assertEqual(result, original);
+});
+
+test('toURLEncodedForm — handles empty/null input', () => {
+  const params = toURLEncodedForm(null);
+  assert(params instanceof URLSearchParams, 'should return URLSearchParams');
+  assertEqual(params.toString(), '');
+});
+
+test('toURLEncodedForm — skips dangerous keys', () => {
+  const params = toURLEncodedForm({ __proto__: 'evil', valid: 'ok' });
+  assertEqual(params.get('__proto__'), null);
+  assertEqual(params.get('valid'), 'ok');
+});
+
+test('formToJSON — converts simple entries', () => {
+  // Use URLSearchParams as a FormData stand-in (has entries())
+  const params = new URLSearchParams();
+  params.append('name', 'John');
+  params.append('age', '30');
+  const result = formToJSON(params);
+  assertEqual(result.name, 'John');
+  assertEqual(result.age, '30');
+});
+
+test('formToJSON — handles bracket notation', () => {
+  const params = new URLSearchParams();
+  params.append('user[name]', 'John');
+  params.append('user[email]', 'john@test.com');
+  const result = formToJSON(params);
+  assert(typeof result.user === 'object', 'should create nested object');
+  assertEqual(result.user.name, 'John');
+  assertEqual(result.user.email, 'john@test.com');
+});
+
+test('formToJSON — handles duplicate keys as array', () => {
+  const params = new URLSearchParams();
+  params.append('tags', 'a');
+  params.append('tags', 'b');
+  const result = formToJSON(params);
+  assert(Array.isArray(result.tags), 'should create array');
+  assertEqual(result.tags.length, 2);
+});
+
+test('formToJSON — handles null/empty input', () => {
+  const result = formToJSON(null);
+  assert(typeof result === 'object', 'should return object');
+  assertEqual(Object.keys(result).length, 0);
+});
+
+console.log('\n━━━ v11: InterceptorChain.forEach ━━━');
+
+test('InterceptorChain forEach — iterates handlers', () => {
+  const chain = new InterceptorChain();
+  chain.use((c) => c);
+  chain.use((c) => c, (e) => Promise.reject(e));
+
+  const handlers = [];
+  chain.forEach((h) => handlers.push(h));
+  assertEqual(handlers.length, 2);
+  assert(typeof handlers[0].fulfilled === 'function', 'should have fulfilled');
+  assert(handlers[1].rejected !== null, 'second should have rejected');
+});
+
+test('InterceptorChain forEach — no-op for non-function', () => {
+  const chain = new InterceptorChain();
+  chain.use((c) => c);
+  chain.forEach(null); // should not throw
+  chain.forEach(undefined);
+});
+
+console.log('\n━━━ v11: Enhanced ClientError ━━━');
+
+test('ClientError — has response property', () => {
+  const err = new ClientError('Not Found', {
+    status: 404,
+    code: 'ERR_HTTP_404',
+    response: { data: { error: 'not found' }, status: 404, headers: {} },
+  });
+  assert(err.response !== null, 'should have response');
+  assertEqual(err.response.status, 404);
+  assertEqual(err.response.data.error, 'not found');
+});
+
+test('ClientError — has config property', () => {
+  const err = new ClientError('test', {
+    config: { method: 'GET', url: '/api' },
+  });
+  assert(err.config !== null, 'should have config');
+  assertEqual(err.config.method, 'GET');
+});
+
+test('ClientError — isApiBridgeError is true by default', () => {
+  const err = new ClientError('test');
+  assert(err.isApiBridgeError === true, 'should have isApiBridgeError flag');
+});
+
+test('ClientError.from — creates error from source', () => {
+  const source = new Error('Network failure');
+  const err = ClientError.from(
+    source,
+    'ERR_NETWORK',
+    { method: 'GET', url: '/api' },
+    null,
+    { data: null, status: 0 },
+  );
+  assertEqual(err.message, 'Network failure');
+  assertEqual(err.code, 'ERR_NETWORK');
+  assert(err.config !== null, 'should have config');
+  assertEqual(err.config.method, 'GET');
+  assertEqual(err.cause, source);
+});
+
+test('ClientError.from — without response', () => {
+  const err = ClientError.from(new Error('timeout'), 'ERR_TIMEOUT', { url: '/test' });
+  assertEqual(err.code, 'ERR_TIMEOUT');
+  assertEqual(err.response, null);
+});
+
+test('ClientError — toJSON includes name and config', () => {
+  const err = new ClientError('test', {
+    status: 500,
+    code: 'ERR_HTTP_500',
+    config: { method: 'POST', url: '/api', baseURL: '/v1' },
+  });
+  const json = err.toJSON();
+  assertEqual(json.name, 'ClientError');
+  assertEqual(json.status, 500);
+  assert(json.config !== null, 'should include config');
+  assertEqual(json.config.method, 'POST');
+});
+
+console.log('\n━━━ v11: postForm/putForm/patchForm ━━━');
+
+test('APIBridgeClient — has postForm method', () => {
+  const client = createClient();
+  assert(typeof client.postForm === 'function', 'should have postForm');
+});
+
+test('APIBridgeClient — has putForm method', () => {
+  const client = createClient();
+  assert(typeof client.putForm === 'function', 'should have putForm');
+});
+
+test('APIBridgeClient — has patchForm method', () => {
+  const client = createClient();
+  assert(typeof client.patchForm === 'function', 'should have patchForm');
+});
+
+console.log('\n━━━ v11: New Client Options ━━━');
+
+test('createClient — accepts proxy option', () => {
+  const client = createClient({ proxy: { host: '127.0.0.1', port: 8080 } });
+  assert(client.proxy !== null, 'should have proxy');
+  assertEqual(client.proxy.host, '127.0.0.1');
+  assertEqual(client.proxy.port, 8080);
+  assertEqual(client.defaults.proxy.host, '127.0.0.1');
+});
+
+test('createClient — accepts httpAgent option', () => {
+  const agent = { keepAlive: true };
+  const client = createClient({ httpAgent: agent });
+  assertEqual(client.httpAgent, agent);
+  assertEqual(client.defaults.httpAgent, agent);
+});
+
+test('createClient — accepts httpsAgent option', () => {
+  const agent = { keepAlive: true };
+  const client = createClient({ httpsAgent: agent });
+  assertEqual(client.httpsAgent, agent);
+  assertEqual(client.defaults.httpsAgent, agent);
+});
+
+test('createClient — accepts socketPath option', () => {
+  const client = createClient({ socketPath: '/var/run/docker.sock' });
+  assertEqual(client.socketPath, '/var/run/docker.sock');
+  assertEqual(client.defaults.socketPath, '/var/run/docker.sock');
+});
+
+test('createClient — accepts formSerializer option', () => {
+  const serializer = { indexes: true };
+  const client = createClient({ formSerializer: serializer });
+  assertEqual(client.formSerializer.indexes, true);
+  assertEqual(client.defaults.formSerializer.indexes, true);
+});
+
+test('createClient — has env.FormData by default', () => {
+  const client = createClient();
+  assert(client.env !== null, 'should have env');
+});
+
+test('createClient — defaults include v11 options', () => {
+  const client = createClient({
+    maxRedirects: 10,
+    decompress: false,
+    responseEncoding: 'utf16',
+  });
+  assertEqual(client.defaults.maxRedirects, 10);
+  assertEqual(client.defaults.decompress, false);
+  assertEqual(client.defaults.responseEncoding, 'utf16');
+});
+
+console.log('\n━━━ v11: Backward Compatibility ━━━');
+
+test('v11 backward compat — all v11 exports available', () => {
+  assert(typeof VERSION === 'string', 'VERSION');
+  assert(typeof AxiosHeaders === 'function', 'AxiosHeaders');
+  assert(typeof normalizeHeaderName === 'function', 'normalizeHeaderName');
+  assert(typeof HttpStatusCode === 'object', 'HttpStatusCode');
+  assert(typeof fetchAdapter === 'function', 'fetchAdapter');
+  assert(typeof xhrAdapter === 'function', 'xhrAdapter');
+  assert(typeof adapters === 'object', 'adapters');
+  assert(typeof getAdapter === 'function', 'getAdapter');
+  assert(typeof isAbsoluteURL === 'function', 'isAbsoluteURL');
+  assert(typeof combineURLs === 'function', 'combineURLs');
+  assert(typeof isURLSameOrigin === 'function', 'isURLSameOrigin');
+  assert(typeof parseURL === 'function', 'parseURL');
+  assert(typeof kindOf === 'function', 'kindOf');
+  assert(typeof isPlainObject === 'function', 'isPlainObject');
+  assert(typeof isObject === 'function', 'isObject');
+  assert(typeof isFunction === 'function', 'isFunction');
+  assert(typeof isString === 'function', 'isString');
+  assert(typeof isNumber === 'function', 'isNumber');
+  assert(typeof isBoolean === 'function', 'isBoolean');
+  assert(typeof isUndefined === 'function', 'isUndefined');
+  assert(typeof isDate === 'function', 'isDate');
+  assert(typeof isRegExp === 'function', 'isRegExp');
+  assert(typeof isArrayBuffer === 'function', 'isArrayBuffer');
+  assert(typeof isTypedArray === 'function', 'isTypedArray');
+  assert(typeof forEachUtil === 'function', 'forEach');
+  assert(typeof mergeUtil === 'function', 'merge');
+  assert(typeof extend === 'function', 'extend');
+  assert(typeof stripBOM === 'function', 'stripBOM');
+  assert(typeof findKey === 'function', 'findKey');
+  assert(typeof isBrowser === 'function', 'isBrowser');
+  assert(typeof isNode === 'function', 'isNode');
+  assert(typeof freezeDeep === 'function', 'freezeDeep');
+  assert(typeof generateUID === 'function', 'generateUID');
+  assert(typeof isCancelToken === 'function', 'isCancelToken');
+  assert(typeof toURLEncodedForm === 'function', 'toURLEncodedForm');
+  assert(typeof formToJSON === 'function', 'formToJSON');
+});
+
+test('v11 backward compat — all v10 exports still work', () => {
+  assert(typeof CancelToken === 'function', 'CancelToken');
+  assert(typeof Cancel === 'function', 'Cancel');
+  assert(typeof isCancel === 'function', 'isCancel');
+  assert(typeof toFormData === 'function', 'toFormData');
+  assert(typeof isFormData === 'function', 'isFormData');
+  assert(typeof isBlob === 'function', 'isBlob');
+  assert(typeof isFile === 'function', 'isFile');
+  assert(typeof isBuffer === 'function', 'isBuffer');
+  assert(typeof isStream === 'function', 'isStream');
+  assert(typeof isArrayBufferView === 'function', 'isArrayBufferView');
+  assert(typeof isURLSearchParams === 'function', 'isURLSearchParams');
+  assert(typeof all === 'function', 'all');
+  assert(typeof spread === 'function', 'spread');
+  assert(typeof isClientError === 'function', 'isClientError');
+  assert(typeof isApiBridgeError === 'function', 'isApiBridgeError');
+  assert(typeof mergeConfig === 'function', 'mergeConfig');
+  assert(typeof defaultParamsSerializer === 'function', 'defaultParamsSerializer');
+  assert(typeof create === 'function', 'create');
+});
+
+test('v11 backward compat — all v9 exports still work', () => {
+  assert(typeof createClient === 'function', 'createClient');
+  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient');
+  assert(typeof ClientError === 'function', 'ClientError');
+  assert(typeof InterceptorManager === 'function', 'InterceptorManager');
+  assert(typeof InterceptorChain === 'function', 'InterceptorChain');
+  assert(typeof validateExpect === 'function', 'validateExpect');
+  assert(typeof smartProxy === 'function', 'smartProxy');
+  assert(typeof buildURL === 'function', 'buildURL');
+  assertEqual(HEADER_NAME, 'x-api-bridge-expect');
+});
+
+test('v11 backward compat — transform still works', () => {
+  const result = transform({
+    first_name: 'John',
+    last_name: 'Doe',
+    is_active: true,
+  });
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+  assertEqual(result.isActive, true);
+});
+
+test('v11 backward compat — all pre-v9 classes still exported', () => {
+  assert(typeof MiddlewarePipeline === 'function', 'MiddlewarePipeline');
+  assert(typeof ResponseCache === 'function', 'ResponseCache');
+  assert(typeof SchemaValidator === 'function', 'SchemaValidator');
+  assert(typeof PluginManager === 'function', 'PluginManager');
+  assert(typeof CircuitBreaker === 'function', 'CircuitBreaker');
+  assert(typeof RetryStrategy === 'function', 'RetryStrategy');
+  assert(typeof EventBus === 'function', 'EventBus');
+  assert(typeof FuzzyMatcher === 'function', 'FuzzyMatcher');
+  assert(typeof FieldAliaser === 'function', 'FieldAliaser');
+  assert(typeof DeepMerge === 'function', 'DeepMerge');
+});
+
+test('v11 backward compat — all error classes still exported', () => {
+  assert(typeof ApiBridgeError === 'function', 'ApiBridgeError');
+  assert(typeof ValidationError === 'function', 'ValidationError');
+  assert(typeof TransformError === 'function', 'TransformError');
+  assert(typeof NetworkError === 'function', 'NetworkError');
+  assert(typeof CircuitBreakerError === 'function', 'CircuitBreakerError');
+  assert(typeof FuzzyMatchError === 'function', 'FuzzyMatchError');
+  assert(typeof InterceptorError === 'function', 'InterceptorError');
+});
+
+console.log('\n━━━ v11: Integration Tests ━━━');
+
+test('AxiosHeaders + createClient integration', () => {
+  const headers = new AxiosHeaders({
+    'Authorization': 'Bearer token123',
+    'Content-Type': 'application/json',
+  });
+  const client = createClient({
+    baseURL: '/api',
+    headers: headers.toJSON(),
+  });
+  assertEqual(client.defaults.headers.common['Authorization'], 'Bearer token123');
+});
+
+test('HttpStatusCode + validateStatus integration', () => {
+  const client = createClient({
+    validateStatus: (status) => status < HttpStatusCode.InternalServerError,
+  });
+  assert(client.validateStatus(HttpStatusCode.Ok), '200 should be valid');
+  assert(client.validateStatus(HttpStatusCode.NotFound), '404 should be valid');
+  assert(!client.validateStatus(HttpStatusCode.InternalServerError), '500 should not be valid');
+});
+
+test('isAbsoluteURL + combineURLs + buildURL integration', () => {
+  const base = 'https://api.example.com';
+  const relative = '/users';
+  const combined = combineURLs(base, relative);
+  const full = buildURL(combined, '', { page: 1 });
+  assert(full.includes('https://api.example.com/users'), 'should have combined URL');
+  assert(full.includes('page=1'), 'should have params');
+});
+
+test('CancelToken + isCancelToken + isCancel full roundtrip', () => {
+  const source = CancelToken.source();
+  assert(isCancelToken(source.token), 'should be cancel token');
+  assert(!source.token.requested, 'should not be cancelled');
+
+  source.cancel('user abort');
+  assert(source.token.requested, 'should be cancelled');
+  assert(isCancel(source.token.reason), 'reason should be cancel');
+  assert(CancelToken.isCancel(source.token.reason), 'static should detect');
+});
+
+test('formToJSON + toURLEncodedForm roundtrip', () => {
+  const original = { name: 'John', age: '30', active: 'true' };
+  const encoded = toURLEncodedForm(original);
+  const decoded = formToJSON(encoded);
+  assertEqual(decoded.name, 'John');
+  assertEqual(decoded.age, '30');
+  assertEqual(decoded.active, 'true');
+});
+
+test('kindOf + isPlainObject + isFunction together', () => {
+  assertEqual(kindOf({}), 'object');
+  assert(isPlainObject({}), 'plain object');
+  assertEqual(kindOf(() => {}), 'function');
+  assert(isFunction(() => {}), 'is function');
+  assert(!isPlainObject(() => {}), 'function is not plain object');
+});
+
+test('complete Axios API surface check', () => {
+  // Verify all Axios-compatible APIs exist
+  const client = createClient({ baseURL: '/api' });
+
+  // HTTP methods
+  assert(typeof client.get === 'function', 'get');
+  assert(typeof client.post === 'function', 'post');
+  assert(typeof client.put === 'function', 'put');
+  assert(typeof client.patch === 'function', 'patch');
+  assert(typeof client.delete === 'function', 'delete');
+  assert(typeof client.head === 'function', 'head');
+  assert(typeof client.options === 'function', 'options');
+  assert(typeof client.request === 'function', 'request');
+
+  // v11 form methods
+  assert(typeof client.postForm === 'function', 'postForm');
+  assert(typeof client.putForm === 'function', 'putForm');
+  assert(typeof client.patchForm === 'function', 'patchForm');
+
+  // getUri
+  assert(typeof client.getUri === 'function', 'getUri');
+
+  // Interceptors
+  assert(client.interceptors !== undefined, 'interceptors');
+  assert(typeof client.interceptors.request.use === 'function', 'interceptors.request.use');
+  assert(typeof client.interceptors.response.use === 'function', 'interceptors.response.use');
+  assert(typeof client.interceptors.request.eject === 'function', 'interceptors.request.eject');
+  assert(typeof client.interceptors.request.forEach === 'function', 'interceptors.request.forEach');
+
+  // Defaults
+  assert(client.defaults !== undefined, 'defaults');
+  assert(client.defaults.headers !== undefined, 'defaults.headers');
+  assert(client.defaults.headers.common !== undefined, 'defaults.headers.common');
+
+  // v11 defaults
+  assert('adapter' in client.defaults, 'defaults.adapter');
+  assert('proxy' in client.defaults, 'defaults.proxy');
+  assert('env' in client.defaults, 'defaults.env');
+  assert('maxRedirects' in client.defaults, 'defaults.maxRedirects');
+  assert('decompress' in client.defaults, 'defaults.decompress');
+});
+
 // Wait a tick for async tests
 setTimeout(() => {
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
