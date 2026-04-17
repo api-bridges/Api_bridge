@@ -142,6 +142,7 @@ ClientError.ETIMEDOUT = 'ETIMEDOUT';
 ClientError.ERR_TIMEOUT = 'ERR_TIMEOUT';
 ClientError.ERR_MAX_BODY_LENGTH_EXCEEDED = 'ERR_MAX_BODY_LENGTH_EXCEEDED';
 ClientError.ERR_MAX_CONTENT_LENGTH_EXCEEDED = 'ERR_MAX_CONTENT_LENGTH_EXCEEDED';
+ClientError.ERR_ABORTED = 'ERR_ABORTED';
 
 /**
  * Create a ClientError with full context (like AxiosError.from).
@@ -1071,9 +1072,14 @@ class APIBridgeClient {
       // Custom validateStatus (Axios-compatible)
       const statusValidator = reqConfig.validateStatus || this.validateStatus;
       if (!statusValidator(response.status)) {
-        const errCode = response.status >= 400 && response.status < 500
-          ? ClientError.ERR_BAD_REQUEST
-          : ClientError.ERR_BAD_RESPONSE;
+        let errCode;
+        if (response.status >= 400 && response.status < 500) {
+          errCode = ClientError.ERR_BAD_REQUEST;
+        } else if (response.status >= 500) {
+          errCode = ClientError.ERR_BAD_RESPONSE;
+        } else {
+          errCode = `ERR_HTTP_${response.status}`;
+        }
         throw new ClientError(
           `Request failed with status ${response.status}`,
           {
@@ -1129,7 +1135,7 @@ class APIBridgeClient {
           throw reqConfig.cancelToken.reason;
         }
         throw new ClientError('Request aborted', {
-          code: reqConfig.timeout > 0 ? ClientError.ECONNABORTED : 'ERR_ABORTED',
+          code: reqConfig.timeout > 0 ? ClientError.ECONNABORTED : ClientError.ERR_ABORTED,
           details: { url: fullURL },
         });
       }
