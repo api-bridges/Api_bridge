@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v9 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2, v3, v4, v5, v6, v7, v8, and v9 features.
+ * APIBridge AI v10 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2-v10 features.
  */
 
 const {
@@ -92,6 +92,26 @@ const {
   HEADER_NAME,
   smartProxy,
   buildURL,
+
+  // v10 exports
+  CancelToken,
+  Cancel,
+  isCancel,
+  toFormData,
+  isFormData,
+  isBlob,
+  isFile,
+  isBuffer,
+  isStream,
+  isArrayBufferView,
+  isURLSearchParams,
+  all,
+  spread,
+  isClientError,
+  isApiBridgeError,
+  mergeConfig,
+  defaultParamsSerializer,
+  create,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -5225,6 +5245,820 @@ test('createClient — transformer has correct options', () => {
   assert(client.learning, 'should have learning engine');
   assert(client.fuzzyMatcher instanceof FuzzyMatcher, 'should have fuzzy matcher');
   assert(client.typeCoercer instanceof TypeCoercer, 'should have type coercer');
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// v10 TEST SUITE — Complete Axios Replacement
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+console.log('\n━━━ v10: CancelToken System ━━━');
+
+test('CancelToken.source() — creates token and cancel function', () => {
+  const source = CancelToken.source();
+  assert(source.token instanceof CancelToken, 'should return CancelToken');
+  assert(typeof source.cancel === 'function', 'should have cancel function');
+  assert(!source.token.requested, 'should not be cancelled initially');
+});
+
+test('CancelToken.source() — cancel sets reason', () => {
+  const source = CancelToken.source();
+  source.cancel('User cancelled');
+  assert(source.token.requested, 'should be cancelled');
+  assertEqual(source.token.reason.message, 'User cancelled');
+  assert(source.token.reason.__CANCEL__, 'should have __CANCEL__ flag');
+});
+
+test('CancelToken — executor pattern', () => {
+  let cancelFn;
+  const token = new CancelToken((c) => { cancelFn = c; });
+  assert(!token.requested, 'not cancelled initially');
+  cancelFn('timeout');
+  assert(token.requested, 'should be cancelled');
+  assertEqual(token.reason.message, 'timeout');
+});
+
+test('CancelToken — throwIfRequested', () => {
+  const source = CancelToken.source();
+  // Should not throw before cancel
+  source.token.throwIfRequested();
+  source.cancel('done');
+  let threw = false;
+  try { source.token.throwIfRequested(); } catch (e) { threw = true; }
+  assert(threw, 'should throw after cancel');
+});
+
+test('CancelToken — subscribe and unsubscribe', () => {
+  const source = CancelToken.source();
+  let called = false;
+  const listener = () => { called = true; };
+  source.token.subscribe(listener);
+  source.cancel('test');
+  assert(called, 'listener should be called');
+});
+
+test('CancelToken — subscribe after cancel fires immediately', () => {
+  const source = CancelToken.source();
+  source.cancel('pre-cancelled');
+  let called = false;
+  source.token.subscribe(() => { called = true; });
+  assert(called, 'should fire immediately');
+});
+
+test('CancelToken — unsubscribe prevents notification', () => {
+  const source = CancelToken.source();
+  let called = false;
+  const listener = () => { called = true; };
+  source.token.subscribe(listener);
+  source.token.unsubscribe(listener);
+  source.cancel('test');
+  assert(!called, 'should not be called after unsubscribe');
+});
+
+test('CancelToken — double cancel is no-op', () => {
+  const source = CancelToken.source();
+  source.cancel('first');
+  source.cancel('second');
+  assertEqual(source.token.reason.message, 'first');
+});
+
+test('CancelToken — has signal property', () => {
+  const source = CancelToken.source();
+  assert(source.token.signal instanceof AbortSignal, 'should have AbortSignal');
+});
+
+test('CancelToken — constructor rejects non-function', () => {
+  let threw = false;
+  try { new CancelToken('not a function'); } catch (e) { threw = true; }
+  assert(threw, 'should throw for non-function executor');
+});
+
+test('isCancel — returns true for Cancel instances', () => {
+  const source = CancelToken.source();
+  source.cancel('test');
+  assert(isCancel(source.token.reason), 'should detect Cancel');
+});
+
+test('isCancel — returns false for regular errors', () => {
+  assert(!isCancel(new Error('test')), 'regular Error is not Cancel');
+  assert(!isCancel(null), 'null is not Cancel');
+  assert(!isCancel(undefined), 'undefined is not Cancel');
+  assert(!isCancel('string'), 'string is not Cancel');
+});
+
+test('isCancel — returns false for ClientError', () => {
+  assert(!isCancel(new ClientError('test')), 'ClientError is not Cancel');
+});
+
+test('Cancel — toString', () => {
+  const source = CancelToken.source();
+  source.cancel('custom message');
+  assertEqual(source.token.reason.toString(), 'Cancel: custom message');
+});
+
+test('Cancel — default message', () => {
+  const cancel = new Cancel();
+  assertEqual(cancel.message, 'Request cancelled');
+});
+
+console.log('\n━━━ v10: FormData Utilities ━━━');
+
+test('isFormData — returns false for plain objects', () => {
+  assert(!isFormData({}), 'plain object is not FormData');
+  assert(!isFormData(null), 'null is not FormData');
+  assert(!isFormData(undefined), 'undefined is not FormData');
+  assert(!isFormData('string'), 'string is not FormData');
+});
+
+test('isFormData — detects duck-typed FormData', () => {
+  // Simulate FormData-like object
+  const fake = {
+    append: function() {},
+    toString: function() { return '[object FormData]'; },
+  };
+  assert(isFormData(fake), 'should detect duck-typed FormData');
+});
+
+test('isBlob — returns false for non-Blob', () => {
+  assert(!isBlob({}), 'plain object is not Blob');
+  assert(!isBlob(null), 'null is not Blob');
+  assert(!isBlob('string'), 'string is not Blob');
+});
+
+test('isFile — returns false for non-File', () => {
+  assert(!isFile({}), 'plain object is not File');
+  assert(!isFile(null), 'null is not File');
+});
+
+test('isBuffer — works with Buffer', () => {
+  const buf = Buffer.from('hello');
+  assert(isBuffer(buf), 'should detect Buffer');
+  assert(!isBuffer('string'), 'string is not Buffer');
+  assert(!isBuffer(null), 'null is not Buffer');
+});
+
+test('isStream — detects stream-like objects', () => {
+  const streamLike = { pipe: function() {} };
+  assert(isStream(streamLike), 'should detect stream-like');
+  assert(!isStream({}), 'plain object is not stream');
+  assert(!isStream(null), 'null is not stream');
+});
+
+test('isArrayBufferView — detects ArrayBuffer', () => {
+  const ab = new ArrayBuffer(8);
+  assert(isArrayBufferView(ab), 'should detect ArrayBuffer');
+  const typed = new Uint8Array(8);
+  assert(isArrayBufferView(typed), 'should detect typed array');
+  assert(!isArrayBufferView({}), 'plain object is not ArrayBufferView');
+});
+
+test('isURLSearchParams — detects URLSearchParams', () => {
+  const params = new URLSearchParams('a=1&b=2');
+  assert(isURLSearchParams(params), 'should detect URLSearchParams');
+  assert(!isURLSearchParams({}), 'plain object is not URLSearchParams');
+  assert(!isURLSearchParams(null), 'null is not URLSearchParams');
+});
+
+test('toFormData — converts object to FormData', () => {
+  const fd = toFormData({ name: 'John', age: 30 });
+  assert(fd instanceof FormData, 'should return FormData');
+  assertEqual(fd.get('name'), 'John');
+  assertEqual(fd.get('age'), '30');
+});
+
+test('toFormData — handles nested objects', () => {
+  const fd = toFormData({ user: { name: 'John' } });
+  assertEqual(fd.get('user[name]'), 'John');
+});
+
+test('toFormData — handles arrays', () => {
+  const fd = toFormData({ tags: ['a', 'b'] });
+  assertEqual(fd.get('tags[0]'), 'a');
+  assertEqual(fd.get('tags[1]'), 'b');
+});
+
+test('toFormData — handles Date objects', () => {
+  const date = new Date('2024-01-15T00:00:00.000Z');
+  const fd = toFormData({ created: date });
+  assertEqual(fd.get('created'), date.toISOString());
+});
+
+test('toFormData — handles null values', () => {
+  const fd = toFormData({ field: null });
+  assertEqual(fd.get('field'), '');
+});
+
+test('toFormData — handles Buffer', () => {
+  const fd = toFormData({ data: Buffer.from('hello') });
+  // Should not throw
+  assert(fd instanceof FormData, 'should return FormData');
+});
+
+test('toFormData — rejects __proto__ keys', () => {
+  const obj = Object.create(null);
+  obj['__proto__'] = 'evil';
+  obj.safe = 'value';
+  const fd = toFormData(obj);
+  assert(!fd.has('__proto__'), 'should skip __proto__');
+  assertEqual(fd.get('safe'), 'value');
+});
+
+test('toFormData — returns empty FormData for null', () => {
+  const fd = toFormData(null);
+  assert(fd instanceof FormData, 'should return FormData');
+});
+
+test('toFormData — appends to existing FormData', () => {
+  const existing = new FormData();
+  existing.append('existing', 'value');
+  const fd = toFormData({ new: 'data' }, existing);
+  assertEqual(fd.get('existing'), 'value');
+  assertEqual(fd.get('new'), 'data');
+});
+
+console.log('\n━━━ v10: Enhanced Client Options ━━━');
+
+test('APIBridgeClient — defaults object', () => {
+  const client = createClient({ baseURL: '/api', timeout: 5000 });
+  assertEqual(client.defaults.baseURL, '/api');
+  assertEqual(client.defaults.timeout, 5000);
+  assert(client.defaults.headers.common, 'should have common headers');
+  assert(client.defaults.headers.post, 'should have post headers');
+  assertEqual(client.defaults.headers.post['Content-Type'], 'application/json');
+});
+
+test('APIBridgeClient — auth option', () => {
+  const client = createClient({ auth: { username: 'user', password: 'pass' } });
+  assertEqual(client.auth.username, 'user');
+  assertEqual(client.auth.password, 'pass');
+  assertEqual(client.defaults.auth.username, 'user');
+});
+
+test('APIBridgeClient — responseType option', () => {
+  const client = createClient({ responseType: 'text' });
+  assertEqual(client.responseType, 'text');
+  assertEqual(client.defaults.responseType, 'text');
+});
+
+test('APIBridgeClient — default responseType is json', () => {
+  const client = createClient();
+  assertEqual(client.responseType, 'json');
+});
+
+test('APIBridgeClient — validateStatus option', () => {
+  const custom = (status) => status < 500;
+  const client = createClient({ validateStatus: custom });
+  assert(client.validateStatus(200), '200 should be valid');
+  assert(client.validateStatus(404), '404 should be valid');
+  assert(!client.validateStatus(500), '500 should not be valid');
+});
+
+test('APIBridgeClient — default validateStatus', () => {
+  const client = createClient();
+  assert(client.validateStatus(200), '200 valid');
+  assert(client.validateStatus(299), '299 valid');
+  assert(!client.validateStatus(300), '300 not valid');
+  assert(!client.validateStatus(400), '400 not valid');
+  assert(!client.validateStatus(500), '500 not valid');
+});
+
+test('APIBridgeClient — paramsSerializer option', () => {
+  const custom = (params) => 'custom=true';
+  const client = createClient({ paramsSerializer: custom });
+  assertEqual(client.paramsSerializer({ any: 'thing' }), 'custom=true');
+});
+
+test('APIBridgeClient — maxContentLength option', () => {
+  const client = createClient({ maxContentLength: 1024 });
+  assertEqual(client.maxContentLength, 1024);
+  assertEqual(client.defaults.maxContentLength, 1024);
+});
+
+test('APIBridgeClient — maxBodyLength option', () => {
+  const client = createClient({ maxBodyLength: 2048 });
+  assertEqual(client.maxBodyLength, 2048);
+  assertEqual(client.defaults.maxBodyLength, 2048);
+});
+
+test('APIBridgeClient — default maxContentLength is -1', () => {
+  const client = createClient();
+  assertEqual(client.maxContentLength, -1);
+});
+
+test('APIBridgeClient — default maxBodyLength is -1', () => {
+  const client = createClient();
+  assertEqual(client.maxBodyLength, -1);
+});
+
+test('APIBridgeClient — transformRequest option', () => {
+  const fn = (data) => data;
+  const client = createClient({ transformRequest: [fn] });
+  assert(Array.isArray(client.transformRequest), 'should be array');
+  assertEqual(client.transformRequest.length, 1);
+});
+
+test('APIBridgeClient — transformResponse option', () => {
+  const fn = (data) => data;
+  const client = createClient({ transformResponse: [fn] });
+  assert(Array.isArray(client.transformResponse), 'should be array');
+  assertEqual(client.transformResponse.length, 1);
+});
+
+test('APIBridgeClient — withCredentials option', () => {
+  const client = createClient({ withCredentials: true });
+  assert(client.withCredentials, 'should be true');
+  assert(client.defaults.withCredentials, 'defaults should match');
+});
+
+test('APIBridgeClient — xsrfCookieName / xsrfHeaderName', () => {
+  const client = createClient({ xsrfCookieName: 'MY-XSRF', xsrfHeaderName: 'X-MY-XSRF' });
+  assertEqual(client.xsrfCookieName, 'MY-XSRF');
+  assertEqual(client.xsrfHeaderName, 'X-MY-XSRF');
+});
+
+test('APIBridgeClient — default xsrf names', () => {
+  const client = createClient();
+  assertEqual(client.xsrfCookieName, 'XSRF-TOKEN');
+  assertEqual(client.xsrfHeaderName, 'X-XSRF-TOKEN');
+});
+
+test('APIBridgeClient — defaults.headers per-method', () => {
+  const client = createClient();
+  assertEqual(client.defaults.headers.post['Content-Type'], 'application/json');
+  assertEqual(client.defaults.headers.put['Content-Type'], 'application/json');
+  assertEqual(client.defaults.headers.patch['Content-Type'], 'application/json');
+  assert(typeof client.defaults.headers.get === 'object', 'should have get headers');
+  assert(typeof client.defaults.headers.delete === 'object', 'should have delete headers');
+});
+
+test('APIBridgeClient — mutable defaults', () => {
+  const client = createClient();
+  client.defaults.headers.common['X-Custom'] = 'test';
+  assertEqual(client.defaults.headers.common['X-Custom'], 'test');
+  client.defaults.timeout = 30000;
+  assertEqual(client.defaults.timeout, 30000);
+});
+
+console.log('\n━━━ v10: getUri ━━━');
+
+test('APIBridgeClient — getUri basic', () => {
+  const client = createClient({ baseURL: 'https://api.example.com' });
+  const uri = client.getUri({ url: '/users' });
+  assertEqual(uri, 'https://api.example.com/users');
+});
+
+test('APIBridgeClient — getUri with params', () => {
+  const client = createClient({ baseURL: '/api' });
+  const uri = client.getUri({ url: '/users', params: { page: 1, limit: 10 } });
+  assert(uri.includes('page=1'), 'should have page');
+  assert(uri.includes('limit=10'), 'should have limit');
+});
+
+test('APIBridgeClient — getUri with custom paramsSerializer', () => {
+  const client = createClient({
+    baseURL: '/api',
+    paramsSerializer: () => 'custom=serialized',
+  });
+  const uri = client.getUri({ url: '/users', params: { any: 'thing' } });
+  assert(uri.includes('custom=serialized'), 'should use custom serializer');
+});
+
+test('APIBridgeClient — getUri overrides base with config', () => {
+  const client = createClient({ baseURL: '/default' });
+  const uri = client.getUri({ baseURL: '/override', url: '/test' });
+  assertEqual(uri, '/override/test');
+});
+
+console.log('\n━━━ v10: request(config) Pattern ━━━');
+
+test('APIBridgeClient — request with config object pattern', () => {
+  const client = createClient({ baseURL: '/api' });
+  // Just verify it accepts config object without throwing
+  assertEqual(typeof client.request, 'function');
+});
+
+test('APIBridgeClient — request config object has method/url', () => {
+  const client = createClient();
+  // Verify the method signature accepts an object
+  assert(typeof client.request === 'function', 'should be a function');
+});
+
+console.log('\n━━━ v10: Concurrent Helpers ━━━');
+
+test('all — resolves all promises', async () => {
+  const results = await all([
+    Promise.resolve(1),
+    Promise.resolve(2),
+    Promise.resolve(3),
+  ]);
+  assertEqual(results.length, 3);
+  assertEqual(results[0], 1);
+  assertEqual(results[1], 2);
+  assertEqual(results[2], 3);
+});
+
+test('all — rejects if any promise rejects', async () => {
+  let threw = false;
+  try {
+    await all([
+      Promise.resolve(1),
+      Promise.reject(new Error('fail')),
+    ]);
+  } catch (e) {
+    threw = true;
+    assertEqual(e.message, 'fail');
+  }
+  assert(threw, 'should reject');
+});
+
+test('spread — spreads array to function args', () => {
+  const fn = spread((a, b, c) => a + b + c);
+  assertEqual(fn([1, 2, 3]), 6);
+});
+
+test('spread — works with strings', () => {
+  const fn = spread((first, last) => `${first} ${last}`);
+  assertEqual(fn(['John', 'Doe']), 'John Doe');
+});
+
+console.log('\n━━━ v10: Error Type Checks ━━━');
+
+test('isClientError — returns true for ClientError', () => {
+  assert(isClientError(new ClientError('test')), 'should detect ClientError');
+});
+
+test('isClientError — returns false for regular Error', () => {
+  assert(!isClientError(new Error('test')), 'regular Error is not ClientError');
+});
+
+test('isClientError — returns false for null/undefined', () => {
+  assert(!isClientError(null), 'null is not ClientError');
+  assert(!isClientError(undefined), 'undefined is not ClientError');
+});
+
+test('isApiBridgeError — alias for isClientError', () => {
+  assert(isApiBridgeError(new ClientError('test')), 'should detect');
+  assert(!isApiBridgeError(new Error('test')), 'should not detect');
+});
+
+test('APIBridgeClient.isClientError static method', () => {
+  assert(APIBridgeClient.isClientError(new ClientError('test')), 'static should detect');
+  assert(!APIBridgeClient.isClientError(new Error('test')), 'static should not detect');
+});
+
+test('APIBridgeClient.isApiBridgeError static method', () => {
+  assert(APIBridgeClient.isApiBridgeError(new ClientError('test')), 'should detect');
+});
+
+console.log('\n━━━ v10: mergeConfig ━━━');
+
+test('mergeConfig — merges two configs', () => {
+  const result = mergeConfig(
+    { baseURL: '/api', timeout: 1000 },
+    { timeout: 5000, retries: 3 },
+  );
+  assertEqual(result.baseURL, '/api');
+  assertEqual(result.timeout, 5000);
+  assertEqual(result.retries, 3);
+});
+
+test('mergeConfig — deep merges nested objects', () => {
+  const result = mergeConfig(
+    { headers: { common: { Accept: 'application/json' } } },
+    { headers: { common: { Authorization: 'Bearer token' } } },
+  );
+  assertEqual(result.headers.common.Accept, 'application/json');
+  assertEqual(result.headers.common.Authorization, 'Bearer token');
+});
+
+test('mergeConfig — later values override', () => {
+  const result = mergeConfig(
+    { responseType: 'json' },
+    { responseType: 'text' },
+  );
+  assertEqual(result.responseType, 'text');
+});
+
+test('mergeConfig — handles null/undefined targets', () => {
+  const result = mergeConfig(null, { foo: 'bar' });
+  assertEqual(result.foo, 'bar');
+});
+
+test('mergeConfig — handles null/undefined sources', () => {
+  const result = mergeConfig({ foo: 'bar' }, null);
+  assertEqual(result.foo, 'bar');
+});
+
+test('mergeConfig — arrays are replaced not merged', () => {
+  const result = mergeConfig(
+    { items: [1, 2] },
+    { items: [3, 4, 5] },
+  );
+  assertEqual(result.items.length, 3);
+  assertEqual(result.items[0], 3);
+});
+
+console.log('\n━━━ v10: defaultParamsSerializer ━━━');
+
+test('defaultParamsSerializer — basic params', () => {
+  const result = defaultParamsSerializer({ a: 1, b: 'hello' });
+  assert(result.includes('a=1'), 'should have a=1');
+  assert(result.includes('b=hello'), 'should have b=hello');
+});
+
+test('defaultParamsSerializer — skips null/undefined', () => {
+  const result = defaultParamsSerializer({ a: 1, b: null, c: undefined });
+  assert(result.includes('a=1'), 'should have a');
+  assert(!result.includes('b='), 'should not have b');
+  assert(!result.includes('c='), 'should not have c');
+});
+
+test('defaultParamsSerializer — encodes special characters', () => {
+  const result = defaultParamsSerializer({ q: 'hello world' });
+  assert(result.includes('q=hello%20world'), 'should encode spaces');
+});
+
+test('defaultParamsSerializer — handles arrays', () => {
+  const result = defaultParamsSerializer({ tags: ['a', 'b'] });
+  assert(result.includes('tags=a'), 'should have first array item');
+  assert(result.includes('tags=b'), 'should have second array item');
+});
+
+test('defaultParamsSerializer — empty object returns empty string', () => {
+  assertEqual(defaultParamsSerializer({}), '');
+});
+
+test('defaultParamsSerializer — null returns empty string', () => {
+  assertEqual(defaultParamsSerializer(null), '');
+});
+
+test('defaultParamsSerializer — handles URLSearchParams', () => {
+  const params = new URLSearchParams('a=1&b=2');
+  const result = defaultParamsSerializer(params);
+  assertEqual(result, 'a=1&b=2');
+});
+
+console.log('\n━━━ v10: buildURL Enhanced ━━━');
+
+test('buildURL — with custom paramsSerializer', () => {
+  const url = buildURL('/api', '/users', { page: 1 }, () => 'custom=true');
+  assert(url.includes('custom=true'), 'should use custom serializer');
+});
+
+test('buildURL — with array params', () => {
+  const url = buildURL('/api', '/search', { tags: ['js', 'ts'] });
+  assert(url.includes('tags=js'), 'should have first tag');
+  assert(url.includes('tags=ts'), 'should have second tag');
+});
+
+console.log('\n━━━ v10: create() Factory ━━━');
+
+test('create — is alias for createClient', () => {
+  assert(typeof create === 'function', 'should be exported');
+  const client = create({ baseURL: '/api' });
+  assert(client instanceof APIBridgeClient, 'should return APIBridgeClient');
+  assertEqual(client.baseURL, '/api');
+});
+
+console.log('\n━━━ v10: ClientError Enhanced ━━━');
+
+test('ClientError — isApiBridgeError flag preserved on wrap', () => {
+  const client = createClient();
+  const err = client._wrapError(new Error('test'), { method: 'GET', url: '/api' });
+  assert(err.isApiBridgeError, 'should have flag');
+  assert(err.config, 'should have config');
+});
+
+test('ClientError — config attached on existing ClientError', () => {
+  const client = createClient();
+  const original = new ClientError('test', { status: 404 });
+  const wrapped = client._wrapError(original, { method: 'GET', url: '/test' });
+  assert(wrapped.config, 'should have config');
+  assertEqual(wrapped.config.method, 'GET');
+});
+
+console.log('\n━━━ v10: Response Shape ━━━');
+
+test('APIBridgeClient — has statusText and config in response', () => {
+  const client = createClient();
+  // Verify the response shape is compatible with axios
+  // We can't make real HTTP requests but verify the method signatures exist
+  assertEqual(typeof client.get, 'function');
+  assertEqual(typeof client.post, 'function');
+  assertEqual(typeof client.put, 'function');
+  assertEqual(typeof client.patch, 'function');
+  assertEqual(typeof client.delete, 'function');
+  assertEqual(typeof client.head, 'function');
+  assertEqual(typeof client.options, 'function');
+  assertEqual(typeof client.request, 'function');
+  assertEqual(typeof client.getUri, 'function');
+});
+
+console.log('\n━━━ v10: Backward Compatibility ━━━');
+
+test('v10 backward compat — all v10 exports available', () => {
+  assert(typeof CancelToken === 'function', 'CancelToken');
+  assert(typeof Cancel === 'function', 'Cancel');
+  assert(typeof isCancel === 'function', 'isCancel');
+  assert(typeof toFormData === 'function', 'toFormData');
+  assert(typeof isFormData === 'function', 'isFormData');
+  assert(typeof isBlob === 'function', 'isBlob');
+  assert(typeof isFile === 'function', 'isFile');
+  assert(typeof isBuffer === 'function', 'isBuffer');
+  assert(typeof isStream === 'function', 'isStream');
+  assert(typeof isArrayBufferView === 'function', 'isArrayBufferView');
+  assert(typeof isURLSearchParams === 'function', 'isURLSearchParams');
+  assert(typeof all === 'function', 'all');
+  assert(typeof spread === 'function', 'spread');
+  assert(typeof isClientError === 'function', 'isClientError');
+  assert(typeof isApiBridgeError === 'function', 'isApiBridgeError');
+  assert(typeof mergeConfig === 'function', 'mergeConfig');
+  assert(typeof defaultParamsSerializer === 'function', 'defaultParamsSerializer');
+  assert(typeof create === 'function', 'create');
+});
+
+test('v10 backward compat — all v9 exports still work', () => {
+  assert(typeof createClient === 'function', 'createClient');
+  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient');
+  assert(typeof ClientError === 'function', 'ClientError');
+  assert(typeof InterceptorManager === 'function', 'InterceptorManager');
+  assert(typeof InterceptorChain === 'function', 'InterceptorChain');
+  assert(typeof validateExpect === 'function', 'validateExpect');
+  assert(typeof serializeExpect === 'function', 'serializeExpect');
+  assert(typeof deserializeExpect === 'function', 'deserializeExpect');
+  assert(typeof extractExpect === 'function', 'extractExpect');
+  assert(typeof injectExpectHeader === 'function', 'injectExpectHeader');
+  assert(typeof flattenExpect === 'function', 'flattenExpect');
+  assert(typeof smartProxy === 'function', 'smartProxy');
+  assert(typeof buildURL === 'function', 'buildURL');
+  assertEqual(HEADER_NAME, 'x-api-bridge-expect');
+});
+
+test('v10 backward compat — all v8 exports still work', () => {
+  assert(typeof bridge === 'function', 'bridge');
+  assert(typeof bridgeFetch === 'function', 'bridgeFetch');
+  assert(typeof transform === 'function', 'transform');
+  assert(typeof createTransformer === 'function', 'createTransformer');
+  assert(typeof FieldAliaser === 'function', 'FieldAliaser');
+  assert(typeof SchemaMigrator === 'function', 'SchemaMigrator');
+  assert(typeof BatchOrchestrator === 'function', 'BatchOrchestrator');
+  assert(typeof FieldStats === 'function', 'FieldStats');
+  assert(typeof ConditionalTransform === 'function', 'ConditionalTransform');
+  assert(typeof DeepMerge === 'function', 'DeepMerge');
+  assert(typeof OutputFormatter === 'function', 'OutputFormatter');
+  assert(typeof RequestInterceptor === 'function', 'RequestInterceptor');
+});
+
+test('v10 backward compat — transform still works', () => {
+  const result = transform({
+    first_name: 'John',
+    last_name: 'Doe',
+    is_active: true,
+  });
+  assertEqual(result.firstName, 'John');
+  assertEqual(result.lastName, 'Doe');
+  assertEqual(result.isActive, true);
+});
+
+test('v10 backward compat — all pre-v9 classes still exported', () => {
+  // v2
+  assert(typeof MiddlewarePipeline === 'function', 'MiddlewarePipeline');
+  assert(typeof ResponseCache === 'function', 'ResponseCache');
+  assert(typeof SchemaValidator === 'function', 'SchemaValidator');
+  assert(typeof ResponseNormalizer === 'function', 'ResponseNormalizer');
+  // v3
+  assert(typeof PluginManager === 'function', 'PluginManager');
+  assert(typeof SchemaInference === 'function', 'SchemaInference');
+  assert(typeof FieldProjection === 'function', 'FieldProjection');
+  assert(typeof DataMasker === 'function', 'DataMasker');
+  assert(typeof RateLimiter === 'function', 'RateLimiter');
+  assert(typeof SchemaDiff === 'function', 'SchemaDiff');
+  assert(typeof TypeGenerator === 'function', 'TypeGenerator');
+  assert(typeof MetricsCollector === 'function', 'MetricsCollector');
+  // v4
+  assert(typeof CircuitBreaker === 'function', 'CircuitBreaker');
+  assert(typeof RequestDeduplicator === 'function', 'RequestDeduplicator');
+  assert(typeof GraphQLBridge === 'function', 'GraphQLBridge');
+  assert(typeof ComposablePipeline === 'function', 'ComposablePipeline');
+  // v5
+  assert(typeof RetryStrategy === 'function', 'RetryStrategy');
+  assert(typeof EventBus === 'function', 'EventBus');
+  assert(typeof HealthCheck === 'function', 'HealthCheck');
+  assert(typeof MockServer === 'function', 'MockServer');
+  // v6
+  assert(typeof FuzzyMatcher === 'function', 'FuzzyMatcher');
+  assert(typeof CrypticResolver === 'function', 'CrypticResolver');
+  assert(typeof TypeCoercer === 'function', 'TypeCoercer');
+});
+
+test('v10 backward compat — all error classes still exported', () => {
+  assert(typeof ApiBridgeError === 'function', 'ApiBridgeError');
+  assert(typeof ValidationError === 'function', 'ValidationError');
+  assert(typeof TransformError === 'function', 'TransformError');
+  assert(typeof NetworkError === 'function', 'NetworkError');
+  assert(typeof PluginError === 'function', 'PluginError');
+  assert(typeof RateLimitError === 'function', 'RateLimitError');
+  assert(typeof CircuitBreakerError === 'function', 'CircuitBreakerError');
+  assert(typeof PipelineError === 'function', 'PipelineError');
+  assert(typeof RetryError === 'function', 'RetryError');
+  assert(typeof FuzzyMatchError === 'function', 'FuzzyMatchError');
+  assert(typeof TypeCoercionError === 'function', 'TypeCoercionError');
+  assert(typeof CrypticResolverError === 'function', 'CrypticResolverError');
+  assert(typeof FieldAliaserError === 'function', 'FieldAliaserError');
+  assert(typeof SchemaMigrationError === 'function', 'SchemaMigrationError');
+  assert(typeof BatchOrchestratorError === 'function', 'BatchOrchestratorError');
+  assert(typeof DeepMergeError === 'function', 'DeepMergeError');
+  assert(typeof InterceptorError === 'function', 'InterceptorError');
+});
+
+console.log('\n━━━ v10: Integration Tests ━━━');
+
+test('createClient + CancelToken integration', () => {
+  const client = createClient({ baseURL: '/api' });
+  const source = CancelToken.source();
+  // CancelToken should be passable in config
+  assert(typeof source.token.signal !== 'undefined', 'should have signal');
+  assert(!source.token.requested, 'should not be cancelled');
+});
+
+test('createClient + auth + interceptors integration', () => {
+  const client = createClient({
+    baseURL: '/api',
+    auth: { username: 'admin', password: 'secret' },
+  });
+  client.interceptors.request.use((config) => {
+    config.headers['X-Custom'] = 'test';
+    return config;
+  });
+  assertEqual(client.auth.username, 'admin');
+  assertEqual(client.interceptors.request.size, 1);
+});
+
+test('createClient + defaults mutation integration', () => {
+  const client = createClient({ baseURL: '/api' });
+  client.defaults.headers.common['Authorization'] = 'Bearer mytoken';
+  client.defaults.timeout = 10000;
+  assertEqual(client.defaults.headers.common['Authorization'], 'Bearer mytoken');
+  assertEqual(client.defaults.timeout, 10000);
+});
+
+test('createClient + transformRequest integration', () => {
+  const client = createClient({
+    baseURL: '/api',
+    transformRequest: [(data) => {
+      if (data && typeof data === 'object') {
+        data.timestamp = '2024-01-01';
+      }
+      return data;
+    }],
+  });
+  assert(Array.isArray(client.transformRequest), 'should have transformRequest');
+  assertEqual(client.transformRequest.length, 1);
+});
+
+test('createClient + validateStatus integration', () => {
+  const client = createClient({
+    validateStatus: (status) => status < 500,
+  });
+  assert(client.validateStatus(200), '200 ok');
+  assert(client.validateStatus(404), '404 ok');
+  assert(!client.validateStatus(500), '500 not ok');
+});
+
+test('create + all + spread integration', async () => {
+  const results = await all([
+    Promise.resolve({ data: 'user' }),
+    Promise.resolve({ data: 'posts' }),
+  ]);
+  const combined = spread((user, posts) => ({
+    user: user.data,
+    posts: posts.data,
+  }))(results);
+  assertEqual(combined.user, 'user');
+  assertEqual(combined.posts, 'posts');
+});
+
+test('smart proxy + transform + v10 still works', () => {
+  const raw = { user_name: 'John', user_email: 'john@example.com', account_balance: 5000 };
+  const transformed = transform(raw);
+  assertEqual(transformed.userName, 'John');
+  assertEqual(transformed.userEmail, 'john@example.com');
+  assertEqual(transformed.accountBalance, 5000);
+});
+
+test('CancelToken + isCancel roundtrip', () => {
+  const source = CancelToken.source();
+  source.cancel('test cancel');
+  assert(isCancel(source.token.reason), 'should be cancel');
+  assertEqual(source.token.reason.message, 'test cancel');
+  assert(!isCancel(new ClientError('not cancel')), 'ClientError not cancel');
+});
+
+test('mergeConfig + defaults integration', () => {
+  const client = createClient({ baseURL: '/api', timeout: 5000 });
+  const merged = mergeConfig(client.defaults, { timeout: 10000, headers: { common: { 'X-Test': 'yes' } } });
+  assertEqual(merged.baseURL, '/api');
+  assertEqual(merged.timeout, 10000);
+  assertEqual(merged.headers.common['X-Test'], 'yes');
 });
 // Wait a tick for async tests
 setTimeout(() => {

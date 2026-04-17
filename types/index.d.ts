@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v8
-// Type definitions for api-bridge-ai 8.0.0
+// TypeScript Type Declarations for APIBridge AI v10
+// Type definitions for api-bridge-ai 10.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -26,6 +26,293 @@ declare namespace ApiBridgeAI {
    * Create a reusable transformer instance.
    */
   function createTransformer(options?: TransformOptions): APIBridgeTransformer;
+
+  /**
+   * Create a new API client instance (v9+).
+   */
+  function createClient(options?: ClientOptions): APIBridgeClient;
+
+  /**
+   * Alias for createClient (Axios-compatible).
+   */
+  function create(options?: ClientOptions): APIBridgeClient;
+
+  /**
+   * Execute multiple requests concurrently (like axios.all).
+   */
+  function all<T>(promises: Promise<T>[]): Promise<T[]>;
+
+  /**
+   * Spread the results of concurrent requests (like axios.spread).
+   */
+  function spread<T, R>(callback: (...args: T[]) => R): (arr: T[]) => R;
+
+  /**
+   * Check if an error is a ClientError (like axios.isAxiosError).
+   */
+  function isClientError(err: any): boolean;
+
+  /**
+   * Alias for isClientError.
+   */
+  function isApiBridgeError(err: any): boolean;
+
+  /**
+   * Check if a value is a Cancel (cancellation reason).
+   */
+  function isCancel(value: any): boolean;
+
+  /**
+   * Convert a plain object to FormData.
+   */
+  function toFormData(obj: Record<string, any>, formData?: FormData, parentKey?: string): FormData;
+
+  /** Check if a value is FormData. */
+  function isFormData(value: any): boolean;
+  /** Check if a value is a Blob. */
+  function isBlob(value: any): boolean;
+  /** Check if a value is a File. */
+  function isFile(value: any): boolean;
+  /** Check if a value is a Buffer. */
+  function isBuffer(value: any): boolean;
+  /** Check if a value is a Stream. */
+  function isStream(value: any): boolean;
+  /** Check if a value is an ArrayBuffer or typed array. */
+  function isArrayBufferView(value: any): boolean;
+  /** Check if a value is URLSearchParams. */
+  function isURLSearchParams(value: any): boolean;
+
+  /**
+   * Build a full URL from base + path + params.
+   */
+  function buildURL(baseURL: string, path: string, params?: Record<string, any>, paramsSerializer?: (params: any) => string): string;
+
+  /**
+   * Deep merge two config objects.
+   */
+  function mergeConfig(target: Record<string, any>, source: Record<string, any>): Record<string, any>;
+
+  /**
+   * Default params serializer.
+   */
+  function defaultParamsSerializer(params: Record<string, any>): string;
+
+  // ─── v10 Client Options ─────────────────────────────────────────────────
+
+  interface ClientOptions {
+    baseURL?: string;
+    headers?: Record<string, string>;
+    timeout?: number;
+    retries?: number;
+    retryDelay?: number;
+    schema?: Record<string, string>;
+    proxyMode?: boolean;
+    autoAlign?: boolean;
+    autoCoerce?: boolean;
+    debug?: boolean;
+    retryableStatuses?: Set<number>;
+    auth?: { username: string; password: string };
+    responseType?: 'json' | 'text' | 'blob' | 'arraybuffer';
+    validateStatus?: (status: number) => boolean;
+    paramsSerializer?: (params: any) => string;
+    maxContentLength?: number;
+    maxBodyLength?: number;
+    transformRequest?: Array<(data: any, headers?: Record<string, string>) => any>;
+    transformResponse?: Array<(data: any) => any>;
+    responseEncoding?: string;
+    maxRedirects?: number;
+    decompress?: boolean;
+    xsrfCookieName?: string;
+    xsrfHeaderName?: string;
+    withCredentials?: boolean;
+    fuzzyMatcher?: any;
+    typeCoercer?: any;
+  }
+
+  interface ClientRequestConfig {
+    method?: string;
+    url?: string;
+    baseURL?: string;
+    headers?: Record<string, string>;
+    params?: Record<string, any>;
+    data?: any;
+    body?: any;
+    timeout?: number;
+    signal?: AbortSignal;
+    retries?: number;
+    auth?: { username: string; password: string };
+    responseType?: 'json' | 'text' | 'blob' | 'arraybuffer';
+    validateStatus?: (status: number) => boolean;
+    paramsSerializer?: (params: any) => string;
+    maxContentLength?: number;
+    maxBodyLength?: number;
+    transformRequest?: Array<(data: any, headers?: Record<string, string>) => any>;
+    transformResponse?: Array<(data: any) => any>;
+    cancelToken?: CancelToken;
+    onDownloadProgress?: (progressEvent: ProgressEvent) => void;
+    onUploadProgress?: (progressEvent: ProgressEvent) => void;
+    withCredentials?: boolean;
+    expect?: Record<string, string | Record<string, any>>;
+  }
+
+  interface ClientResponse<T = any> {
+    data: T;
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    config: ClientRequestConfig;
+    raw?: any;
+  }
+
+  interface ProgressEvent {
+    loaded: number;
+    total: number;
+    progress: number;
+    bytes: number;
+  }
+
+  interface ClientDefaults {
+    baseURL: string;
+    timeout: number;
+    headers: {
+      common: Record<string, string>;
+      get: Record<string, string>;
+      post: Record<string, string>;
+      put: Record<string, string>;
+      patch: Record<string, string>;
+      delete: Record<string, string>;
+      head: Record<string, string>;
+      options: Record<string, string>;
+    };
+    responseType: string;
+    validateStatus: (status: number) => boolean;
+    paramsSerializer: ((params: any) => string) | null;
+    maxContentLength: number;
+    maxBodyLength: number;
+    transformRequest: Array<Function> | null;
+    transformResponse: Array<Function> | null;
+    xsrfCookieName: string;
+    xsrfHeaderName: string;
+    withCredentials: boolean;
+    auth: { username: string; password: string } | null;
+  }
+
+  // ─── v10 Client Class ──────────────────────────────────────────────────
+
+  class APIBridgeClient {
+    constructor(options?: ClientOptions);
+    baseURL: string;
+    defaultHeaders: Record<string, string>;
+    timeout: number;
+    retries: number;
+    retryDelay: number;
+    proxyMode: boolean;
+    autoAlign: boolean;
+    autoCoerce: boolean;
+    auth: { username: string; password: string } | null;
+    responseType: string;
+    validateStatus: (status: number) => boolean;
+    paramsSerializer: ((params: any) => string) | null;
+    maxContentLength: number;
+    maxBodyLength: number;
+    transformRequest: Array<Function> | null;
+    transformResponse: Array<Function> | null;
+    withCredentials: boolean;
+    xsrfCookieName: string;
+    xsrfHeaderName: string;
+    defaults: ClientDefaults;
+    transformer: APIBridgeTransformer;
+    learning: LearningEngine;
+    fuzzyMatcher: FuzzyMatcher;
+    typeCoercer: TypeCoercer;
+    interceptors: InterceptorManager;
+
+    get<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    post<T = any>(url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    put<T = any>(url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    patch<T = any>(url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    delete<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    head<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    options<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    request<T = any>(config: ClientRequestConfig): Promise<ClientResponse<T>>;
+    request<T = any>(method: string, url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    getUri(config?: ClientRequestConfig): string;
+    setSchema(schema: Record<string, string>): void;
+    enableDebug(enabled: boolean): void;
+    enableProxy(enabled: boolean): void;
+    getStats(): any;
+    clearCache(): void;
+    reset(): void;
+    _coerceValue(value: any, targetType: string): any;
+    _coerceToExpect(data: any, expectMap: Map<string, string>): any;
+    _wrapError(err: Error, reqConfig: any): ClientError;
+
+    static isClientError(err: any): boolean;
+    static isApiBridgeError(err: any): boolean;
+  }
+
+  class ClientError extends ApiBridgeError {
+    constructor(message: string, details?: { status?: number; code?: string; details?: any });
+    status: number | null;
+    code: string;
+    details: any;
+    config?: ClientRequestConfig;
+    isApiBridgeError?: boolean;
+    toJSON(): { message: string; status: number | null; code: string; details: any };
+  }
+
+  // ─── v10 Cancel Token ──────────────────────────────────────────────────
+
+  class CancelToken {
+    constructor(executor: (cancel: (message?: string) => void) => void);
+    reason: Cancel | null;
+    signal: AbortSignal;
+    readonly requested: boolean;
+    throwIfRequested(): void;
+    subscribe(listener: (reason: Cancel) => void): void;
+    unsubscribe(listener: (reason: Cancel) => void): void;
+    static source(): { token: CancelToken; cancel: (message?: string) => void };
+  }
+
+  class Cancel {
+    constructor(message?: string);
+    message: string;
+    __CANCEL__: boolean;
+    toString(): string;
+  }
+
+  // ─── v10 Interceptors ──────────────────────────────────────────────────
+
+  class InterceptorChain {
+    use(fulfilled: Function, rejected?: Function): number;
+    eject(id: number): boolean;
+    handlers(): Array<{ id: number; fulfilled: Function; rejected: Function | null }>;
+    clear(): void;
+    readonly size: number;
+  }
+
+  class InterceptorManager {
+    request: InterceptorChain;
+    response: InterceptorChain;
+    runRequest(config: any): Promise<any>;
+    runResponse(response: any): Promise<any>;
+    runError(error: Error): Promise<any>;
+    clear(): void;
+  }
+
+  // ─── v10 Expectation Helpers ───────────────────────────────────────────
+
+  function validateExpect(schema: Record<string, any>, depth?: number): { valid: boolean; error?: string };
+  function serializeExpect(schema: Record<string, any>): string;
+  function deserializeExpect(encoded: string): Record<string, any> | null;
+  function extractExpect(config: Record<string, any>): { config: Record<string, any>; expect: Record<string, any> | null; error?: string };
+  function injectExpectHeader(headers: Record<string, string>, expect: Record<string, any>): Record<string, string>;
+  function flattenExpect(schema: Record<string, any>, prefix?: string): Map<string, string>;
+  const HEADER_NAME: string;
+
+  // ─── v10 Smart Proxy ───────────────────────────────────────────────────
+
+  function smartProxy(data: any, options?: { learningEngine?: LearningEngine; fuzzyMatcher?: FuzzyMatcher; cache?: Map<string, any> }): any;
 
   // ─── Options ─────────────────────────────────────────────────────────────
 

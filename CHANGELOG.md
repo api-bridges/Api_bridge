@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.0] - 2026-04-17
+
+### Added — Complete Axios Replacement
+- **CancelToken System** — Axios-compatible request cancellation
+  - `CancelToken.source()` factory (most common pattern)
+  - `new CancelToken(executor)` executor pattern
+  - `isCancel(error)` check for cancellation errors
+  - `Cancel` class with `__CANCEL__` flag, `message`, and `toString()`
+  - `token.throwIfRequested()`, `token.subscribe()`, `token.unsubscribe()`
+  - `token.signal` property bridges to native `AbortSignal`
+  - Double-cancel is no-op (idempotent)
+- **Basic Auth Support** — `{ auth: { username, password } }` → auto `Authorization: Basic` header
+- **Custom `responseType`** — `'json'` (default), `'text'`, `'blob'`, `'arraybuffer'`
+- **Custom `validateStatus`** — Function to override success status check (e.g., `(status) => status < 500`)
+- **Custom `paramsSerializer`** — Override query string serialization (supports arrays, URLSearchParams)
+- **Per-request `transformRequest` / `transformResponse`** — Arrays of transform functions per request
+  - `transformRequest: [(data, headers) => modifiedData]`
+  - `transformResponse: [(data) => modifiedData]`
+- **`maxContentLength` / `maxBodyLength`** — Enforce response/request size limits
+  - `ERR_MAX_CONTENT_LENGTH_EXCEEDED` and `ERR_MAX_BODY_LENGTH_EXCEEDED` error codes
+- **`onDownloadProgress` / `onUploadProgress`** — Progress callbacks `({ loaded, total, progress, bytes })`
+- **`withCredentials`** — Include credentials in cross-origin requests
+- **FormData Auto-Detection** — Automatic `Content-Type` handling for FormData, URLSearchParams, Buffer, Stream, ArrayBuffer
+- **`toFormData(obj)`** — Convert plain objects to FormData with nested keys, arrays, dates, null handling
+  - Prototype pollution protection (`__proto__`, `constructor`, `prototype` keys rejected)
+  - Append to existing FormData
+- **Type Detection Utilities** — `isFormData()`, `isBlob()`, `isFile()`, `isBuffer()`, `isStream()`, `isArrayBufferView()`, `isURLSearchParams()`
+- **`request(config)` Pattern** — Axios-compatible config-object request: `client.request({ method: 'get', url: '/user', data: {} })`
+  - Also supports `request(url, config)` pattern
+  - Backward compatible with v9 positional args `request(method, url, body, config)`
+- **`getUri(config)`** — Build URL without making request: `client.getUri({ url: '/users', params: { page: 1 } })`
+- **Mutable `defaults` Object** — Axios-compatible defaults
+  - `client.defaults.headers.common['Authorization'] = 'Bearer token'`
+  - Per-method headers: `client.defaults.headers.post`, `.put`, `.patch`, `.get`, `.delete`, `.head`, `.options`
+  - `client.defaults.timeout`, `.responseType`, `.validateStatus`, `.auth`, etc.
+- **Deep Config Merging** — `mergeConfig(target, source)` utility for deep-merging configurations
+- **`all()` + `spread()`** — Concurrent request helpers (like `axios.all`, `axios.spread`)
+  - `all([api.get('/a'), api.get('/b')]).then(spread((a, b) => ...))`
+- **`isClientError()` / `isApiBridgeError()`** — Error type checking (like `axios.isAxiosError`)
+  - Available as standalone function and static method `APIBridgeClient.isClientError(err)`
+- **`create()` Factory** — Alias for `createClient()` (Axios `axios.create()` pattern)
+- **`defaultParamsSerializer()`** — Exported default params serializer with array support
+- **Response Shape Enhancement** — `statusText` and `config` now included in response objects
+  - `{ data, status, statusText, headers, config, raw? }`
+- **`xsrfCookieName` / `xsrfHeaderName`** — XSRF protection configuration
+- **`responseEncoding`** — Response encoding configuration
+- **`maxRedirects`** — Max redirects configuration
+- **`decompress`** — Auto decompress configuration
+- **`isApiBridgeError` flag** — Attached to wrapped errors for detection
+- 100 new tests (649 total)
+
+### Changed
+- `buildURL()` now accepts optional 4th parameter `paramsSerializer` function
+- Client error objects now include `config` and `isApiBridgeError` flag
+- Updated package description for complete Axios replacement positioning
+- Added 13 new keywords: `cancel-token`, `form-data`, `axios-replacement`, `drop-in`, etc.
+
 ## [9.0.0] - 2026-04-17
 
 ### Added
