@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v10
-// Type definitions for api-bridge-ai 10.0.0
+// TypeScript Type Declarations for APIBridge AI v11
+// Type definitions for api-bridge-ai 11.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -63,9 +63,24 @@ declare namespace ApiBridgeAI {
   function isCancel(value: any): boolean;
 
   /**
+   * Check if a value is a CancelToken.
+   */
+  function isCancelToken(value: any): boolean;
+
+  /**
    * Convert a plain object to FormData.
    */
   function toFormData(obj: Record<string, any>, formData?: FormData, parentKey?: string): FormData;
+
+  /**
+   * Convert an object to URL-encoded form (URLSearchParams).
+   */
+  function toURLEncodedForm(data: Record<string, any> | URLSearchParams): URLSearchParams;
+
+  /**
+   * Convert FormData entries back to a plain JSON object.
+   */
+  function formToJSON(formData: any): Record<string, any>;
 
   /** Check if a value is FormData. */
   function isFormData(value: any): boolean;
@@ -81,6 +96,10 @@ declare namespace ApiBridgeAI {
   function isArrayBufferView(value: any): boolean;
   /** Check if a value is URLSearchParams. */
   function isURLSearchParams(value: any): boolean;
+  /** Check if a value is a typed array. */
+  function isTypedArray(value: any): boolean;
+  /** Check if a value is a FileList. */
+  function isFileList(value: any): boolean;
 
   /**
    * Build a full URL from base + path + params.
@@ -97,7 +116,217 @@ declare namespace ApiBridgeAI {
    */
   function defaultParamsSerializer(params: Record<string, any>): string;
 
-  // ─── v10 Client Options ─────────────────────────────────────────────────
+  // ─── v11: VERSION ────────────────────────────────────────────────────────
+
+  /**
+   * Library version string.
+   */
+  const VERSION: string;
+
+  // ─── v11: AxiosHeaders ─────────────────────────────────────────────────
+
+  /**
+   * Normalize a header name to Title-Case-Dashes format.
+   */
+  function normalizeHeaderName(name: string): string;
+
+  /**
+   * Case-insensitive header management class (like Axios's AxiosHeaders).
+   */
+  class AxiosHeaders {
+    constructor(init?: Record<string, string> | AxiosHeaders | Array<[string, string]>);
+
+    set(name: string, value: string | string[] | null, rewrite?: boolean): AxiosHeaders;
+    get(name: string, asParsed?: boolean): string | null;
+    has(name: string): boolean;
+    delete(name: string): boolean;
+    clear(): AxiosHeaders;
+    forEach(callback: (value: string, name: string, headers: AxiosHeaders) => void, thisArg?: any): void;
+    keys(): string[];
+    values(): string[];
+    entries(): Array<[string, string]>;
+    readonly size: number;
+    normalize(asFormat?: boolean): AxiosHeaders;
+    merge(other: Record<string, string> | AxiosHeaders, rewrite?: boolean): AxiosHeaders;
+    toJSON(normalize?: boolean): Record<string, string>;
+    toString(): string;
+    [Symbol.iterator](): Iterator<[string, string]>;
+
+    // Common header accessors
+    getContentType(): string | null;
+    setContentType(value: string, rewrite?: boolean): AxiosHeaders;
+    hasContentType(): boolean;
+    getContentLength(): string | null;
+    setContentLength(value: string, rewrite?: boolean): AxiosHeaders;
+    hasContentLength(): boolean;
+    getAccept(): string | null;
+    setAccept(value: string, rewrite?: boolean): AxiosHeaders;
+    hasAccept(): boolean;
+    getAuthorization(): string | null;
+    setAuthorization(value: string, rewrite?: boolean): AxiosHeaders;
+    hasAuthorization(): boolean;
+
+    static from(entries: any): AxiosHeaders;
+    static concat(...sources: Array<Record<string, string> | AxiosHeaders>): AxiosHeaders;
+    static accessor(name: string): typeof AxiosHeaders;
+  }
+
+  // ─── v11: HttpStatusCode ───────────────────────────────────────────────
+
+  /**
+   * HTTP status code enum (like Axios's HttpStatusCode).
+   */
+  const HttpStatusCode: {
+    readonly Continue: 100;
+    readonly SwitchingProtocols: 101;
+    readonly Processing: 102;
+    readonly EarlyHints: 103;
+    readonly Ok: 200;
+    readonly Created: 201;
+    readonly Accepted: 202;
+    readonly NonAuthoritativeInformation: 203;
+    readonly NoContent: 204;
+    readonly ResetContent: 205;
+    readonly PartialContent: 206;
+    readonly MultiStatus: 207;
+    readonly AlreadyReported: 208;
+    readonly ImUsed: 226;
+    readonly MultipleChoices: 300;
+    readonly MovedPermanently: 301;
+    readonly Found: 302;
+    readonly SeeOther: 303;
+    readonly NotModified: 304;
+    readonly UseProxy: 305;
+    readonly TemporaryRedirect: 307;
+    readonly PermanentRedirect: 308;
+    readonly BadRequest: 400;
+    readonly Unauthorized: 401;
+    readonly PaymentRequired: 402;
+    readonly Forbidden: 403;
+    readonly NotFound: 404;
+    readonly MethodNotAllowed: 405;
+    readonly NotAcceptable: 406;
+    readonly ProxyAuthenticationRequired: 407;
+    readonly RequestTimeout: 408;
+    readonly Conflict: 409;
+    readonly Gone: 410;
+    readonly LengthRequired: 411;
+    readonly PreconditionFailed: 412;
+    readonly PayloadTooLarge: 413;
+    readonly UriTooLong: 414;
+    readonly UnsupportedMediaType: 415;
+    readonly RangeNotSatisfiable: 416;
+    readonly ExpectationFailed: 417;
+    readonly ImATeapot: 418;
+    readonly MisdirectedRequest: 421;
+    readonly UnprocessableEntity: 422;
+    readonly Locked: 423;
+    readonly FailedDependency: 424;
+    readonly TooEarly: 425;
+    readonly UpgradeRequired: 426;
+    readonly PreconditionRequired: 428;
+    readonly TooManyRequests: 429;
+    readonly RequestHeaderFieldsTooLarge: 431;
+    readonly UnavailableForLegalReasons: 451;
+    readonly InternalServerError: 500;
+    readonly NotImplemented: 501;
+    readonly BadGateway: 502;
+    readonly ServiceUnavailable: 503;
+    readonly GatewayTimeout: 504;
+    readonly HttpVersionNotSupported: 505;
+    readonly VariantAlsoNegotiates: 506;
+    readonly InsufficientStorage: 507;
+    readonly LoopDetected: 508;
+    readonly NotExtended: 510;
+    readonly NetworkAuthenticationRequired: 511;
+  };
+
+  // ─── v11: Adapter System ───────────────────────────────────────────────
+
+  type AdapterConfig = object;
+  type AdapterResponse = { data: any; rawData: any; status: number; statusText: string; headers: Record<string, string> };
+  type AdapterFunction = (config: AdapterConfig) => Promise<AdapterResponse>;
+
+  /**
+   * Fetch adapter (uses native fetch API).
+   */
+  function fetchAdapter(config: AdapterConfig): Promise<AdapterResponse>;
+
+  /**
+   * XHR adapter (uses XMLHttpRequest).
+   */
+  function xhrAdapter(config: AdapterConfig): Promise<AdapterResponse>;
+
+  /**
+   * Known adapter registry.
+   */
+  const adapters: Record<string, AdapterFunction>;
+
+  /**
+   * Get an adapter by name, function, or priority list.
+   */
+  function getAdapter(adapterConfig?: string | AdapterFunction | string[]): AdapterFunction;
+
+  // ─── v11: URL Utilities ────────────────────────────────────────────────
+
+  /**
+   * Check if a URL is absolute.
+   */
+  function isAbsoluteURL(url: string): boolean;
+
+  /**
+   * Combine a base URL and a relative URL.
+   */
+  function combineURLs(baseURL: string, relativeURL: string): string;
+
+  /**
+   * Check if two URLs share the same origin.
+   */
+  function isURLSameOrigin(requestURL: string, currentOrigin?: string): boolean;
+
+  /**
+   * Parse a URL into components.
+   */
+  function parseURL(url: string): {
+    protocol: string;
+    host: string;
+    hostname: string;
+    port: string;
+    pathname: string;
+    search: string;
+    hash: string;
+    origin: string;
+  } | null;
+
+  // ─── v11: Type Helpers ─────────────────────────────────────────────────
+
+  function kindOf(thing: any): string;
+  function isPlainObject(val: any): boolean;
+  function isObject(thing: any): boolean;
+  function isFunction(val: any): boolean;
+  function isString(val: any): boolean;
+  function isNumber(val: any): boolean;
+  function isBoolean(val: any): boolean;
+  function isUndefined(val: any): boolean;
+  function isDate(val: any): boolean;
+  function isRegExp(val: any): boolean;
+  function isHTMLForm(val: any): boolean;
+  function isArrayBuffer(val: any): boolean;
+  function isSpecCompliantForm(thing: any): boolean;
+  function isBrowser(): boolean;
+  function isNode(): boolean;
+
+  // ─── v11: Utility Helpers ──────────────────────────────────────────────
+
+  function forEach(obj: any, fn: (value: any, key: string | number, obj: any) => void, allOwnKeys?: boolean): void;
+  function merge(...args: object[]): object;
+  function extend(a: object, b: object, thisArg?: any, allOwnKeys?: boolean): object;
+  function stripBOM(content: string): string;
+  function findKey(obj: object, key: string): string | undefined;
+  function freezeDeep(obj: object): object;
+  function generateUID(size?: number): string;
+
+  // ─── v11 Client Options ─────────────────────────────────────────────────
 
   interface ClientOptions {
     baseURL?: string;
@@ -112,7 +341,7 @@ declare namespace ApiBridgeAI {
     debug?: boolean;
     retryableStatuses?: Set<number>;
     auth?: { username: string; password: string };
-    responseType?: 'json' | 'text' | 'blob' | 'arraybuffer';
+    responseType?: 'json' | 'text' | 'blob' | 'arraybuffer' | 'stream';
     validateStatus?: (status: number) => boolean;
     paramsSerializer?: (params: any) => string;
     maxContentLength?: number;
@@ -127,6 +356,15 @@ declare namespace ApiBridgeAI {
     withCredentials?: boolean;
     fuzzyMatcher?: any;
     typeCoercer?: any;
+    // v11 options
+    adapter?: string | AdapterFunction | string[];
+    proxy?: { host: string; port: number; auth?: { username: string; password: string }; protocol?: string } | null;
+    httpAgent?: any;
+    httpsAgent?: any;
+    socketPath?: string;
+    formSerializer?: { indexes?: boolean; dots?: boolean; metaTokens?: boolean } | null;
+    env?: { FormData?: any };
+    signal?: AbortSignal;
   }
 
   interface ClientRequestConfig {
@@ -141,7 +379,7 @@ declare namespace ApiBridgeAI {
     signal?: AbortSignal;
     retries?: number;
     auth?: { username: string; password: string };
-    responseType?: 'json' | 'text' | 'blob' | 'arraybuffer';
+    responseType?: 'json' | 'text' | 'blob' | 'arraybuffer' | 'stream';
     validateStatus?: (status: number) => boolean;
     paramsSerializer?: (params: any) => string;
     maxContentLength?: number;
@@ -153,6 +391,14 @@ declare namespace ApiBridgeAI {
     onUploadProgress?: (progressEvent: ProgressEvent) => void;
     withCredentials?: boolean;
     expect?: Record<string, string | Record<string, any>>;
+    // v11 options
+    adapter?: string | AdapterFunction | string[];
+    proxy?: { host: string; port: number; auth?: { username: string; password: string }; protocol?: string } | null;
+    httpAgent?: any;
+    httpsAgent?: any;
+    socketPath?: string;
+    formSerializer?: { indexes?: boolean; dots?: boolean; metaTokens?: boolean } | null;
+    env?: { FormData?: any };
   }
 
   interface ClientResponse<T = any> {
@@ -195,9 +441,20 @@ declare namespace ApiBridgeAI {
     xsrfHeaderName: string;
     withCredentials: boolean;
     auth: { username: string; password: string } | null;
+    // v11 defaults
+    adapter: string | AdapterFunction | string[] | null;
+    proxy: { host: string; port: number; auth?: { username: string; password: string }; protocol?: string } | null;
+    httpAgent: any;
+    httpsAgent: any;
+    socketPath: string | null;
+    formSerializer: { indexes?: boolean; dots?: boolean; metaTokens?: boolean } | null;
+    env: { FormData?: any };
+    maxRedirects: number;
+    decompress: boolean;
+    responseEncoding: string;
   }
 
-  // ─── v10 Client Class ──────────────────────────────────────────────────
+  // ─── v11 Client Class ──────────────────────────────────────────────────
 
   class APIBridgeClient {
     constructor(options?: ClientOptions);
@@ -226,6 +483,15 @@ declare namespace ApiBridgeAI {
     fuzzyMatcher: FuzzyMatcher;
     typeCoercer: TypeCoercer;
     interceptors: InterceptorManager;
+    // v11 properties
+    adapter: string | AdapterFunction | string[] | null;
+    proxy: { host: string; port: number; auth?: { username: string; password: string }; protocol?: string } | null;
+    httpAgent: any;
+    httpsAgent: any;
+    socketPath: string | null;
+    formSerializer: { indexes?: boolean; dots?: boolean; metaTokens?: boolean } | null;
+    env: { FormData?: any };
+    signal: AbortSignal | null;
 
     get<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
     post<T = any>(url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
@@ -236,6 +502,10 @@ declare namespace ApiBridgeAI {
     options<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
     request<T = any>(config: ClientRequestConfig): Promise<ClientResponse<T>>;
     request<T = any>(method: string, url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    // v11 form methods
+    postForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    putForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    patchForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
     getUri(config?: ClientRequestConfig): string;
     setSchema(schema: Record<string, string>): void;
     enableDebug(enabled: boolean): void;
@@ -245,23 +515,34 @@ declare namespace ApiBridgeAI {
     reset(): void;
     _coerceValue(value: any, targetType: string): any;
     _coerceToExpect(data: any, expectMap: Map<string, string>): any;
-    _wrapError(err: Error, reqConfig: any): ClientError;
+    _wrapError(err: Error, reqConfig: any, response?: any): ClientError;
 
     static isClientError(err: any): boolean;
     static isApiBridgeError(err: any): boolean;
   }
 
   class ClientError extends ApiBridgeError {
-    constructor(message: string, details?: { status?: number; code?: string; details?: any });
+    constructor(message: string, details?: {
+      status?: number;
+      code?: string;
+      details?: any;
+      config?: ClientRequestConfig;
+      response?: { data: any; status: number; statusText: string; headers: Record<string, string>; config?: ClientRequestConfig } | null;
+      request?: any;
+    });
     status: number | null;
     code: string;
     details: any;
-    config?: ClientRequestConfig;
-    isApiBridgeError?: boolean;
-    toJSON(): { message: string; status: number | null; code: string; details: any };
+    config: ClientRequestConfig | null;
+    response: { data: any; status: number; statusText: string; headers: Record<string, string>; config?: ClientRequestConfig } | null;
+    request: any;
+    isApiBridgeError: boolean;
+    toJSON(): { message: string; name: string; status: number | null; code: string; details: any; config: any };
+
+    static from(error: Error, code?: string, config?: ClientRequestConfig, request?: any, response?: any): ClientError;
   }
 
-  // ─── v10 Cancel Token ──────────────────────────────────────────────────
+  // ─── v10/v11 Cancel Token ──────────────────────────────────────────────
 
   class CancelToken {
     constructor(executor: (cancel: (message?: string) => void) => void);
@@ -272,6 +553,8 @@ declare namespace ApiBridgeAI {
     subscribe(listener: (reason: Cancel) => void): void;
     unsubscribe(listener: (reason: Cancel) => void): void;
     static source(): { token: CancelToken; cancel: (message?: string) => void };
+    static isCancel(value: any): boolean;
+    static isCancelToken(value: any): boolean;
   }
 
   class Cancel {
@@ -281,13 +564,14 @@ declare namespace ApiBridgeAI {
     toString(): string;
   }
 
-  // ─── v10 Interceptors ──────────────────────────────────────────────────
+  // ─── v10/v11 Interceptors ──────────────────────────────────────────────
 
   class InterceptorChain {
     use(fulfilled: Function, rejected?: Function): number;
     eject(id: number): boolean;
     handlers(): Array<{ id: number; fulfilled: Function; rejected: Function | null }>;
     clear(): void;
+    forEach(fn: (handler: { fulfilled: Function; rejected: Function | null }) => void): void;
     readonly size: number;
   }
 
