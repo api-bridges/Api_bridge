@@ -108,24 +108,6 @@ function isRegExp(val) {
 }
 
 /**
- * Determine if a value is a typed array (Uint8Array, Int32Array, etc.).
- * @param {*} val
- * @returns {boolean}
- */
-function isTypedArray(val) {
-  return typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(val) && !(val instanceof DataView);
-}
-
-/**
- * Determine if a value is a FileList.
- * @param {*} val
- * @returns {boolean}
- */
-function isFileList(val) {
-  return typeof FileList !== 'undefined' && val instanceof FileList;
-}
-
-/**
  * Determine if a value is an HTMLFormElement.
  * @param {*} val
  * @returns {boolean}
@@ -284,49 +266,6 @@ function freezeDeep(obj) {
 }
 
 /**
- * Convert FormData entries to a JSON object.
- * @param {FormData} formData
- * @returns {object}
- */
-function formToJSON(formData) {
-  if (!formData || typeof formData.entries !== 'function') {
-    return {};
-  }
-
-  const result = {};
-
-  for (const [key, value] of formData.entries()) {
-    // Handle bracket notation: name[field] → nested object
-    const keys = key.replace(/\]/g, '').split('[');
-    let current = result;
-
-    for (let i = 0; i < keys.length; i++) {
-      const k = keys[i];
-      if (i === keys.length - 1) {
-        // Last key — set value
-        if (current[k] !== undefined) {
-          // Already exists — make array
-          if (!Array.isArray(current[k])) {
-            current[k] = [current[k]];
-          }
-          current[k].push(value);
-        } else {
-          current[k] = value;
-        }
-      } else {
-        // Intermediate key
-        if (current[k] === undefined || typeof current[k] !== 'object') {
-          current[k] = isNaN(keys[i + 1]) ? {} : [];
-        }
-        current = current[k];
-      }
-    }
-  }
-
-  return result;
-}
-
-/**
  * Generate a unique ID.
  * @param {number} [size=21]
  * @returns {string}
@@ -351,8 +290,6 @@ module.exports = {
   isUndefined,
   isDate,
   isRegExp,
-  isTypedArray,
-  isFileList,
   isHTMLForm,
   isArrayBuffer,
   isSpecCompliantForm,
@@ -364,6 +301,5 @@ module.exports = {
   isBrowser,
   isNode,
   freezeDeep,
-  formToJSON,
   generateUID,
 };

@@ -53,7 +53,6 @@ const {
   kindOf, isPlainObject, isObject, isFunction, isString, isNumber, isBoolean, isUndefined,
   isDate, isRegExp, isHTMLForm, isArrayBuffer, isSpecCompliantForm,
   forEach, merge, extend, stripBOM, findKey, isBrowser, isNode, freezeDeep, generateUID,
-  formToJSON: helpersFormToJSON,
 } = require('./helpers');
 
 module.exports = {
