@@ -77,6 +77,17 @@ class InterceptorChain {
   get size() {
     return this._handlers.length;
   }
+
+  /**
+   * Iterate over all registered interceptors (Axios-compatible).
+   * @param {Function} fn — Called with each handler { fulfilled, rejected }
+   */
+  forEach(fn) {
+    if (typeof fn !== 'function') return;
+    for (const handler of this._handlers) {
+      fn(handler);
+    }
+  }
 }
 
 /**

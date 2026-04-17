@@ -148,8 +148,106 @@ function toFormData(obj, formData, parentKey) {
   return fd;
 }
 
+/**
+ * Convert an object to URL-encoded form data string.
+ *
+ * @param {object} data
+ * @returns {URLSearchParams}
+ */
+function toURLEncodedForm(data) {
+  if (isURLSearchParams(data)) return data;
+
+  const params = new URLSearchParams();
+  if (!data || typeof data !== 'object') return params;
+
+  const entries = Array.isArray(data)
+    ? data.map((val, idx) => [idx, val])
+    : Object.entries(data);
+
+  for (const [key, value] of entries) {
+    if (DANGEROUS_KEYS.has(String(key))) continue;
+
+    if (value === null || value === undefined) {
+      params.append(String(key), '');
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        params.append(`${key}[]`, String(item));
+      }
+    } else if (typeof value === 'object' && !(value instanceof Date)) {
+      params.append(String(key), JSON.stringify(value));
+    } else if (value instanceof Date) {
+      params.append(String(key), value.toISOString());
+    } else {
+      params.append(String(key), String(value));
+    }
+  }
+
+  return params;
+}
+
+/**
+ * Convert FormData entries back to a plain JSON object.
+ * Handles bracket notation (e.g., user[name]) for nested objects.
+ *
+ * @param {FormData} formData
+ * @returns {object}
+ */
+function formToJSON(formData) {
+  if (!formData || typeof formData.entries !== 'function') {
+    return {};
+  }
+
+  const result = {};
+
+  for (const [key, value] of formData.entries()) {
+    const keys = key.replace(/\]/g, '').split('[');
+    let current = result;
+
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (i === keys.length - 1) {
+        if (current[k] !== undefined) {
+          if (!Array.isArray(current[k])) {
+            current[k] = [current[k]];
+          }
+          current[k].push(value);
+        } else {
+          current[k] = value;
+        }
+      } else {
+        if (current[k] === undefined || typeof current[k] !== 'object') {
+          current[k] = isNaN(keys[i + 1]) ? {} : [];
+        }
+        current = current[k];
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Check if a value is a typed array (Uint8Array, etc.).
+ * @param {*} val
+ * @returns {boolean}
+ */
+function isTypedArray(val) {
+  return typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(val) && !(val instanceof DataView);
+}
+
+/**
+ * Check if a value is a FileList.
+ * @param {*} val
+ * @returns {boolean}
+ */
+function isFileList(val) {
+  return typeof FileList !== 'undefined' && val instanceof FileList;
+}
+
 module.exports = {
   toFormData,
+  toURLEncodedForm,
+  formToJSON,
   isFormData,
   isBlob,
   isFile,
@@ -157,4 +255,6 @@ module.exports = {
   isStream,
   isArrayBufferView,
   isURLSearchParams,
+  isTypedArray,
+  isFileList,
 };

@@ -22,6 +22,7 @@ const errors = require('./errors');
 const {
   APIBridgeClient, ClientError, createClient, buildURL,
   all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
+  VERSION,
 } = require('./client');
 const { InterceptorManager, InterceptorChain } = require('./interceptors');
 const {
@@ -34,8 +35,24 @@ const {
   HEADER_NAME,
 } = require('./expectation');
 const { smartProxy, tokenize: proxyTokenize, generateCandidates } = require('./proxy');
-const { CancelToken, Cancel, isCancel } = require('./cancel');
-const { toFormData, isFormData, isBlob, isFile, isBuffer, isStream, isArrayBufferView, isURLSearchParams } = require('./form-data');
+const { CancelToken, Cancel, isCancel, isCancelToken } = require('./cancel');
+const {
+  toFormData, toURLEncodedForm, formToJSON,
+  isFormData, isBlob, isFile, isBuffer, isStream, isArrayBufferView, isURLSearchParams,
+  isTypedArray, isFileList,
+} = require('./form-data');
+
+// v11 new modules
+const { AxiosHeaders, normalizeHeaderName } = require('./headers');
+const { HttpStatusCode } = require('./http-status');
+const { fetchAdapter, xhrAdapter, adapters, getAdapter } = require('./adapters');
+const { isAbsoluteURL, combineURLs, isURLSameOrigin, parseURL, encode: uriEncode } = require('./url-utils');
+const {
+  kindOf, isPlainObject, isObject, isFunction, isString, isNumber, isBoolean, isUndefined,
+  isDate, isRegExp, isHTMLForm, isArrayBuffer, isSpecCompliantForm,
+  forEach, merge, extend, stripBOM, findKey, isBrowser, isNode, freezeDeep, generateUID,
+  formToJSON: helpersFormToJSON,
+} = require('./helpers');
 
 module.exports = {
   // Classes
@@ -61,9 +78,12 @@ module.exports = {
   CancelToken,
   Cancel,
   isCancel,
+  isCancelToken,
 
-  // v10 FormData utilities
+  // v10/v11 FormData utilities
   toFormData,
+  toURLEncodedForm,
+  formToJSON,
   isFormData,
   isBlob,
   isFile,
@@ -71,6 +91,8 @@ module.exports = {
   isStream,
   isArrayBufferView,
   isURLSearchParams,
+  isTypedArray,
+  isFileList,
 
   // v10 helpers
   all,
@@ -79,6 +101,53 @@ module.exports = {
   isApiBridgeError,
   mergeConfig,
   defaultParamsSerializer,
+
+  // v11: AxiosHeaders
+  AxiosHeaders,
+  normalizeHeaderName,
+
+  // v11: HttpStatusCode
+  HttpStatusCode,
+
+  // v11: Adapter system
+  fetchAdapter,
+  xhrAdapter,
+  adapters,
+  getAdapter,
+
+  // v11: URL utilities
+  isAbsoluteURL,
+  combineURLs,
+  isURLSameOrigin,
+  parseURL,
+  uriEncode,
+
+  // v11: Type helpers
+  kindOf,
+  isPlainObject,
+  isObject,
+  isFunction,
+  isString,
+  isNumber,
+  isBoolean,
+  isUndefined,
+  isDate,
+  isRegExp,
+  isHTMLForm,
+  isArrayBuffer,
+  isSpecCompliantForm,
+  forEach,
+  merge,
+  extend,
+  stripBOM,
+  findKey,
+  isBrowser,
+  isNode,
+  freezeDeep,
+  generateUID,
+
+  // v11: VERSION
+  VERSION,
 
   // v9 factory
   createClient,
