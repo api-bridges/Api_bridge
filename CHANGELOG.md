@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.1] - 2026-04-17
+
+### Changed
+- **Demo project updated** — Full-stack demo now showcases all v8 features
+  - FieldAliaser for bidirectional multi-alias field resolution
+  - FieldStats for per-field transformation analytics
+  - OutputFormatter for multi-format debug output (JSON, CSV, XML, key-value)
+  - ConditionalTransform for dynamic value-based transformations
+  - DeepMerge for intelligent partial update merging
+- New demo API endpoints: `/api/debug/field-stats`, `/api/debug/output/:format`, `/api/users/batch`
+- Demo frontend updated with new "v8 Features" tab showcasing field aliaser, analytics, and output formats
+- Demo README updated with v8 feature documentation
+
 ## [8.0.0] - 2024-01-15
 
 ### Added

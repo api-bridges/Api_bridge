@@ -272,7 +272,7 @@
 
 <div class="container">
   <header>
-    <h1>🌉 APIBridge AI Demo</h1>
+    <h1>🌉 APIBridge AI v8.0.1 Demo</h1>
     <p>See how APIBridge AI automatically resolves field name mismatches between SQL, Backend, and Frontend</p>
   </header>
 
@@ -302,6 +302,7 @@
     <button class="tab-btn" data-tab="comparison">🔀 Before / After</button>
     <button class="tab-btn" data-tab="users">👥 User Data</button>
     <button class="tab-btn" data-tab="create">➕ Create User</button>
+    <button class="tab-btn" data-tab="v8features">⚡ v8 Features</button>
   </div>
 
   <!-- Tab: Field Mappings -->
@@ -430,6 +431,69 @@
           <button type="reset" class="btn" style="background: var(--surface-alt); color: var(--text);">Reset</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Tab: v8 Features -->
+  <div class="tab-panel" id="tab-v8features">
+    <!-- v8 Summary -->
+    <div class="card">
+      <h2>⚡ v8.0.1 Feature Summary</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        APIBridge AI v8 introduces 8 new modules. This demo showcases FieldAliaser, FieldStats, OutputFormatter, ConditionalTransform, and DeepMerge in action.
+      </p>
+      <div id="v8Summary" class="loading">Loading v8 summary…</div>
+    </div>
+
+    <!-- Field Aliaser -->
+    <div class="card">
+      <h2>🔗 Field Aliaser — Multi-Alias Resolution</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Register multiple aliases for each canonical field. Try resolving any alias below.
+      </p>
+      <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <input type="text" id="aliasInput" placeholder="Try: uid, fname, dob, tel, salary…"
+          style="flex: 1; min-width: 200px; padding: 0.6rem 0.8rem; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 0.4rem; color: var(--text); font-size: 0.9rem;">
+        <button class="btn btn-primary" onclick="resolveAlias()">Resolve Alias</button>
+      </div>
+      <div id="aliasResult"></div>
+      <div id="aliasGroups" class="loading" style="margin-top: 1rem;">Loading alias groups…</div>
+    </div>
+
+    <!-- Field Stats -->
+    <div class="card">
+      <h2>📊 Field Stats — Transformation Analytics</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Per-field usage tracking, resolution methods, and confidence scores.
+      </p>
+      <div id="fieldStatsContent" class="loading">Loading field stats…</div>
+    </div>
+
+    <!-- Output Formatter -->
+    <div class="card">
+      <h2>📄 Output Formatter — Multi-Format Export</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Export transformed user data in different formats.
+      </p>
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <button class="btn btn-primary btn-sm" onclick="showOutput('json')">JSON</button>
+        <button class="btn btn-primary btn-sm" onclick="showOutput('csv')">CSV</button>
+        <button class="btn btn-primary btn-sm" onclick="showOutput('xml')">XML</button>
+        <button class="btn btn-primary btn-sm" onclick="showOutput('keyvalue')">Key-Value</button>
+      </div>
+      <div class="json-box" style="max-height: 400px;">
+        <h3 id="outputFormatLabel">Select a format above</h3>
+        <pre id="outputContent" style="white-space: pre-wrap; word-break: break-all;">Click a format button to see the output.</pre>
+      </div>
+    </div>
+
+    <!-- Conditional Transform -->
+    <div class="card">
+      <h2>🔀 Conditional Transform — Dynamic Rules</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Value-based transformation rules applied dynamically. Example: integer 0/1 → boolean, null → "N/A", currency rounding.
+      </p>
+      <div id="conditionalContent" class="loading">Loading conditional transform…</div>
     </div>
   </div>
 </div>
@@ -602,6 +666,193 @@
 
   // ── Initial load ─────────────────────────────────────────────────────────────
   loadAll();
+  loadV8Features();
+
+  // ── v8 Feature Loaders ────────────────────────────────────────────────────────
+
+  async function loadV8Features() {
+    try {
+      const [summaryRes, aliasRes, statsRes, conditionalRes] = await Promise.all([
+        fetch('/api/debug/v8-summary').then(r => r.json()),
+        fetch('/api/debug/aliases').then(r => r.json()),
+        fetch('/api/debug/field-stats').then(r => r.json()),
+        fetch('/api/debug/conditional').then(r => r.json()),
+      ]);
+
+      // v8 Summary
+      renderV8Summary(summaryRes);
+
+      // Alias groups
+      renderAliasGroups(aliasRes);
+
+      // Field stats
+      renderFieldStats(statsRes);
+
+      // Conditional transform
+      renderConditional(conditionalRes);
+    } catch (err) {
+      console.error('Failed to load v8 features:', err);
+    }
+  }
+
+  function renderV8Summary(data) {
+    const el = document.getElementById('v8Summary');
+    if (!data.success) { el.innerHTML = '<p>Failed to load.</p>'; return; }
+    const features = data.v8Features;
+    el.innerHTML = `
+      <div class="stats-bar" style="margin-bottom: 0;">
+        ${Object.entries(features).map(([key, feat]) => `
+          <div class="stat-card" style="text-align: left;">
+            <div style="font-weight: 700; color: var(--primary-light); font-size: 0.95rem; margin-bottom: 0.25rem;">
+              ${key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-muted);">${feat.description}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderAliasGroups(data) {
+    const el = document.getElementById('aliasGroups');
+    if (!data.success || !data.groups) { el.innerHTML = '<p>No alias data.</p>'; return; }
+
+    // bulkExport returns { canonical: { global: [...], apis: {} }, ... }
+    const groups = Object.entries(data.groups).map(([canonical, info]) => ({
+      canonical,
+      aliases: info.global || info.aliases || [],
+    }));
+
+    el.innerHTML = `
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        ${data.stats ? `${data.stats.totalGroups} groups, ${data.stats.totalAliases} aliases registered` : `${groups.length} groups`}
+      </div>
+      <div class="mapping-grid">
+        ${groups.map(g => `
+          <div class="mapping-item">
+            <span class="fe-key" style="min-width: 120px;">${g.canonical}</span>
+            <span class="arrow">←</span>
+            <span style="font-family: 'Courier New', monospace; font-size: 0.82rem; color: var(--text-muted);">
+              ${g.aliases.slice(0, 4).join(', ')}${g.aliases.length > 4 ? ' …' : ''}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderFieldStats(data) {
+    const el = document.getElementById('fieldStatsContent');
+    if (!data.success) { el.innerHTML = '<p>No stats available.</p>'; return; }
+
+    const exported = data.stats || {};
+    const global = exported.global || {};
+    const fields = exported.fields || [];
+    const coverage = exported.coverage || {};
+
+    el.innerHTML = `
+      <div class="stats-bar" style="margin-bottom: 1rem;">
+        <div class="stat-card">
+          <div class="number">${global.totalTransformations || 0}</div>
+          <div class="label">Total Transforms</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">${global.totalFields || 0}</div>
+          <div class="label">Unique Fields</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">${global.confidenceBuckets ? global.confidenceBuckets.high || 0 : '—'}</div>
+          <div class="label">High Confidence</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">${coverage.autoResolvedRate || '—'}</div>
+          <div class="label">Auto-Resolved Rate</div>
+        </div>
+      </div>
+      ${fields.length > 0 ? `
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Field</th><th>Count</th><th>Method</th><th>Avg Confidence</th></tr></thead>
+            <tbody>
+              ${fields.map(f => `<tr>
+                <td><code>${f.field}</code></td>
+                <td>${f.count || '—'}</td>
+                <td><span class="badge badge-success">${f.primaryMethod || 'transform'}</span></td>
+                <td>${f.avgConfidence != null ? (f.avgConfidence * 100).toFixed(0) + '%' : '—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : '<p style="color: var(--text-muted);">No per-field details yet.</p>'}
+    `;
+  }
+
+  async function resolveAlias() {
+    const input = document.getElementById('aliasInput').value.trim();
+    const resultDiv = document.getElementById('aliasResult');
+    if (!input) { resultDiv.innerHTML = '<div class="alert alert-error">Enter a field name to resolve.</div>'; return; }
+
+    try {
+      const res = await fetch('/api/debug/resolve-alias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: input }),
+      });
+      const data = await res.json();
+      if (data.resolved && data.resolved.matched) {
+        resultDiv.innerHTML = `<div class="alert alert-success">✅ <code>${input}</code> → canonical: <strong>${data.resolved.canonical}</strong></div>`;
+      } else {
+        resultDiv.innerHTML = `<div class="alert alert-error">❌ <code>${input}</code> did not match any registered alias.</div>`;
+      }
+    } catch (err) {
+      resultDiv.innerHTML = `<div class="alert alert-error">Error: ${err.message}</div>`;
+    }
+  }
+
+  async function showOutput(format) {
+    const label = document.getElementById('outputFormatLabel');
+    const content = document.getElementById('outputContent');
+    label.textContent = format.toUpperCase() + ' Output';
+    content.textContent = 'Loading…';
+
+    try {
+      const res = await fetch('/api/debug/output/' + format);
+      const text = await res.text();
+      content.textContent = text;
+    } catch (err) {
+      content.textContent = 'Error: ' + err.message;
+    }
+  }
+
+  function renderConditional(data) {
+    const el = document.getElementById('conditionalContent');
+    if (!data.success || !data.original) { el.innerHTML = '<p>No conditional transform data.</p>'; return; }
+
+    const original = data.original;
+    const transformed = data.conditionallyTransformed;
+    const stats = data.ruleStats || {};
+
+    // Find fields where the value changed
+    const changes = Object.keys(original).filter(k => {
+      return JSON.stringify(original[k]) !== JSON.stringify(transformed[k]);
+    });
+
+    el.innerHTML = `
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        Rules evaluated: ${stats.totalEvaluations || 0} | Fields changed: ${changes.length}
+      </div>
+      <div class="json-compare">
+        <div class="json-box">
+          <h3>Original Values</h3>
+          <pre>${syntaxHighlight(original)}</pre>
+        </div>
+        <div class="json-box">
+          <h3>After Conditional Rules</h3>
+          <pre>${syntaxHighlight(transformed)}</pre>
+        </div>
+      </div>
+    `;
+  }
 </script>
 
 </body>
