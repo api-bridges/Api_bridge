@@ -43,7 +43,16 @@ function combineURLs(baseURL, relativeURL) {
   if (!relativeURL) return baseURL;
   if (isAbsoluteURL(relativeURL)) return relativeURL;
 
-  return baseURL.replace(/\/+$/, '') + '/' + relativeURL.replace(/^\/+/, '');
+  // Remove trailing slashes from base and leading slashes from relative
+  let base = baseURL;
+  while (base.length > 0 && base[base.length - 1] === '/') {
+    base = base.slice(0, -1);
+  }
+  let rel = relativeURL;
+  while (rel.length > 0 && rel[0] === '/') {
+    rel = rel.slice(1);
+  }
+  return base + '/' + rel;
 }
 
 /**
