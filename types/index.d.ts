@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v12
-// Type definitions for api-bridge-ai 12.0.0
+// TypeScript Type Declarations for APIBridge AI v13
+// Type definitions for api-bridge-ai 13.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -244,7 +244,7 @@ declare namespace ApiBridgeAI {
   // ─── v11: Adapter System ───────────────────────────────────────────────
 
   type AdapterConfig = object;
-  type AdapterResponse = { data: any; rawData: any; status: number; statusText: string; headers: Record<string, string> };
+  type AdapterResponse = { data: any; rawData: any; status: number; statusText: string; headers: Record<string, string> | AxiosHeaders; request?: any };
   type AdapterFunction = (config: AdapterConfig) => Promise<AdapterResponse>;
 
   /**
@@ -371,6 +371,9 @@ declare namespace ApiBridgeAI {
       forcedJSONParsing?: boolean;
       clarifyTimeoutError?: boolean;
     };
+    // v13 options
+    maxRate?: number | [number, number] | null;
+    lookup?: ((hostname: string, options?: any, callback?: Function) => void) | null;
   }
 
   interface ClientRequestConfig {
@@ -411,8 +414,9 @@ declare namespace ApiBridgeAI {
     data: T;
     status: number;
     statusText: string;
-    headers: Record<string, string>;
+    headers: AxiosHeaders;
     config: ClientRequestConfig;
+    request: any;
     raw?: any;
   }
 
@@ -441,8 +445,8 @@ declare namespace ApiBridgeAI {
     paramsSerializer: ((params: any) => string) | null;
     maxContentLength: number;
     maxBodyLength: number;
-    transformRequest: Array<Function> | null;
-    transformResponse: Array<Function> | null;
+    transformRequest: Array<Function>;
+    transformResponse: Array<Function>;
     xsrfCookieName: string;
     xsrfHeaderName: string;
     withCredentials: boolean;
@@ -465,6 +469,9 @@ declare namespace ApiBridgeAI {
       clarifyTimeoutError: boolean;
     };
     signal: AbortSignal | null;
+    // v13 defaults
+    maxRate: number | [number, number] | null;
+    lookup: ((hostname: string, options?: any, callback?: Function) => void) | null;
   }
 
   // ─── v11 Client Class ──────────────────────────────────────────────────
@@ -485,8 +492,8 @@ declare namespace ApiBridgeAI {
     paramsSerializer: ((params: any) => string) | null;
     maxContentLength: number;
     maxBodyLength: number;
-    transformRequest: Array<Function> | null;
-    transformResponse: Array<Function> | null;
+    transformRequest: Array<Function>;
+    transformResponse: Array<Function>;
     withCredentials: boolean;
     xsrfCookieName: string;
     xsrfHeaderName: string;
@@ -507,6 +514,9 @@ declare namespace ApiBridgeAI {
     signal: AbortSignal | null;
     // v12 property
     transitional: { silentJSONParsing: boolean; forcedJSONParsing: boolean; clarifyTimeoutError: boolean };
+    // v13 properties
+    maxRate: number | [number, number] | null;
+    lookup: ((hostname: string, options?: any, callback?: Function) => void) | null;
 
     get<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
     post<T = any>(url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
@@ -549,9 +559,10 @@ declare namespace ApiBridgeAI {
     code: string;
     details: any;
     config: ClientRequestConfig | null;
-    response: { data: any; status: number; statusText: string; headers: Record<string, string>; config?: ClientRequestConfig } | null;
+    response: { data: any; status: number; statusText: string; headers: AxiosHeaders | Record<string, string>; config?: ClientRequestConfig } | null;
     request: any;
     isApiBridgeError: boolean;
+    isAxiosError: boolean;
     toJSON(): { message: string; name: string; status: number | null; code: string; details: any; config: any };
 
     static from(error: Error, code?: string, config?: ClientRequestConfig, request?: any, response?: any): ClientError;
@@ -572,6 +583,7 @@ declare namespace ApiBridgeAI {
     static readonly ERR_TIMEOUT: string;
     static readonly ERR_MAX_BODY_LENGTH_EXCEEDED: string;
     static readonly ERR_MAX_CONTENT_LENGTH_EXCEEDED: string;
+    static readonly ERR_ABORTED: string;
   }
 
   // ─── v10/v11 Cancel Token ──────────────────────────────────────────────
