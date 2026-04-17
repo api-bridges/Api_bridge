@@ -1,27 +1,36 @@
 /**
- * APIBridge AI v10 — HTTP Client Engine (Complete Axios Replacement)
+ * APIBridge AI v11 — HTTP Client Engine (Complete Axios Replacement)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
  *
  * Features:
- *   - Built on native fetch (zero dependencies)
+ *   - Built on native fetch (zero dependencies) with pluggable adapter system
  *   - Full Axios API compatibility (drop-in replacement)
- *   - GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+ *   - GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS + postForm/putForm/patchForm
  *   - Headers, params, body (JSON, FormData, URLSearchParams, text, Buffer)
  *   - Timeouts via AbortController
  *   - CancelToken support (Axios-compatible) + AbortController
  *   - Retries with exponential backoff + jitter
  *   - Interceptor system (Axios-compatible)
- *   - Per-request transformRequest / transformResponse
+ *   - Per-request transformRequest / transformResponse with defaults
  *   - Basic auth support ({ username, password })
- *   - Custom responseType ('json', 'text', 'blob', 'arraybuffer')
+ *   - Custom responseType ('json', 'text', 'blob', 'arraybuffer', 'stream')
  *   - Custom validateStatus function
  *   - Custom paramsSerializer function
  *   - maxContentLength / maxBodyLength enforcement
  *   - onDownloadProgress / onUploadProgress callbacks
  *   - getUri() method
  *   - Mutable defaults
+ *   - Pluggable adapter system (fetch, xhr, custom)
+ *   - Proxy configuration support
+ *   - httpAgent / httpsAgent support
+ *   - socketPath support
+ *   - formSerializer options
+ *   - env.FormData configuration
+ *   - AxiosHeaders integration
+ *   - Error response/request properties (full Axios error shape)
+ *   - Default transform chains (JSON stringify/parse)
  *   - Expectation-aware system
  *   - Auto data alignment (snake_case → camelCase, fuzzy matching, etc.)
  *   - Type coercion
@@ -38,6 +47,12 @@
  *   const api = createClient({ baseURL: "/api" });
  *   api.defaults.headers.common['Authorization'] = 'Bearer token';
  *   const res = await api.request({ method: 'get', url: '/user' });
+ *
+ *   // Form submissions:
+ *   await api.postForm('/upload', { file: myFile, name: 'doc' });
+ *
+ *   // Adapter selection:
+ *   const api = createClient({ adapter: 'xhr' });
  */
 
 'use strict';
@@ -57,7 +72,15 @@ const {
 const { smartProxy } = require('./proxy');
 const { ApiBridgeError, NetworkError, ValidationError } = require('./errors');
 const { isCancel } = require('./cancel');
-const { isFormData, isURLSearchParams, isStream, isBuffer, isArrayBufferView } = require('./form-data');
+const { isFormData, isURLSearchParams, isStream, isBuffer, isArrayBufferView, toFormData } = require('./form-data');
+const { getAdapter } = require('./adapters');
+const { isAbsoluteURL, combineURLs } = require('./url-utils');
+
+/**
+ * Library version.
+ * @type {string}
+ */
+const VERSION = '11.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -71,6 +94,9 @@ class ClientError extends ApiBridgeError {
    * @param {number} [details.status]
    * @param {string} [details.code]
    * @param {*}      [details.details]
+   * @param {object} [details.config]
+   * @param {object} [details.response]
+   * @param {object} [details.request]
    */
   constructor(message, details = {}) {
     super(message);
@@ -78,17 +104,53 @@ class ClientError extends ApiBridgeError {
     this.status = details.status || null;
     this.code = details.code || 'ERR_CLIENT';
     this.details = details.details || null;
+    this.config = details.config || null;
+    this.response = details.response || null;
+    this.request = details.request || null;
+    this.isApiBridgeError = true;
   }
 
   toJSON() {
     return {
       message: this.message,
+      name: this.name,
       status: this.status,
       code: this.code,
       details: this.details,
+      config: this.config ? {
+        method: this.config.method,
+        url: this.config.url,
+        baseURL: this.config.baseURL,
+      } : null,
     };
   }
 }
+
+/**
+ * Create a ClientError with full context (like AxiosError.from).
+ *
+ * @param {Error} error — Source error
+ * @param {string} [code] — Error code
+ * @param {object} [config] — Request config
+ * @param {object} [request] — Request object
+ * @param {object} [response] — Response object
+ * @returns {ClientError}
+ */
+ClientError.from = function from(error, code, config, request, response) {
+  const err = new ClientError(
+    error.message,
+    {
+      status: response ? response.status : null,
+      code: code || error.code || 'ERR_CLIENT',
+      details: response ? response.data : null,
+      config,
+      request,
+      response,
+    },
+  );
+  err.cause = error;
+  return err;
+};
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -228,7 +290,7 @@ class APIBridgeClient {
    * @param {boolean} [options.debug=false] — Debug mode
    * @param {Set<number>} [options.retryableStatuses] — Status codes to retry
    * @param {object} [options.auth] — Basic auth { username, password }
-   * @param {string} [options.responseType='json'] — Default response type ('json','text','blob','arraybuffer')
+   * @param {string} [options.responseType='json'] — Default response type ('json','text','blob','arraybuffer','stream')
    * @param {Function} [options.validateStatus] — Custom status validation function
    * @param {Function} [options.paramsSerializer] — Custom params serializer
    * @param {number} [options.maxContentLength=-1] — Max response content length (-1 = unlimited)
@@ -241,6 +303,14 @@ class APIBridgeClient {
    * @param {string} [options.xsrfCookieName='XSRF-TOKEN'] — XSRF cookie name
    * @param {string} [options.xsrfHeaderName='X-XSRF-TOKEN'] — XSRF header name
    * @param {boolean} [options.withCredentials=false] — Include credentials
+   * @param {string|Function|string[]} [options.adapter] — Adapter to use ('fetch', 'xhr', custom fn, or priority list)
+   * @param {object} [options.proxy] — Proxy configuration { host, port, auth, protocol }
+   * @param {*} [options.httpAgent] — Custom HTTP agent (for Node.js)
+   * @param {*} [options.httpsAgent] — Custom HTTPS agent (for Node.js)
+   * @param {string} [options.socketPath] — Unix domain socket path
+   * @param {object} [options.formSerializer] — Custom form serialization options
+   * @param {object} [options.env] — Environment configuration { FormData }
+   * @param {string} [options.signal] — AbortSignal
    */
   constructor(options = {}) {
     this.baseURL = options.baseURL || '';
@@ -256,7 +326,7 @@ class APIBridgeClient {
     this.retryableStatuses = options.retryableStatuses ||
       new Set([408, 429, 500, 502, 503, 504]);
 
-    // ─── New v10: Axios-compatible options ─────────────────────────
+    // ─── v10: Axios-compatible options ─────────────────────────────
     this.auth = options.auth || null;
     this.responseType = options.responseType || 'json';
     this.validateStatus = options.validateStatus || ((status) => status >= 200 && status < 300);
@@ -271,6 +341,16 @@ class APIBridgeClient {
     this.xsrfCookieName = options.xsrfCookieName || 'XSRF-TOKEN';
     this.xsrfHeaderName = options.xsrfHeaderName || 'X-XSRF-TOKEN';
     this.withCredentials = options.withCredentials || false;
+
+    // ─── v11: New Axios-compatible options ─────────────────────────
+    this.adapter = options.adapter || null;
+    this.proxy = options.proxy || null;
+    this.httpAgent = options.httpAgent || null;
+    this.httpsAgent = options.httpsAgent || null;
+    this.socketPath = options.socketPath || null;
+    this.formSerializer = options.formSerializer || null;
+    this.env = options.env || { FormData: typeof FormData !== 'undefined' ? FormData : undefined };
+    this.signal = options.signal || null;
 
     // ─── Mutable defaults object (Axios-compatible) ───────────────
     this.defaults = {
@@ -297,6 +377,17 @@ class APIBridgeClient {
       xsrfHeaderName: this.xsrfHeaderName,
       withCredentials: this.withCredentials,
       auth: this.auth,
+      // v11: New defaults
+      adapter: this.adapter,
+      proxy: this.proxy,
+      httpAgent: this.httpAgent,
+      httpsAgent: this.httpsAgent,
+      socketPath: this.socketPath,
+      formSerializer: this.formSerializer,
+      env: this.env,
+      maxRedirects: this.maxRedirects,
+      decompress: this.decompress,
+      responseEncoding: this.responseEncoding,
     };
 
     // Core engines
@@ -464,6 +555,66 @@ class APIBridgeClient {
     return this._doRequest('OPTIONS', url, undefined, config);
   }
 
+  // ─── Form Submission Methods (v11) ────────────────────────────────────
+
+  /**
+   * POST with FormData (like axios.postForm).
+   * Auto-converts plain objects to FormData.
+   *
+   * @param {string} url
+   * @param {*} [data]
+   * @param {object} [config={}]
+   * @returns {Promise<object>}
+   */
+  postForm(url, data, config) {
+    return this._doRequest('POST', url, data, {
+      ...config,
+      headers: {
+        ...(config && config.headers),
+        'Content-Type': 'multipart/form-data',
+      },
+      _formSubmission: true,
+    });
+  }
+
+  /**
+   * PUT with FormData (like axios.putForm).
+   *
+   * @param {string} url
+   * @param {*} [data]
+   * @param {object} [config={}]
+   * @returns {Promise<object>}
+   */
+  putForm(url, data, config) {
+    return this._doRequest('PUT', url, data, {
+      ...config,
+      headers: {
+        ...(config && config.headers),
+        'Content-Type': 'multipart/form-data',
+      },
+      _formSubmission: true,
+    });
+  }
+
+  /**
+   * PATCH with FormData (like axios.patchForm).
+   *
+   * @param {string} url
+   * @param {*} [data]
+   * @param {object} [config={}]
+   * @returns {Promise<object>}
+   */
+  patchForm(url, data, config) {
+    return this._doRequest('PATCH', url, data, {
+      ...config,
+      headers: {
+        ...(config && config.headers),
+        'Content-Type': 'multipart/form-data',
+      },
+      _formSubmission: true,
+    });
+  }
+
   // ─── getUri — Build URL without making a request ────────────────────────
 
   /**
@@ -540,6 +691,15 @@ class APIBridgeClient {
       onUploadProgress: cleanConfig.onUploadProgress || undefined,
       withCredentials: cleanConfig.withCredentials !== undefined ? cleanConfig.withCredentials : this.defaults.withCredentials,
       baseURL: cleanConfig.baseURL || this.defaults.baseURL || this.baseURL,
+      // v11: New options
+      adapter: cleanConfig.adapter || this.defaults.adapter || this.adapter,
+      proxy: cleanConfig.proxy || this.defaults.proxy || this.proxy,
+      httpAgent: cleanConfig.httpAgent || this.defaults.httpAgent || this.httpAgent,
+      httpsAgent: cleanConfig.httpsAgent || this.defaults.httpsAgent || this.httpsAgent,
+      socketPath: cleanConfig.socketPath || this.defaults.socketPath || this.socketPath,
+      formSerializer: cleanConfig.formSerializer || this.defaults.formSerializer || this.formSerializer,
+      env: cleanConfig.env || this.defaults.env || this.env,
+      _formSubmission: cleanConfig._formSubmission || false,
     };
 
     // Inject expect header
@@ -563,6 +723,16 @@ class APIBridgeClient {
     } catch (err) {
       this._stats.failures++;
       throw this._wrapError(err, reqConfig);
+    }
+
+    // 3.5. Form submission: convert plain object to FormData (v11)
+    if (reqConfig._formSubmission && reqConfig.body && typeof reqConfig.body === 'object' &&
+        !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body)) {
+      try {
+        reqConfig.body = toFormData(reqConfig.body);
+      } catch {
+        // FormData not available — leave as-is
+      }
     }
 
     // 4. Run per-request transformRequest chain
@@ -997,21 +1167,37 @@ class APIBridgeClient {
 
   // ─── Error wrapping ─────────────────────────────────────────────────────
 
-  _wrapError(err, reqConfig) {
+  _wrapError(err, reqConfig, response) {
     if (err instanceof ClientError) {
-      err.config = reqConfig;
+      if (!err.config) err.config = reqConfig;
+      if (!err.response && response) {
+        err.response = {
+          data: response.data || response.details,
+          status: response.status || err.status,
+          statusText: response.statusText || '',
+          headers: response.headers || {},
+          config: reqConfig,
+        };
+      }
       err.isApiBridgeError = true;
       return err;
     }
     const wrapped = new ClientError(err.message || 'Unknown error', {
-      status: err.status || null,
+      status: err.status || (response && response.status) || null,
       code: err.code || 'ERR_UNKNOWN',
       details: {
         method: reqConfig ? reqConfig.method : undefined,
         url: reqConfig ? reqConfig.url : undefined,
       },
+      config: reqConfig,
+      response: response ? {
+        data: response.data,
+        status: response.status,
+        statusText: response.statusText || '',
+        headers: response.headers || {},
+        config: reqConfig,
+      } : null,
     });
-    wrapped.config = reqConfig;
     wrapped.isApiBridgeError = true;
     return wrapped;
   }
@@ -1133,4 +1319,5 @@ module.exports = {
   isApiBridgeError,
   mergeConfig,
   defaultParamsSerializer,
+  VERSION,
 };

@@ -132,4 +132,17 @@ function isCancel(value) {
   return !!(value && value.__CANCEL__);
 }
 
-module.exports = { CancelToken, Cancel, isCancel };
+/**
+ * Check if a value is a CancelToken.
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isCancelToken(value) {
+  return value instanceof CancelToken;
+}
+
+// Static methods on CancelToken (Axios-compatible)
+CancelToken.isCancel = isCancel;
+CancelToken.isCancelToken = isCancelToken;
+
+module.exports = { CancelToken, Cancel, isCancel, isCancelToken };
