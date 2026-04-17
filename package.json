@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "12.0.0",
-  "description": "Production-ready complete Axios drop-in replacement with callable default export, AxiosError codes, pluggable adapters, AxiosHeaders, HttpStatusCode, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60 modules — a next-generation API client",
+  "version": "13.0.0",
+  "description": "Production-ready complete Axios replacement with zero-gap API compatibility, AxiosHeaders responses, default transform chains, callable export, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules — a next-generation API client",
   "main": "src/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -95,7 +95,12 @@
     "validate-status",
     "params-serializer",
     "transform-request",
-    "transform-response"
+    "transform-response",
+    "axios-headers",
+    "zero-dependency-http",
+    "fetch-wrapper",
+    "max-rate",
+    "dns-lookup"
   ],
   "engines": {
     "node": ">=16.0.0"

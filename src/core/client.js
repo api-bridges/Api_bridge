@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v12 — HTTP Client Engine (Complete Axios Drop-in Replacement)
+ * APIBridge AI v13 — HTTP Client Engine (Complete Axios Drop-in Replacement)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -75,12 +75,13 @@ const { isCancel } = require('./cancel');
 const { isFormData, isURLSearchParams, isStream, isBuffer, isArrayBufferView, toFormData } = require('./form-data');
 const { getAdapter } = require('./adapters');
 const { isAbsoluteURL, combineURLs } = require('./url-utils');
+const { AxiosHeaders } = require('./headers');
 
 /**
  * Library version.
  * @type {string}
  */
-const VERSION = '12.0.0';
+const VERSION = '13.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -108,6 +109,7 @@ class ClientError extends ApiBridgeError {
     this.response = details.response || null;
     this.request = details.request || null;
     this.isApiBridgeError = true;
+    this.isAxiosError = true;
   }
 
   toJSON() {
@@ -351,8 +353,34 @@ class APIBridgeClient {
     this.paramsSerializer = options.paramsSerializer || null;
     this.maxContentLength = typeof options.maxContentLength === 'number' ? options.maxContentLength : -1;
     this.maxBodyLength = typeof options.maxBodyLength === 'number' ? options.maxBodyLength : -1;
-    this.transformRequest = options.transformRequest || null;
-    this.transformResponse = options.transformResponse || null;
+    this.transformRequest = options.transformRequest || [
+      function defaultTransformRequest(data, headers) {
+        if (data === null || data === undefined) return data;
+        if (isFormData(data) || isURLSearchParams(data) || isStream(data) ||
+            isBuffer(data) || isArrayBufferView(data) || typeof data === 'string') {
+          return data;
+        }
+        if (typeof data === 'object') {
+          if (headers && !headers['Content-Type'] && !headers['content-type']) {
+            headers['Content-Type'] = 'application/json';
+          }
+          return JSON.stringify(data);
+        }
+        return data;
+      },
+    ];
+    this.transformResponse = options.transformResponse || [
+      function defaultTransformResponse(data) {
+        if (typeof data === 'string') {
+          try {
+            return JSON.parse(data);
+          } catch {
+            return data;
+          }
+        }
+        return data;
+      },
+    ];
     this.responseEncoding = options.responseEncoding || 'utf8';
     this.maxRedirects = typeof options.maxRedirects === 'number' ? options.maxRedirects : 5;
     this.decompress = options.decompress !== false;
@@ -376,6 +404,10 @@ class APIBridgeClient {
       forcedJSONParsing: true,
       clarifyTimeoutError: false,
     };
+
+    // ─── v13: New Axios-compatible options ─────────────────────────
+    this.maxRate = options.maxRate || null;
+    this.lookup = options.lookup || null;
 
     // ─── Mutable defaults object (Axios-compatible) ───────────────
     this.defaults = {
@@ -416,6 +448,9 @@ class APIBridgeClient {
       // v12: Transitional + signal
       transitional: this.transitional,
       signal: this.signal,
+      // v13: New defaults
+      maxRate: this.maxRate,
+      lookup: this.lookup,
     };
 
     // Core engines
@@ -887,12 +922,24 @@ class APIBridgeClient {
         }
 
         // Build response object (Axios-compatible shape)
+        // v13: Wrap headers in AxiosHeaders, add request property, add data alias in config
+        const responseHeaders = response.headers instanceof AxiosHeaders
+          ? response.headers
+          : new AxiosHeaders(response.headers);
+
+        // Build a config object with `data` alias (Axios uses data, not body)
+        const responseConfig = Object.assign({}, reqConfig);
+        if (responseConfig.body !== undefined && responseConfig.data === undefined) {
+          responseConfig.data = responseConfig.body;
+        }
+
         let result = {
           data: responseData,
           status: response.status,
           statusText: response.statusText || '',
-          headers: response.headers,
-          config: reqConfig,
+          headers: responseHeaders,
+          config: responseConfig,
+          request: response.request || {},
         };
 
         if (this._debug) {
@@ -1056,7 +1103,9 @@ class APIBridgeClient {
 
       // Enforce maxContentLength
       if (reqConfig.maxContentLength > 0 && response.headers) {
-        const contentLength = response.headers['content-length'];
+        const contentLength = response.headers instanceof AxiosHeaders
+          ? response.headers.get('content-length')
+          : response.headers['content-length'];
         if (contentLength && parseInt(contentLength, 10) > reqConfig.maxContentLength) {
           throw new ClientError(
             `Response content length ${contentLength} exceeds maxContentLength ${reqConfig.maxContentLength}`,
@@ -1091,16 +1140,23 @@ class APIBridgeClient {
               data: response.data,
               status: response.status,
               statusText: response.statusText || '',
-              headers: response.headers || {},
+              headers: response.headers instanceof AxiosHeaders
+                ? response.headers
+                : new AxiosHeaders(response.headers || {}),
               config: reqConfig,
             },
+            request: response.request || {},
           },
         );
       }
 
       // onDownloadProgress callback (after data received)
       if (reqConfig.onDownloadProgress && typeof reqConfig.onDownloadProgress === 'function') {
-        const contentLength = response.headers && response.headers['content-length'];
+        const contentLength = response.headers && (
+          response.headers instanceof AxiosHeaders
+            ? response.headers.get('content-length')
+            : response.headers['content-length']
+        );
         reqConfig.onDownloadProgress({
           loaded: contentLength ? parseInt(contentLength, 10) : 0,
           total: contentLength ? parseInt(contentLength, 10) : 0,
@@ -1115,6 +1171,7 @@ class APIBridgeClient {
         status: response.status,
         statusText: response.statusText || '',
         headers: response.headers || {},
+        request: response.request || {},
       };
     } catch (err) {
       if (timeoutTimer) clearTimeout(timeoutTimer);
@@ -1210,10 +1267,10 @@ class APIBridgeClient {
       }
     }
 
-    // Collect response headers
-    const resHeaders = {};
+    // Collect response headers as AxiosHeaders (v13)
+    const resHeaders = new AxiosHeaders();
     res.headers.forEach((value, key) => {
-      resHeaders[key] = value;
+      resHeaders.set(key, value);
     });
 
     return {
@@ -1222,6 +1279,7 @@ class APIBridgeClient {
       status: res.status,
       statusText: res.statusText || '',
       headers: resHeaders,
+      request: { url: adapterReqConfig.fullURL, method: adapterReqConfig.method },
     };
   }
 
@@ -1353,7 +1411,7 @@ class APIBridgeClient {
  * @returns {boolean}
  */
 APIBridgeClient.isClientError = function isClientError(err) {
-  return err instanceof ClientError || (err && err.isApiBridgeError === true);
+  return err instanceof ClientError || (err && (err.isApiBridgeError === true || err.isAxiosError === true));
 };
 
 /**
@@ -1407,7 +1465,7 @@ function spread(callback) {
  * @returns {boolean}
  */
 function isClientError(err) {
-  return err instanceof ClientError || (err && err.isApiBridgeError === true);
+  return err instanceof ClientError || (err && (err.isApiBridgeError === true || err.isAxiosError === true));
 }
 
 /**
