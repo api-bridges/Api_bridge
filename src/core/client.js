@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v11 — HTTP Client Engine (Complete Axios Replacement)
+ * APIBridge AI v12 — HTTP Client Engine (Complete Axios Drop-in Replacement)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -80,7 +80,7 @@ const { isAbsoluteURL, combineURLs } = require('./url-utils');
  * Library version.
  * @type {string}
  */
-const VERSION = '11.0.0';
+const VERSION = '12.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -125,6 +125,24 @@ class ClientError extends ApiBridgeError {
     };
   }
 }
+
+// ─── Standard Error Code Constants (Axios-compatible) ─────────────────────
+ClientError.ERR_FR_TOO_MANY_REDIRECTS = 'ERR_FR_TOO_MANY_REDIRECTS';
+ClientError.ERR_BAD_OPTION_VALUE = 'ERR_BAD_OPTION_VALUE';
+ClientError.ERR_BAD_OPTION = 'ERR_BAD_OPTION';
+ClientError.ERR_NETWORK = 'ERR_NETWORK';
+ClientError.ERR_DEPRECATED = 'ERR_DEPRECATED';
+ClientError.ERR_BAD_RESPONSE = 'ERR_BAD_RESPONSE';
+ClientError.ERR_BAD_REQUEST = 'ERR_BAD_REQUEST';
+ClientError.ERR_CANCELED = 'ERR_CANCELED';
+ClientError.ERR_NOT_SUPPORT = 'ERR_NOT_SUPPORT';
+ClientError.ERR_INVALID_URL = 'ERR_INVALID_URL';
+ClientError.ECONNABORTED = 'ECONNABORTED';
+ClientError.ETIMEDOUT = 'ETIMEDOUT';
+ClientError.ERR_TIMEOUT = 'ERR_TIMEOUT';
+ClientError.ERR_MAX_BODY_LENGTH_EXCEEDED = 'ERR_MAX_BODY_LENGTH_EXCEEDED';
+ClientError.ERR_MAX_CONTENT_LENGTH_EXCEEDED = 'ERR_MAX_CONTENT_LENGTH_EXCEEDED';
+ClientError.ERR_ABORTED = 'ERR_ABORTED';
 
 /**
  * Create a ClientError with full context (like AxiosError.from).
@@ -352,6 +370,13 @@ class APIBridgeClient {
     this.env = options.env || { FormData: typeof FormData !== 'undefined' ? FormData : undefined };
     this.signal = options.signal || null;
 
+    // ─── v12: Transitional behavior options ───────────────────────
+    this.transitional = options.transitional || {
+      silentJSONParsing: true,
+      forcedJSONParsing: true,
+      clarifyTimeoutError: false,
+    };
+
     // ─── Mutable defaults object (Axios-compatible) ───────────────
     this.defaults = {
       baseURL: this.baseURL,
@@ -388,6 +413,9 @@ class APIBridgeClient {
       maxRedirects: this.maxRedirects,
       decompress: this.decompress,
       responseEncoding: this.responseEncoding,
+      // v12: Transitional + signal
+      transitional: this.transitional,
+      signal: this.signal,
     };
 
     // Core engines
@@ -534,7 +562,9 @@ class APIBridgeClient {
    * @returns {Promise<object>}
    */
   delete(url, config) {
-    return this._doRequest('DELETE', url, undefined, config);
+    // Axios-compatible: delete(url, { data: body }) sends a body
+    const body = config && config.data !== undefined ? config.data : undefined;
+    return this._doRequest('DELETE', url, body, config);
   }
 
   /**
@@ -938,42 +968,56 @@ class APIBridgeClient {
       reqConfig.paramsSerializer,
     );
 
-    const fetchOptions = {
-      method: reqConfig.method,
-    };
-
-    // withCredentials → credentials
-    if (reqConfig.withCredentials) {
-      fetchOptions.credentials = 'include';
-    }
-
-    // Headers
-    const headers = Object.assign({}, reqConfig.headers);
-
-    // Body
-    if (reqConfig.body !== undefined && reqConfig.method !== 'GET' && reqConfig.method !== 'HEAD') {
-      if (isFormData(reqConfig.body)) {
-        // FormData — let the browser/runtime set Content-Type with boundary
-        fetchOptions.body = reqConfig.body;
-        delete headers['Content-Type'];
-      } else if (isURLSearchParams(reqConfig.body)) {
-        headers['Content-Type'] = headers['Content-Type'] || 'application/x-www-form-urlencoded';
-        fetchOptions.body = reqConfig.body.toString();
-      } else if (isBuffer(reqConfig.body) || isArrayBufferView(reqConfig.body)) {
-        fetchOptions.body = reqConfig.body;
-      } else if (isStream(reqConfig.body)) {
-        fetchOptions.body = reqConfig.body;
-      } else if (typeof reqConfig.body === 'string') {
-        fetchOptions.body = reqConfig.body;
-      } else if (typeof reqConfig.body === 'object') {
-        headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-        fetchOptions.body = JSON.stringify(reqConfig.body);
-      } else {
-        fetchOptions.body = String(reqConfig.body);
+    // ─── v12: Resolve adapter (pluggable adapter system) ──────────
+    const adapterConfig = reqConfig.adapter || this.defaults.adapter || this.adapter;
+    let useAdapter = null;
+    if (adapterConfig) {
+      try {
+        useAdapter = getAdapter(adapterConfig);
+      } catch {
+        // Fallback to native fetch if adapter resolution fails
+        useAdapter = null;
       }
     }
 
-    fetchOptions.headers = headers;
+    // Build adapter-compatible config
+    const adapterReqConfig = {
+      method: reqConfig.method,
+      url: reqConfig.url,
+      fullURL,
+      headers: Object.assign({}, reqConfig.headers),
+      body: reqConfig.body,
+      responseType: reqConfig.responseType || 'json',
+      withCredentials: reqConfig.withCredentials,
+      timeout: reqConfig.timeout,
+      maxRedirects: reqConfig.maxRedirects,
+      onDownloadProgress: reqConfig.onDownloadProgress,
+      onUploadProgress: reqConfig.onUploadProgress,
+    };
+
+    // Body handling
+    if (reqConfig.body !== undefined && reqConfig.method !== 'GET' && reqConfig.method !== 'HEAD') {
+      if (isFormData(reqConfig.body)) {
+        adapterReqConfig.body = reqConfig.body;
+        delete adapterReqConfig.headers['Content-Type'];
+      } else if (isURLSearchParams(reqConfig.body)) {
+        adapterReqConfig.headers['Content-Type'] = adapterReqConfig.headers['Content-Type'] || 'application/x-www-form-urlencoded';
+        adapterReqConfig.body = reqConfig.body.toString();
+      } else if (isBuffer(reqConfig.body) || isArrayBufferView(reqConfig.body)) {
+        adapterReqConfig.body = reqConfig.body;
+      } else if (isStream(reqConfig.body)) {
+        adapterReqConfig.body = reqConfig.body;
+      } else if (typeof reqConfig.body === 'string') {
+        adapterReqConfig.body = reqConfig.body;
+      } else if (typeof reqConfig.body === 'object') {
+        adapterReqConfig.headers['Content-Type'] = adapterReqConfig.headers['Content-Type'] || 'application/json';
+        adapterReqConfig.body = JSON.stringify(reqConfig.body);
+      } else {
+        adapterReqConfig.body = String(reqConfig.body);
+      }
+    } else {
+      adapterReqConfig.body = undefined;
+    }
 
     // Timeout + AbortController + CancelToken
     let timeoutTimer = null;
@@ -990,84 +1034,73 @@ class APIBridgeClient {
       );
 
       if (reqConfig.timeout > 0) {
-        fetchOptions.signal = controller.signal;
+        adapterReqConfig.signal = controller.signal;
         timeoutTimer = timer;
       } else if (combinedSignal) {
-        fetchOptions.signal = combinedSignal;
+        adapterReqConfig.signal = combinedSignal;
       }
     }
 
     try {
-      const res = await fetch(fullURL, fetchOptions);
+      let response;
+
+      if (useAdapter) {
+        // ─── Use pluggable adapter ────────────────────────────────
+        response = await useAdapter(adapterReqConfig);
+      } else {
+        // ─── Default: native fetch ────────────────────────────────
+        response = await this._nativeFetchRequest(adapterReqConfig, reqConfig);
+      }
 
       if (timeoutTimer) clearTimeout(timeoutTimer);
 
-      // Parse response based on responseType
-      const contentType = res.headers.get('content-type') || '';
-      let data;
-      const responseType = reqConfig.responseType || 'json';
-
       // Enforce maxContentLength
-      if (reqConfig.maxContentLength > 0) {
-        const contentLength = res.headers.get('content-length');
+      if (reqConfig.maxContentLength > 0 && response.headers) {
+        const contentLength = response.headers['content-length'];
         if (contentLength && parseInt(contentLength, 10) > reqConfig.maxContentLength) {
           throw new ClientError(
             `Response content length ${contentLength} exceeds maxContentLength ${reqConfig.maxContentLength}`,
             {
-              code: 'ERR_MAX_CONTENT_LENGTH_EXCEEDED',
-              status: res.status,
+              code: ClientError.ERR_MAX_CONTENT_LENGTH_EXCEEDED,
+              status: response.status,
               details: { size: parseInt(contentLength, 10), limit: reqConfig.maxContentLength },
             },
           );
         }
       }
 
-      if (responseType === 'arraybuffer') {
-        data = await res.arrayBuffer();
-      } else if (responseType === 'blob') {
-        if (typeof res.blob === 'function') {
-          data = await res.blob();
-        } else {
-          data = await res.arrayBuffer();
-        }
-      } else if (responseType === 'text') {
-        data = await res.text();
-      } else {
-        // Default: json
-        if (contentType.includes('application/json')) {
-          data = await res.json();
-        } else {
-          const text = await res.text();
-          try {
-            data = JSON.parse(text);
-          } catch {
-            data = text;
-          }
-        }
-      }
-
       // Custom validateStatus (Axios-compatible)
       const statusValidator = reqConfig.validateStatus || this.validateStatus;
-      if (!statusValidator(res.status)) {
+      if (!statusValidator(response.status)) {
+        let errCode;
+        if (response.status >= 400 && response.status < 500) {
+          errCode = ClientError.ERR_BAD_REQUEST;
+        } else if (response.status >= 500) {
+          errCode = ClientError.ERR_BAD_RESPONSE;
+        } else {
+          errCode = `ERR_HTTP_${response.status}`;
+        }
         throw new ClientError(
-          `Request failed with status ${res.status}`,
+          `Request failed with status ${response.status}`,
           {
-            status: res.status,
-            code: `ERR_HTTP_${res.status}`,
-            details: data,
+            status: response.status,
+            code: errCode,
+            details: response.data,
+            config: reqConfig,
+            response: {
+              data: response.data,
+              status: response.status,
+              statusText: response.statusText || '',
+              headers: response.headers || {},
+              config: reqConfig,
+            },
           },
         );
       }
 
-      // Collect response headers
-      const resHeaders = {};
-      res.headers.forEach((value, key) => {
-        resHeaders[key] = value;
-      });
-
       // onDownloadProgress callback (after data received)
       if (reqConfig.onDownloadProgress && typeof reqConfig.onDownloadProgress === 'function') {
-        const contentLength = res.headers.get('content-length');
+        const contentLength = response.headers && response.headers['content-length'];
         reqConfig.onDownloadProgress({
           loaded: contentLength ? parseInt(contentLength, 10) : 0,
           total: contentLength ? parseInt(contentLength, 10) : 0,
@@ -1077,11 +1110,11 @@ class APIBridgeClient {
       }
 
       return {
-        data,
-        rawData: data,
-        status: res.status,
-        statusText: res.statusText || '',
-        headers: resHeaders,
+        data: response.data,
+        rawData: response.rawData || response.data,
+        status: response.status,
+        statusText: response.statusText || '',
+        headers: response.headers || {},
       };
     } catch (err) {
       if (timeoutTimer) clearTimeout(timeoutTimer);
@@ -1095,10 +1128,14 @@ class APIBridgeClient {
         throw reqConfig.cancelToken.reason;
       }
 
-      // Abort error
+      // Abort / timeout error
       if (err.name === 'AbortError') {
+        const isCancelledByToken = reqConfig.cancelToken && reqConfig.cancelToken.requested;
+        if (isCancelledByToken) {
+          throw reqConfig.cancelToken.reason;
+        }
         throw new ClientError('Request aborted', {
-          code: 'ERR_ABORTED',
+          code: reqConfig.timeout > 0 ? ClientError.ECONNABORTED : ClientError.ERR_ABORTED,
           details: { url: fullURL },
         });
       }
@@ -1107,11 +1144,85 @@ class APIBridgeClient {
       throw new ClientError(
         `Network error: ${err.message}`,
         {
-          code: 'ERR_NETWORK',
+          code: ClientError.ERR_NETWORK,
           details: { url: fullURL, originalError: err.message },
         },
       );
     }
+  }
+
+  /**
+   * Internal: Native fetch-based request (default when no adapter is specified).
+   */
+  async _nativeFetchRequest(adapterReqConfig, reqConfig) {
+    const fetchOptions = {
+      method: adapterReqConfig.method,
+    };
+
+    if (adapterReqConfig.withCredentials) {
+      fetchOptions.credentials = 'include';
+    }
+
+    fetchOptions.headers = adapterReqConfig.headers;
+
+    if (adapterReqConfig.body !== undefined && adapterReqConfig.method !== 'GET' && adapterReqConfig.method !== 'HEAD') {
+      fetchOptions.body = adapterReqConfig.body;
+    }
+
+    if (adapterReqConfig.signal) {
+      fetchOptions.signal = adapterReqConfig.signal;
+    }
+
+    if (reqConfig.maxRedirects === 0) {
+      fetchOptions.redirect = 'manual';
+    }
+
+    const res = await fetch(adapterReqConfig.fullURL, fetchOptions);
+
+    // Parse response based on responseType
+    const contentType = res.headers.get('content-type') || '';
+    let data;
+    const responseType = adapterReqConfig.responseType || 'json';
+
+    if (responseType === 'arraybuffer') {
+      data = await res.arrayBuffer();
+    } else if (responseType === 'blob') {
+      if (typeof res.blob === 'function') {
+        data = await res.blob();
+      } else {
+        data = await res.arrayBuffer();
+      }
+    } else if (responseType === 'text') {
+      data = await res.text();
+    } else if (responseType === 'stream') {
+      data = res.body;
+    } else {
+      // Default: json
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = text;
+        }
+      }
+    }
+
+    // Collect response headers
+    const resHeaders = {};
+    res.headers.forEach((value, key) => {
+      resHeaders[key] = value;
+    });
+
+    return {
+      data,
+      rawData: data,
+      status: res.status,
+      statusText: res.statusText || '',
+      headers: resHeaders,
+    };
   }
 
   // ─── Type Coercion based on expect schema ───────────────────────────────
@@ -1308,6 +1419,19 @@ function isApiBridgeError(err) {
   return isClientError(err);
 }
 
+// ─── Axios Aliases (v12: Complete drop-in compatibility) ─────────────────
+const Axios = APIBridgeClient;
+const AxiosError = ClientError;
+
+/**
+ * Check if an error is an AxiosError (alias for isClientError).
+ * @param {*} err
+ * @returns {boolean}
+ */
+function isAxiosError(err) {
+  return isClientError(err);
+}
+
 module.exports = {
   APIBridgeClient,
   ClientError,
@@ -1320,4 +1444,8 @@ module.exports = {
   mergeConfig,
   defaultParamsSerializer,
   VERSION,
+  // v12: Axios aliases
+  Axios,
+  AxiosError,
+  isAxiosError,
 };

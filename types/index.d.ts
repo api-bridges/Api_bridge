@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v11
-// Type definitions for api-bridge-ai 11.0.0
+// TypeScript Type Declarations for APIBridge AI v12
+// Type definitions for api-bridge-ai 12.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -365,6 +365,12 @@ declare namespace ApiBridgeAI {
     formSerializer?: { indexes?: boolean; dots?: boolean; metaTokens?: boolean } | null;
     env?: { FormData?: any };
     signal?: AbortSignal;
+    // v12 options
+    transitional?: {
+      silentJSONParsing?: boolean;
+      forcedJSONParsing?: boolean;
+      clarifyTimeoutError?: boolean;
+    };
   }
 
   interface ClientRequestConfig {
@@ -452,6 +458,13 @@ declare namespace ApiBridgeAI {
     maxRedirects: number;
     decompress: boolean;
     responseEncoding: string;
+    // v12 defaults
+    transitional: {
+      silentJSONParsing: boolean;
+      forcedJSONParsing: boolean;
+      clarifyTimeoutError: boolean;
+    };
+    signal: AbortSignal | null;
   }
 
   // ─── v11 Client Class ──────────────────────────────────────────────────
@@ -492,6 +505,8 @@ declare namespace ApiBridgeAI {
     formSerializer: { indexes?: boolean; dots?: boolean; metaTokens?: boolean } | null;
     env: { FormData?: any };
     signal: AbortSignal | null;
+    // v12 property
+    transitional: { silentJSONParsing: boolean; forcedJSONParsing: boolean; clarifyTimeoutError: boolean };
 
     get<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
     post<T = any>(url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
@@ -540,6 +555,23 @@ declare namespace ApiBridgeAI {
     toJSON(): { message: string; name: string; status: number | null; code: string; details: any; config: any };
 
     static from(error: Error, code?: string, config?: ClientRequestConfig, request?: any, response?: any): ClientError;
+
+    // v12: Error code constants
+    static readonly ERR_FR_TOO_MANY_REDIRECTS: string;
+    static readonly ERR_BAD_OPTION_VALUE: string;
+    static readonly ERR_BAD_OPTION: string;
+    static readonly ERR_NETWORK: string;
+    static readonly ERR_DEPRECATED: string;
+    static readonly ERR_BAD_RESPONSE: string;
+    static readonly ERR_BAD_REQUEST: string;
+    static readonly ERR_CANCELED: string;
+    static readonly ERR_NOT_SUPPORT: string;
+    static readonly ERR_INVALID_URL: string;
+    static readonly ECONNABORTED: string;
+    static readonly ETIMEDOUT: string;
+    static readonly ERR_TIMEOUT: string;
+    static readonly ERR_MAX_BODY_LENGTH_EXCEEDED: string;
+    static readonly ERR_MAX_CONTENT_LENGTH_EXCEEDED: string;
   }
 
   // ─── v10/v11 Cancel Token ──────────────────────────────────────────────
@@ -1115,4 +1147,99 @@ declare namespace ApiBridgeAI {
     onRetry?: (attempt: number, error: Error) => void;
     backoffFn?: (attempt: number) => number;
   }
+
+  // ─── v12: Axios Class Aliases ─────────────────────────────────────────
+
+  /**
+   * Axios class alias (same as APIBridgeClient).
+   */
+  const Axios: typeof APIBridgeClient;
+
+  /**
+   * AxiosError alias (same as ClientError, with error code constants).
+   */
+  const AxiosError: typeof ClientError;
+
+  /**
+   * Check if an error is an AxiosError (alias for isClientError).
+   */
+  function isAxiosError(err: any): boolean;
+
+  // ─── v12: Callable Default Export ──────────────────────────────────────
+
+  /**
+   * Callable default export — use like axios:
+   *   apiBridge('/api/users')
+   *   apiBridge({ method: 'post', url: '/api/users', data: { name: 'John' } })
+   */
+  interface ApiBridgeCallable {
+    (config: ClientRequestConfig): Promise<ClientResponse>;
+    (url: string, config?: ClientRequestConfig): Promise<ClientResponse>;
+
+    request(config: ClientRequestConfig): Promise<ClientResponse>;
+    request(url: string, config?: ClientRequestConfig): Promise<ClientResponse>;
+    get<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    post<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    put<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    patch<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    delete<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    head<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    options<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    postForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    putForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    patchForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+    getUri(config?: ClientRequestConfig): string;
+
+    defaults: ClientDefaults;
+    interceptors: InterceptorManager;
+    create(options?: ClientOptions): APIBridgeClient;
+    createClient(options?: ClientOptions): APIBridgeClient;
+
+    all<T>(promises: Promise<T>[]): Promise<T[]>;
+    spread<T, R>(callback: (...args: T[]) => R): (arr: T[]) => R;
+
+    isClientError(err: any): boolean;
+    isApiBridgeError(err: any): boolean;
+    isAxiosError(err: any): boolean;
+    isCancel(value: any): boolean;
+    isCancelToken(value: any): boolean;
+
+    Axios: typeof APIBridgeClient;
+    AxiosError: typeof ClientError;
+    APIBridgeClient: typeof APIBridgeClient;
+    ClientError: typeof ClientError;
+    CancelToken: typeof CancelToken;
+    Cancel: typeof Cancel;
+    AxiosHeaders: typeof AxiosHeaders;
+    HttpStatusCode: typeof HttpStatusCode;
+    InterceptorManager: typeof InterceptorManager;
+
+    toFormData: typeof toFormData;
+    toURLEncodedForm: typeof toURLEncodedForm;
+    formToJSON: typeof formToJSON;
+    mergeConfig: typeof mergeConfig;
+    getAdapter: typeof getAdapter;
+    buildURL: typeof buildURL;
+    VERSION: string;
+  }
+
+  const apiBridge: ApiBridgeCallable;
+
+  // ─── v12: Module-level shorthand methods ───────────────────────────────
+
+  function request(config: ClientRequestConfig): Promise<ClientResponse>;
+  function request(url: string, config?: ClientRequestConfig): Promise<ClientResponse>;
+  function get<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function post<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function put<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function patch<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  // Note: 'delete' is a reserved word, use the module export
+  function head<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function options<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function postForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function putForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function patchForm<T = any>(url: string, data?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
+  function getUri(config?: ClientRequestConfig): string;
+
+  const interceptors: InterceptorManager;
 }

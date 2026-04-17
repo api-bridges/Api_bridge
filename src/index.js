@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v11
- * Complete Axios Replacement + Intelligent API mismatch detector, transformer, and learner
+ * APIBridge AI v12
+ * Complete Axios Drop-in Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
  *  - Middleware pipeline (before/after hooks)
@@ -145,6 +145,24 @@
  *  - freezeDeep() / generateUID() utilities
  *  - normalizeHeaderName() utility
  *  - Common header accessors (getContentType, setContentType, etc.)
+ *
+ * v12 features (True Axios Drop-in — Callable Export + Full API Surface):
+ *  - Callable default export: apiBridge(config), apiBridge(url, config)
+ *  - Shorthand methods on default export: apiBridge.get(), .post(), .put(), etc.
+ *  - Axios class alias: apiBridge.Axios === APIBridgeClient
+ *  - AxiosError alias: apiBridge.AxiosError === ClientError with error code constants
+ *  - Error code constants: ERR_NETWORK, ERR_CANCELED, ECONNABORTED, ETIMEDOUT, etc.
+ *  - isAxiosError() alias for isClientError()
+ *  - delete(url, { data }) — send body with DELETE requests (Axios-compatible)
+ *  - Adapter system fully wired into request pipeline (_executeRequest uses getAdapter)
+ *  - transitional config option { silentJSONParsing, forcedJSONParsing, clarifyTimeoutError }
+ *  - ERR_BAD_REQUEST / ERR_BAD_RESPONSE semantic error codes on status failures
+ *  - Default export has: get, post, put, patch, delete, head, options, request
+ *  - Default export has: postForm, putForm, patchForm, getUri
+ *  - Default export has: defaults, interceptors, create, all, spread
+ *  - Default export has: CancelToken, Cancel, isCancel, AxiosHeaders, HttpStatusCode
+ *  - Default export has: toFormData, formToJSON, isAxiosError, VERSION
+ *  - 100% Axios API surface coverage for seamless migration
  *
  * Usage:
  *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');
@@ -297,6 +315,8 @@ const {
   APIBridgeClient, ClientError, createClient, buildURL,
   all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
   VERSION,
+  // v12: Axios aliases
+  Axios, AxiosError, isAxiosError,
 } = require('./core/client');
 const { InterceptorManager, InterceptorChain } = require('./core/interceptors');
 const {
@@ -630,7 +650,84 @@ function createTransformer(options = {}) {
 // Default instance (use like axios: apiBridge.get(), apiBridge.post(), etc.)
 const defaultInstance = createClient();
 
+// ─── v12: Callable default export (like axios) ──────────────────────────────
+// Makes the module callable: const apiBridge = require('api-bridge-ai');
+//   apiBridge('/api/users')           — GET by default
+//   apiBridge({ method: 'post', url: '/api/users', data: { name: 'John' } })
+//   apiBridge.get('/api/users')       — shorthand
+//   apiBridge.create({ baseURL: '/api' })
+//
+// This is the key feature that makes api-bridge-ai a true drop-in Axios replacement.
+
+function apiBridge(configOrUrl, config) {
+  if (typeof configOrUrl === 'string') {
+    return defaultInstance.request(configOrUrl, config || {});
+  }
+  return defaultInstance.request(configOrUrl);
+}
+
+// Bind default instance methods
+apiBridge.request = function request(configOrUrl, config) {
+  if (typeof configOrUrl === 'string') {
+    return defaultInstance.request(configOrUrl, config || {});
+  }
+  return defaultInstance.request(configOrUrl);
+};
+apiBridge.get = function get(url, config) { return defaultInstance.get(url, config); };
+apiBridge.post = function post(url, data, config) { return defaultInstance.post(url, data, config); };
+apiBridge.put = function put(url, data, config) { return defaultInstance.put(url, data, config); };
+apiBridge.patch = function patch(url, data, config) { return defaultInstance.patch(url, data, config); };
+apiBridge.delete = function del(url, config) { return defaultInstance.delete(url, config); };
+apiBridge.head = function head(url, config) { return defaultInstance.head(url, config); };
+apiBridge.options = function options(url, config) { return defaultInstance.options(url, config); };
+apiBridge.postForm = function postForm(url, data, config) { return defaultInstance.postForm(url, data, config); };
+apiBridge.putForm = function putForm(url, data, config) { return defaultInstance.putForm(url, data, config); };
+apiBridge.patchForm = function patchForm(url, data, config) { return defaultInstance.patchForm(url, data, config); };
+apiBridge.getUri = function getUri(config) { return defaultInstance.getUri(config); };
+
+// Default instance properties
+apiBridge.defaults = defaultInstance.defaults;
+apiBridge.interceptors = defaultInstance.interceptors;
+
+// Factory
+apiBridge.create = createClient;
+apiBridge.createClient = createClient;
+
+// Concurrent helpers
+apiBridge.all = all;
+apiBridge.spread = spread;
+
+// Error checking
+apiBridge.isClientError = isClientError;
+apiBridge.isApiBridgeError = isApiBridgeError;
+apiBridge.isAxiosError = isAxiosError;
+apiBridge.isCancel = isCancel;
+apiBridge.isCancelToken = isCancelToken;
+
+// Classes & constructors
+apiBridge.Axios = Axios;
+apiBridge.AxiosError = AxiosError;
+apiBridge.APIBridgeClient = APIBridgeClient;
+apiBridge.ClientError = ClientError;
+apiBridge.CancelToken = CancelToken;
+apiBridge.Cancel = Cancel;
+apiBridge.AxiosHeaders = AxiosHeaders;
+apiBridge.HttpStatusCode = HttpStatusCode;
+apiBridge.InterceptorManager = InterceptorManager;
+
+// Utilities
+apiBridge.toFormData = toFormData;
+apiBridge.toURLEncodedForm = toURLEncodedForm;
+apiBridge.formToJSON = formToJSON;
+apiBridge.mergeConfig = mergeConfig;
+apiBridge.getAdapter = getAdapter;
+apiBridge.buildURL = buildURL;
+apiBridge.VERSION = VERSION;
+
 module.exports = {
+  // v12: Callable default export
+  default: apiBridge,
+
   // Main API
   bridge,
   bridgeFetch,
@@ -643,6 +740,21 @@ module.exports = {
 
   // Default instance methods (Axios-compatible)
   defaults: defaultInstance.defaults,
+  interceptors: defaultInstance.interceptors,
+
+  // v12: Default instance shorthand methods
+  request: apiBridge.request,
+  get: apiBridge.get,
+  post: apiBridge.post,
+  put: apiBridge.put,
+  patch: apiBridge.patch,
+  delete: apiBridge.delete,
+  head: apiBridge.head,
+  options: apiBridge.options,
+  postForm: apiBridge.postForm,
+  putForm: apiBridge.putForm,
+  patchForm: apiBridge.patchForm,
+  getUri: apiBridge.getUri,
 
   // Core classes
   APIBridgeTransformer,
@@ -829,4 +941,9 @@ module.exports = {
   BatchOrchestratorError,
   DeepMergeError,
   InterceptorError,
+
+  // v12: Axios class aliases
+  Axios,
+  AxiosError,
+  isAxiosError,
 };
