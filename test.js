@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v12 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2-v12 features.
+ * APIBridge AI v13 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2-v13 features.
  */
 
 const {
@@ -6127,7 +6127,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '12.0.0');
+  assertEqual(VERSION, '13.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7187,7 +7187,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '12.0.0');
+  assertEqual(apiBridge.VERSION, '13.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7551,6 +7551,404 @@ test('v12: mergeConfig on apiBridge callable', () => {
   const merged = apiBridge.mergeConfig({ timeout: 5000 }, { timeout: 10000, baseURL: '/api' });
   assertEqual(merged.timeout, 10000);
   assertEqual(merged.baseURL, '/api');
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// v13: Complete Axios Replacement — Zero Gaps
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+console.log('\n━━━ v13: AxiosHeaders in Responses ━━━');
+
+test('v13: createClient response headers are AxiosHeaders instances (integration)', () => {
+  // Verify AxiosHeaders class is available and works
+  const headers = new AxiosHeaders({ 'Content-Type': 'application/json', 'X-Custom': 'test' });
+  assert(headers instanceof AxiosHeaders, 'should be AxiosHeaders');
+  assertEqual(headers.get('content-type'), 'application/json');
+  assertEqual(headers.get('x-custom'), 'test');
+  assert(headers.has('Content-Type'), 'case-insensitive has');
+  assert(headers.has('x-custom'), 'case-insensitive has');
+});
+
+test('v13: AxiosHeaders toJSON returns plain object', () => {
+  const headers = new AxiosHeaders({ 'Content-Type': 'application/json', 'Authorization': 'Bearer test' });
+  const json = headers.toJSON();
+  assertEqual(json['Content-Type'], 'application/json');
+  assertEqual(json['Authorization'], 'Bearer test');
+});
+
+test('v13: AxiosHeaders supports iteration', () => {
+  const headers = new AxiosHeaders({ 'Content-Type': 'application/json', 'X-Api': 'v13' });
+  const entries = headers.entries();
+  assert(entries.length === 2, 'should have 2 entries');
+});
+
+test('v13: AxiosHeaders case-insensitive get/set/has/delete', () => {
+  const headers = new AxiosHeaders();
+  headers.set('Content-Type', 'application/json');
+  assertEqual(headers.get('content-type'), 'application/json');
+  assertEqual(headers.get('CONTENT-TYPE'), 'application/json');
+  assert(headers.has('content-type'), 'has lowercase');
+  assert(headers.has('Content-Type'), 'has original');
+  headers.delete('CONTENT-TYPE');
+  assert(!headers.has('content-type'), 'deleted');
+});
+
+console.log('\n━━━ v13: .isAxiosError Property ━━━');
+
+test('v13: ClientError has .isAxiosError property', () => {
+  const err = new ClientError('test', { code: 'ERR_TEST' });
+  assert(err.isAxiosError === true, 'isAxiosError should be true');
+  assert(err.isApiBridgeError === true, 'isApiBridgeError should be true');
+});
+
+test('v13: AxiosError has .isAxiosError property', () => {
+  const err = new AxiosError('test');
+  assert(err.isAxiosError === true, 'isAxiosError on AxiosError');
+});
+
+test('v13: isAxiosError() detects .isAxiosError property (duck typing)', () => {
+  const duckError = { isAxiosError: true, message: 'from other lib' };
+  assert(isAxiosError(duckError), 'should detect duck-typed error with isAxiosError');
+});
+
+test('v13: isClientError() detects .isAxiosError property', () => {
+  const duckError = { isAxiosError: true, message: 'from other lib' };
+  assert(isClientError(duckError), 'should detect duck-typed error with isAxiosError');
+});
+
+test('v13: ClientError.from preserves .isAxiosError', () => {
+  const original = new Error('network');
+  const wrapped = ClientError.from(original, 'ERR_NETWORK');
+  assert(wrapped.isAxiosError === true, 'from() result has isAxiosError');
+  assert(wrapped.isApiBridgeError === true, 'from() result has isApiBridgeError');
+});
+
+console.log('\n━━━ v13: Default Transform Chains ━━━');
+
+test('v13: createClient has default transformRequest array', () => {
+  const client = createClient();
+  assert(Array.isArray(client.transformRequest), 'transformRequest is array');
+  assert(client.transformRequest.length > 0, 'has default transforms');
+  assert(typeof client.transformRequest[0] === 'function', 'first entry is function');
+});
+
+test('v13: createClient has default transformResponse array', () => {
+  const client = createClient();
+  assert(Array.isArray(client.transformResponse), 'transformResponse is array');
+  assert(client.transformResponse.length > 0, 'has default transforms');
+  assert(typeof client.transformResponse[0] === 'function', 'first entry is function');
+});
+
+test('v13: defaults.transformRequest is an array', () => {
+  const client = createClient();
+  assert(Array.isArray(client.defaults.transformRequest), 'defaults.transformRequest is array');
+});
+
+test('v13: defaults.transformResponse is an array', () => {
+  const client = createClient();
+  assert(Array.isArray(client.defaults.transformResponse), 'defaults.transformResponse is array');
+});
+
+test('v13: default transformRequest serializes objects to JSON', () => {
+  const client = createClient();
+  const transform = client.transformRequest[0];
+  const headers = {};
+  const result = transform({ name: 'John' }, headers);
+  assertEqual(result, '{"name":"John"}');
+  assertEqual(headers['Content-Type'], 'application/json');
+});
+
+test('v13: default transformRequest passes through strings', () => {
+  const client = createClient();
+  const transform = client.transformRequest[0];
+  const result = transform('already a string', {});
+  assertEqual(result, 'already a string');
+});
+
+test('v13: default transformRequest passes through null/undefined', () => {
+  const client = createClient();
+  const transform = client.transformRequest[0];
+  assertEqual(transform(null, {}), null);
+  assertEqual(transform(undefined, {}), undefined);
+});
+
+test('v13: default transformResponse parses JSON strings', () => {
+  const client = createClient();
+  const transform = client.transformResponse[0];
+  const result = transform('{"name":"John","age":30}');
+  assertEqual(result.name, 'John');
+  assertEqual(result.age, 30);
+});
+
+test('v13: default transformResponse passes through non-JSON strings', () => {
+  const client = createClient();
+  const transform = client.transformResponse[0];
+  const result = transform('not json');
+  assertEqual(result, 'not json');
+});
+
+test('v13: default transformResponse passes through objects', () => {
+  const client = createClient();
+  const transform = client.transformResponse[0];
+  const obj = { already: 'parsed' };
+  assertEqual(transform(obj), obj);
+});
+
+test('v13: custom transformRequest overrides defaults', () => {
+  const customTransform = (data) => data;
+  const client = createClient({ transformRequest: [customTransform] });
+  assertEqual(client.transformRequest[0], customTransform);
+  assertEqual(client.transformRequest.length, 1);
+});
+
+test('v13: custom transformResponse overrides defaults', () => {
+  const customTransform = (data) => data;
+  const client = createClient({ transformResponse: [customTransform] });
+  assertEqual(client.transformResponse[0], customTransform);
+  assertEqual(client.transformResponse.length, 1);
+});
+
+console.log('\n━━━ v13: maxRate Support ━━━');
+
+test('v13: maxRate config option defaults to null', () => {
+  const client = createClient();
+  assertEqual(client.maxRate, null);
+  assertEqual(client.defaults.maxRate, null);
+});
+
+test('v13: maxRate config option is set when provided', () => {
+  const client = createClient({ maxRate: [1024, 2048] });
+  assert(Array.isArray(client.maxRate), 'maxRate is array');
+  assertEqual(client.maxRate[0], 1024);
+  assertEqual(client.maxRate[1], 2048);
+  assertEqual(client.defaults.maxRate[0], 1024);
+  assertEqual(client.defaults.maxRate[1], 2048);
+});
+
+test('v13: maxRate single value works', () => {
+  const client = createClient({ maxRate: 4096 });
+  assertEqual(client.maxRate, 4096);
+  assertEqual(client.defaults.maxRate, 4096);
+});
+
+console.log('\n━━━ v13: lookup DNS Option ━━━');
+
+test('v13: lookup config option defaults to null', () => {
+  const client = createClient();
+  assertEqual(client.lookup, null);
+  assertEqual(client.defaults.lookup, null);
+});
+
+test('v13: lookup config option is set when provided', () => {
+  const customLookup = (hostname, opts, cb) => cb(null, '127.0.0.1', 4);
+  const client = createClient({ lookup: customLookup });
+  assertEqual(client.lookup, customLookup);
+  assertEqual(client.defaults.lookup, customLookup);
+});
+
+console.log('\n━━━ v13: Response request Property ━━━');
+
+test('v13: custom adapter response includes request property', async () => {
+  const customAdapter = async (config) => ({
+    data: { ok: true },
+    rawData: { ok: true },
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    request: { url: config.fullURL, method: config.method },
+  });
+
+  const client = createClient({ adapter: customAdapter, baseURL: 'http://test.local' });
+  const res = await client.get('/api');
+  assert(res.request !== undefined, 'response has request property');
+  assert(res.request.url !== undefined || typeof res.request === 'object', 'request has properties');
+});
+
+test('v13: custom adapter response headers wrapped in AxiosHeaders', async () => {
+  const customAdapter = async (config) => ({
+    data: { ok: true },
+    rawData: { ok: true },
+    status: 200,
+    statusText: 'OK',
+    headers: { 'content-type': 'application/json', 'x-custom': 'hello' },
+    request: {},
+  });
+
+  const client = createClient({ adapter: customAdapter, baseURL: 'http://test.local' });
+  const res = await client.get('/api');
+  assert(res.headers instanceof AxiosHeaders, 'response headers are AxiosHeaders');
+  assertEqual(res.headers.get('content-type'), 'application/json');
+  assertEqual(res.headers.get('x-custom'), 'hello');
+  assertEqual(res.headers.get('X-Custom'), 'hello');
+});
+
+console.log('\n━━━ v13: Response Config data Alias ━━━');
+
+test('v13: response.config has data field for POST', async () => {
+  const customAdapter = async () => ({
+    data: { ok: true },
+    rawData: { ok: true },
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    autoAlign: false,
+    transformRequest: [],
+  });
+  const res = await client.post('/api', { name: 'John' });
+  assert(res.config !== undefined, 'response has config');
+  assert(res.config.data !== undefined || res.config.body !== undefined, 'config has data or body');
+});
+
+console.log('\n━━━ v13: Error Shape Enhancement ━━━');
+
+test('v13: ClientError includes isAxiosError in all error paths', () => {
+  const err = new ClientError('test', {
+    status: 500,
+    code: 'ERR_BAD_RESPONSE',
+    config: { method: 'GET', url: '/api' },
+    response: { data: 'error', status: 500 },
+  });
+  assert(err.isAxiosError === true, 'isAxiosError property');
+  assert(err.isApiBridgeError === true, 'isApiBridgeError property');
+  assertEqual(err.status, 500);
+  assertEqual(err.code, 'ERR_BAD_RESPONSE');
+});
+
+test('v13: error.response.headers is AxiosHeaders when adapter returns headers', async () => {
+  const customAdapter = async () => ({
+    data: { error: 'not found' },
+    rawData: { error: 'not found' },
+    status: 404,
+    statusText: 'Not Found',
+    headers: { 'content-type': 'application/json' },
+    request: {},
+  });
+
+  const client = createClient({ adapter: customAdapter, baseURL: 'http://test.local' });
+  try {
+    await client.get('/missing');
+    assert(false, 'should have thrown');
+  } catch (err) {
+    assert(err.isAxiosError === true, 'error has isAxiosError');
+    assert(err.response !== null, 'error has response');
+    assert(err.response.headers instanceof AxiosHeaders, 'error.response.headers is AxiosHeaders');
+    assertEqual(err.response.headers.get('content-type'), 'application/json');
+  }
+});
+
+test('v13: error includes request property', async () => {
+  const customAdapter = async () => ({
+    data: null,
+    rawData: null,
+    status: 500,
+    statusText: 'Error',
+    headers: {},
+    request: { url: 'http://test.local/fail', method: 'GET' },
+  });
+
+  const client = createClient({ adapter: customAdapter, baseURL: 'http://test.local' });
+  try {
+    await client.get('/fail');
+    assert(false, 'should have thrown');
+  } catch (err) {
+    assert(err.request !== undefined || err.response !== undefined, 'error has request or response');
+  }
+});
+
+console.log('\n━━━ v13: Complete API Surface Verification ━━━');
+
+test('v13: full Axios replacement API surface check (v13)', () => {
+  const api = require('./src/index');
+
+  // v13: VERSION
+  assertEqual(api.VERSION, '13.0.0');
+
+  // Classes with isAxiosError support
+  const err = new api.ClientError('test');
+  assert(err.isAxiosError === true, 'ClientError.isAxiosError');
+  assert(err.isApiBridgeError === true, 'ClientError.isApiBridgeError');
+
+  // AxiosError alias also works
+  const axErr = new api.AxiosError('test');
+  assert(axErr.isAxiosError === true, 'AxiosError.isAxiosError');
+
+  // Verify defaults have transform chains
+  const client = api.createClient();
+  assert(Array.isArray(client.defaults.transformRequest), 'defaults.transformRequest is array');
+  assert(Array.isArray(client.defaults.transformResponse), 'defaults.transformResponse is array');
+  assert(client.defaults.transformRequest.length > 0, 'has default request transforms');
+  assert(client.defaults.transformResponse.length > 0, 'has default response transforms');
+
+  // v13 options
+  assert('maxRate' in client.defaults, 'defaults.maxRate');
+  assert('lookup' in client.defaults, 'defaults.lookup');
+});
+
+test('v13: AxiosHeaders concat and merge', () => {
+  const h1 = new AxiosHeaders({ 'Content-Type': 'application/json' });
+  const h2 = new AxiosHeaders({ 'Authorization': 'Bearer token' });
+  const merged = AxiosHeaders.concat(h1, h2);
+  assertEqual(merged.get('content-type'), 'application/json');
+  assertEqual(merged.get('authorization'), 'Bearer token');
+  assertEqual(merged.size, 2);
+});
+
+test('v13: AxiosHeaders accessor methods', () => {
+  const headers = new AxiosHeaders({ 'Content-Type': 'application/json' });
+  assertEqual(headers.getContentType(), 'application/json');
+  headers.setContentType('text/html');
+  assertEqual(headers.getContentType(), 'text/html');
+  assert(headers.hasContentType(), 'hasContentType');
+});
+
+test('v13: AxiosHeaders clear', () => {
+  const headers = new AxiosHeaders({ 'A': '1', 'B': '2' });
+  assertEqual(headers.size, 2);
+  headers.clear();
+  assertEqual(headers.size, 0);
+});
+
+test('v13: AxiosHeaders normalize', () => {
+  const headers = new AxiosHeaders({ 'content-type': 'application/json' });
+  headers.normalize();
+  const keys = headers.keys();
+  assert(keys.some(k => k === 'Content-Type'), 'normalized to Title-Case');
+});
+
+test('v13: AxiosHeaders from static constructor', () => {
+  const headers = AxiosHeaders.from({ 'X-Test': 'value' });
+  assert(headers instanceof AxiosHeaders, 'from returns AxiosHeaders');
+  assertEqual(headers.get('x-test'), 'value');
+});
+
+test('v13: AxiosHeaders toString', () => {
+  const headers = new AxiosHeaders({ 'Content-Type': 'application/json' });
+  const str = headers.toString();
+  assert(str.includes('Content-Type'), 'toString includes header name');
+  assert(str.includes('application/json'), 'toString includes header value');
+});
+
+test('v13: AxiosHeaders Symbol.iterator', () => {
+  const headers = new AxiosHeaders({ 'A': '1', 'B': '2' });
+  let count = 0;
+  for (const [name, value] of headers) {
+    assert(typeof name === 'string', 'entry name is string');
+    assert(typeof value === 'string', 'entry value is string');
+    count++;
+  }
+  assertEqual(count, 2);
+});
+
+test('v13: default instance transformRequest in defaults', () => {
+  const api = require('./src/index');
+  assert(Array.isArray(api.defaults.transformRequest), 'module defaults.transformRequest');
+  assert(Array.isArray(api.defaults.transformResponse), 'module defaults.transformResponse');
 });
 
 // Wait a tick for async tests

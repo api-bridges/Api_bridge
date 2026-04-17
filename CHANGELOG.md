@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [13.0.0] - 2026-04-17
+
+### Added — Complete Axios Replacement (Zero-Gap API Compatibility)
+- **AxiosHeaders in responses** — All response headers are now `AxiosHeaders` instances with case-insensitive get/set/has/delete, normalize, merge, toJSON, toString, iterator support
+- **`response.request` property** — Every response now includes the request object (URL, method) for Axios-compatible error handling and logging
+- **Default `transformRequest` chain** — Automatic JSON.stringify for object payloads with Content-Type header auto-detection (like Axios defaults)
+- **Default `transformResponse` chain** — Automatic JSON.parse for string responses with safe fallback (like Axios defaults)
+- **`.isAxiosError` property on ClientError** — `error.isAxiosError === true` on all ClientError/AxiosError instances (Axios duck-typing compatible)
+- **`data` alias in response config** — `response.config.data` mirrors `response.config.body` for Axios compatibility
+- **`maxRate` config option** — Upload/download rate throttling: `{ maxRate: [uploadBytesPerSec, downloadBytesPerSec] }`
+- **`lookup` DNS option** — Custom DNS resolution function for Node.js: `{ lookup: (hostname, opts, cb) => ... }`
+- **Enhanced error shapes** — `error.response.headers` is AxiosHeaders, `error.request` included in error objects
+- **`isAxiosError()` duck-typing** — Now checks both `.isApiBridgeError` and `.isAxiosError` properties for cross-library error detection
+- 41 new tests (849 total)
+
+### Changed
+- Default `transformRequest` is now an array with a JSON.stringify function (was `null`)
+- Default `transformResponse` is now an array with a JSON.parse function (was `null`)
+- Response headers throughout the entire pipeline are AxiosHeaders instances (were plain objects)
+- `_nativeFetchRequest` now returns AxiosHeaders and request object in response
+- Updated package description for zero-gap positioning
+- Added new keywords: `axios-headers`, `zero-dependency-http`, `fetch-wrapper`, `max-rate`, `dns-lookup`
+
 ## [12.0.0] - 2026-04-17
 
 ### Added — True Axios Drop-in Replacement (Callable Export + Full API Surface)

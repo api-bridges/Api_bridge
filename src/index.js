@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v12
+ * APIBridge AI v13
  * Complete Axios Drop-in Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -163,6 +163,20 @@
  *  - Default export has: CancelToken, Cancel, isCancel, AxiosHeaders, HttpStatusCode
  *  - Default export has: toFormData, formToJSON, isAxiosError, VERSION
  *  - 100% Axios API surface coverage for seamless migration
+ *
+ * v13 features (Complete Axios Replacement — Zero Gaps):
+ *  - AxiosHeaders in responses: all response headers are now AxiosHeaders instances (case-insensitive)
+ *  - response.request property: every response includes the request object (Axios-compatible)
+ *  - Default transformRequest chain: automatic JSON.stringify for object payloads
+ *  - Default transformResponse chain: automatic JSON.parse for string responses
+ *  - .isAxiosError property on ClientError instances: `error.isAxiosError === true`
+ *  - data alias in response config: response.config.data mirrors response.config.body
+ *  - maxRate support: `{ maxRate: [uploadBytesPerSec, downloadBytesPerSec] }` throttling
+ *  - lookup DNS option: custom DNS resolution function for Node.js
+ *  - Enhanced error shapes: error.response.headers is AxiosHeaders, error.request included
+ *  - AxiosHeaders integration throughout entire request/response pipeline
+ *  - isAxiosError() now also checks `.isAxiosError` property (duck-typing compatible)
+ *  - Version 13.0.0
  *
  * Usage:
  *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');

@@ -1,21 +1,26 @@
-# APIBridge AI v8
+# APIBridge AI v13
 
 [![npm version](https://img.shields.io/npm/v/api-bridge-ai.svg)](https://www.npmjs.com/package/api-bridge-ai)
 [![license](https://img.shields.io/npm/l/api-bridge-ai.svg)](https://github.com/biswaranjantudu064-netizen/Api_bridge/blob/main/LICENSE)
 [![Node.js](https://img.shields.io/node/v/api-bridge-ai.svg)](https://nodejs.org)
 
-**Production-ready API mismatch detector, transformer, and intelligent field mapping SDK** — with fuzzy matching, schema migration, circuit breakers, GraphQL support, plugins, and 45+ modules.
+**Complete Axios replacement with zero-gap API compatibility** — a production-ready, zero-dependency HTTP client with intelligent API mismatch detection, transformation, and learning across 60+ modules.
 
-APIBridge automatically bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
+APIBridge AI is a **true drop-in replacement for Axios** that also bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
+
+> **v13 Highlights:** AxiosHeaders in all responses, default transform chains, `.isAxiosError` property on errors, `response.request` on every response, `maxRate` throttling, `lookup` DNS support, 849 tests.
 
 ---
 
 ## Table of Contents
 
 - [Features](#features)
+- [Why Replace Axios?](#why-replace-axios)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Axios Migration Guide](#axios-migration-guide)
 - [API Reference](#api-reference)
+  - [createClient() — HTTP Client (Axios Replacement)](#createclient--http-client-axios-replacement)
   - [bridge() — Axios Integration](#bridge--axios-integration)
   - [bridgeFetch() — Native Fetch Integration](#bridgefetch--native-fetch-integration)
   - [transform() — Direct Transform](#transform--direct-transform)
@@ -93,6 +98,45 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
 
 ## Features
 
+### Axios Compatibility (v9–v13)
+
+| Axios Feature | v9 | v10 | v11 | v12 | v13 |
+|---|---|---|---|---|---|
+| HTTP methods (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `createClient()` / `create()` factory | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Request/response interceptors | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Base URL, headers, query params | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Timeout + AbortController | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Retries with exponential backoff | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Smart Proxy mode (dynamic field resolution) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Expectation schema (expect) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `auth`, `validateStatus`, `responseType` | ❌ | ✅ | ✅ | ✅ | ✅ |
+| CancelToken, Cancel, isCancel | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `toFormData`, `formToJSON`, `isFormData` | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `all()`, `spread()`, `mergeConfig()` | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `transformRequest` / `transformResponse` | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `maxContentLength` / `maxBodyLength` | ❌ | ✅ | ✅ | ✅ | ✅ |
+| AxiosHeaders class | ❌ | ❌ | ✅ | ✅ | ✅ |
+| HttpStatusCode enum | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Pluggable adapters (fetch/xhr/custom) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| `postForm()`, `putForm()`, `patchForm()` | ❌ | ❌ | ✅ | ✅ | ✅ |
+| `isAbsoluteURL`, `combineURLs`, URL utils | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Callable default export: `apiBridge(config)` | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `Axios` / `AxiosError` class aliases | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Error code constants (ERR_NETWORK, etc.) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `isAxiosError()` function | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `transitional` config option | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Delete with data body | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **AxiosHeaders in all responses** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Default transformRequest/Response chains** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **`.isAxiosError` property on errors** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **`response.request` property** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **`data` alias in response config** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **`maxRate` throttling** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **`lookup` DNS option** | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+### Core Features (v1–v8)
+
 | Feature | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 |
 |---------|----|----|-----|-----|-----|-----|-----|-----|
 | snake_case → camelCase | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -110,54 +154,18 @@ APIBridge automatically bridges the gap between backend and frontend naming conv
 | Middleware pipeline | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Response caching (LRU + TTL) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Retry with backoff | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Batch transformation | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Reverse transform | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Event emitter | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Circular reference protection | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Custom error classes | ❌ | ✅ | ✅ (9 types) | ✅ (13 types) | ✅ (19 types) | ✅ (22 types) | ✅ (22 types) | ✅ (27 types) |
-| Session management | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Plugin system | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Schema inference | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Field projection | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Data masking (PII) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Rate limiter | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Schema diff engine | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| TypeScript type generator | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Metrics collector | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Circuit breaker | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Request deduplication | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GraphQL bridge | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| OpenAPI schema importer | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| API versioning | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Webhook handler | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| JSON Patch generator | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Composable pipeline | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Advanced retry strategies | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Structured request logger | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Schema registry | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Response streamer | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Dependency graph | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Mock server | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Health check monitor | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Event bus | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Enhanced fuzzy matcher | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (weighted ensemble) | ✅ |
-| Cryptic name resolver | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (+ DB prefix, n-gram) | ✅ |
-| Schema-based type coercer | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (enhanced) | ✅ |
 | Weighted ensemble matching | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| N-gram similarity | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Abbreviation-aware semantics | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Database prefix stripping | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Case-insensitive booleans | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Percentage/comma coercion | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Expanded synonym dictionary | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | **Multi-alias field resolution** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | **Schema migration engine** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Batch request orchestrator** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Field analytics collector** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Conditional transforms** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | **Deep merge engine** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Output formatter** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Request interceptor chain** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Conditional transforms** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -177,6 +185,62 @@ npm install
 
 ---
 
+## Why Replace Axios?
+
+APIBridge AI is not just an Axios wrapper — it's a **complete replacement** that gives you everything Axios does plus intelligent API transformation:
+
+| | Axios | APIBridge AI v13 |
+|---|---|---|
+| HTTP client (GET/POST/PUT/PATCH/DELETE) | ✅ | ✅ |
+| Request/response interceptors | ✅ | ✅ |
+| CancelToken + AbortController | ✅ | ✅ |
+| FormData, toFormData, formToJSON | ✅ | ✅ |
+| AxiosHeaders class | ✅ | ✅ |
+| HttpStatusCode enum | ✅ | ✅ |
+| transformRequest/transformResponse | ✅ | ✅ (with defaults) |
+| Pluggable adapters (fetch/xhr) | ✅ | ✅ |
+| `error.isAxiosError` property | ✅ | ✅ |
+| response.request property | ✅ | ✅ |
+| **Zero dependencies** | ❌ (follow-redirects) | ✅ |
+| **Intelligent field mapping** | ❌ | ✅ |
+| **Fuzzy matching (7 strategies)** | ❌ | ✅ |
+| **Learning engine** | ❌ | ✅ |
+| **Schema migration** | ❌ | ✅ |
+| **Smart Proxy mode** | ❌ | ✅ |
+| **60+ utility modules** | ❌ | ✅ |
+
+### Quick Migration from Axios
+
+```js
+// Before (Axios)
+const axios = require('axios');
+const api = axios.create({ baseURL: '/api' });
+
+// After (APIBridge AI — drop-in replacement)
+const apiBridge = require('api-bridge-ai');
+const api = apiBridge.create({ baseURL: '/api' });
+
+// Everything works the same:
+const res = await api.get('/users', { params: { page: 1 } });
+console.log(res.data);           // ✅ Same response shape
+console.log(res.status);         // ✅ Same status
+console.log(res.headers.get('content-type')); // ✅ AxiosHeaders
+console.log(res.request);        // ✅ Request object
+console.log(res.config.data);    // ✅ Request data
+
+// Error handling — identical to Axios
+try {
+  await api.get('/missing');
+} catch (err) {
+  if (err.isAxiosError) {        // ✅ Property check works
+    console.log(err.response.status);
+    console.log(err.response.headers.get('content-type')); // ✅ AxiosHeaders
+  }
+}
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -186,6 +250,17 @@ api-bridge-ai/
 │   ├── core/                    # Core transformation engine
 │   │   ├── index.js             # Barrel export for core module
 │   │   ├── errors.js            # 27 structured error classes
+│   │   ├── client.js            # HTTP client engine (Axios replacement)
+│   │   ├── interceptors.js      # Request/response interceptor system
+│   │   ├── cancel.js            # CancelToken, Cancel, isCancel
+│   │   ├── form-data.js         # FormData utilities
+│   │   ├── headers.js           # AxiosHeaders class
+│   │   ├── http-status.js       # HttpStatusCode enum
+│   │   ├── adapters.js          # Pluggable adapters (fetch/xhr)
+│   │   ├── url-utils.js         # URL utilities
+│   │   ├── helpers.js           # Type & utility helpers
+│   │   ├── expectation.js       # Expectation schema system
+│   │   ├── proxy.js             # Smart Proxy mode
 │   │   ├── transformer.js       # 7-level mismatch detection & correction
 │   │   ├── learning.js          # Persistent learning engine
 │   │   ├── normalizer.js        # Response normalization
@@ -239,7 +314,7 @@ api-bridge-ai/
 │   ├── basic-usage.js           # Basic usage examples
 │   ├── advanced-usage.js        # Advanced SDK patterns
 │   └── plugin-example.js        # Custom plugin development
-├── test.js                      # 462 tests
+├── test.js                      # 849 tests
 ├── package.json
 ├── CHANGELOG.md
 └── README.md
@@ -369,7 +444,35 @@ function createMetricsPlugin(options = {}) {
 
 ## Quick Start
 
-### 1. With Axios
+### 1. As Axios Replacement (v13 — Recommended)
+
+```js
+const apiBridge = require('api-bridge-ai');
+
+// Works exactly like axios:
+const api = apiBridge.create({ baseURL: 'https://api.example.com' });
+const { data } = await api.get('/users/1');
+console.log(data);
+
+// Or use the callable default:
+const res = await apiBridge.get('https://api.example.com/users/1');
+console.log(res.data);
+console.log(res.status);                // 200
+console.log(res.headers.get('content-type')); // AxiosHeaders
+console.log(res.request);               // Request object
+
+// Error handling with .isAxiosError property:
+try {
+  await api.get('/missing');
+} catch (err) {
+  if (err.isAxiosError) {               // ✅ Property check
+    console.log(err.response.status);    // 404
+    console.log(err.code);              // ERR_BAD_REQUEST
+  }
+}
+```
+
+### 2. With Axios (Legacy Bridge)
 
 ```js
 const axios = require('axios');
@@ -388,7 +491,7 @@ console.log(data.firstName); // from "first_name"
 console.log(data.isActive);  // true (from integer 1)
 ```
 
-### 2. With Native Fetch
+### 3. With Native Fetch
 
 ```js
 const { bridgeFetch } = require('api-bridge-ai');
@@ -403,7 +506,7 @@ const user = await api.get('https://api.example.com/users/1');
 console.log(user.firstName); // from "first_name"
 ```
 
-### 3. Direct Transform (No HTTP)
+### 4. Direct Transform (No HTTP)
 
 ```js
 const { transform } = require('api-bridge-ai');
@@ -426,7 +529,7 @@ const result = transform({
 // }
 ```
 
-### 4. Schema Inference (v3)
+### 5. Schema Inference (v3)
 
 ```js
 const { SchemaInference } = require('api-bridge-ai');
@@ -2931,6 +3034,102 @@ This runs 462 tests covering:
 - **v8: Request interceptor** (request/response chains, priority, short-circuit, groups, enable/disable, error handling, stats)
 - **v8: Error classes** (FieldAliaserError, SchemaMigrationError, BatchOrchestratorError, DeepMergeError, InterceptorError)
 - **v8: Backward compatibility** (all v7 exports available, all v8 exports available, transform still works)
+
+---
+
+## Axios Migration Guide
+
+### Step 1: Install APIBridge AI
+
+```bash
+npm uninstall axios
+npm install api-bridge-ai
+```
+
+### Step 2: Update Imports
+
+```js
+// Before
+const axios = require('axios');
+// or
+import axios from 'axios';
+
+// After
+const apiBridge = require('api-bridge-ai');
+// or
+import apiBridge from 'api-bridge-ai';
+```
+
+### Step 3: Everything Just Works
+
+```js
+// ✅ Factory method
+const api = apiBridge.create({ baseURL: '/api', timeout: 5000 });
+
+// ✅ All HTTP methods
+await api.get('/users');
+await api.post('/users', { name: 'John' });
+await api.put('/users/1', { name: 'Jane' });
+await api.patch('/users/1', { active: true });
+await api.delete('/users/1', { data: { reason: 'test' } });
+
+// ✅ Interceptors
+api.interceptors.request.use((config) => {
+  config.headers.Authorization = 'Bearer token';
+  return config;
+});
+
+// ✅ CancelToken
+const source = apiBridge.CancelToken.source();
+api.get('/slow', { cancelToken: source.token });
+source.cancel('Operation cancelled');
+
+// ✅ Error handling
+try {
+  await api.get('/missing');
+} catch (err) {
+  if (err.isAxiosError) {           // v13: property check works!
+    console.log(err.code);          // ERR_BAD_REQUEST
+    console.log(err.response.data); // error body
+    console.log(err.response.headers.get('content-type')); // AxiosHeaders
+    console.log(err.request);       // request object
+  }
+}
+
+// ✅ Concurrent requests
+const [users, orders] = await apiBridge.all([
+  api.get('/users'),
+  api.get('/orders'),
+]);
+
+// ✅ Default transforms
+const api2 = apiBridge.create({
+  transformRequest: [(data, headers) => {
+    // Custom serialization
+    return JSON.stringify(data);
+  }],
+});
+
+// ✅ AxiosHeaders in responses
+const res = await api.get('/users');
+res.headers.get('content-type');    // case-insensitive
+res.headers.has('Content-Type');    // true
+res.headers.toJSON();               // plain object
+
+// ✅ FormData
+const formData = apiBridge.toFormData({ name: 'John', avatar: file });
+await api.postForm('/upload', formData);
+```
+
+### What You Get Extra (Free)
+
+When you replace Axios with APIBridge AI, you automatically get:
+- **Intelligent field mapping**: `user_name` → `userName` automatically
+- **Fuzzy matching**: `usr_nm` → `userName` with 95%+ confidence
+- **Learning engine**: remembers field mappings across sessions
+- **Smart Proxy mode**: `response.data.userName` resolves from any convention
+- **60+ utility modules**: circuit breakers, GraphQL, schema migration, and more
+- **Zero dependencies**: unlike Axios which depends on `follow-redirects`
 
 ---
 

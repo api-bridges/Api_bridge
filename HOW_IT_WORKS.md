@@ -206,7 +206,55 @@ interceptor.useRequest('addAuth', (ctx) => ({
 npm install api-bridge-ai
 ```
 
-### Option 1: With Axios
+### Option 1: As Axios Replacement (v13 — Recommended)
+
+```js
+const apiBridge = require('api-bridge-ai');
+
+// Create a client instance (like axios.create())
+const api = apiBridge.create({
+  baseURL: 'https://api.example.com',
+  timeout: 5000,
+  headers: { 'X-Custom': 'value' },
+});
+
+// Make requests — identical to Axios API
+const res = await api.get('/users/1');
+console.log(res.data);            // Parsed + transformed response
+console.log(res.status);          // 200
+console.log(res.statusText);      // 'OK'
+console.log(res.headers);         // AxiosHeaders (case-insensitive)
+console.log(res.config);          // Request config (with .data alias)
+console.log(res.request);         // Request object
+
+// Headers are AxiosHeaders instances (v13)
+res.headers.get('content-type');   // 'application/json'
+res.headers.has('Authorization');  // false
+res.headers.toJSON();              // Plain object
+
+// Error handling with .isAxiosError (v13)
+try {
+  await api.get('/missing');
+} catch (err) {
+  if (err.isAxiosError) {                      // ✅ Property check
+    console.log(err.code);                     // 'ERR_BAD_REQUEST'
+    console.log(err.response.status);          // 404
+    console.log(err.response.headers.get('content-type')); // AxiosHeaders
+    console.log(err.request);                  // Request object
+  }
+}
+
+// Interceptors
+api.interceptors.request.use((config) => {
+  config.headers['Authorization'] = 'Bearer token';
+  return config;
+});
+
+// Default transforms (v13 — automatic JSON serialize/deserialize)
+const api2 = apiBridge.create(); // transformRequest/Response are set by default
+```
+
+### Option 2: With Axios (Legacy Bridge)
 
 ```js
 const axios = require('axios');
@@ -220,7 +268,7 @@ console.log(response.data);
 // { firstName: "John", lastName: "Doe", isActive: true }
 ```
 
-### Option 2: With Fetch
+### Option 3: With Fetch
 
 ```js
 const { bridgeFetch } = require('api-bridge-ai');
@@ -232,7 +280,7 @@ console.log(user);
 // { firstName: "John", lastName: "Doe", isActive: true }
 ```
 
-### Option 3: Direct Transform (No HTTP)
+### Option 4: Direct Transform (No HTTP)
 
 ```js
 const { transform } = require('api-bridge-ai');
@@ -345,6 +393,7 @@ api.exportCSV('./mismatches.csv');
 | What | How |
 |------|-----|
 | Install | `npm install api-bridge-ai` |
+| Replace Axios | `const api = require('api-bridge-ai').create({ baseURL: '/api' })` |
 | Basic use | `transform({ snake_case: value })` → `{ camelCase: value }` |
 | With Axios | `bridge(axiosInstance)` — auto-transforms all requests & responses |
 | With Fetch | `bridgeFetch()` — same as above but with native fetch |
@@ -353,4 +402,4 @@ api.exportCSV('./mismatches.csv');
 | It remembers | Learnings saved to `.apibridge/learned.json` |
 | Review flags | `getPending()` shows low-confidence mappings that need your approval |
 | Accuracy | 99%+ for standard fields, 92%+ for synonyms, 70-95% for fuzzy matches |
-| V8 modules | 45 source modules, 27 error types, 462 tests |
+| V13 modules | 60+ source modules, 27 error types, 849 tests |
