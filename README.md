@@ -3040,4 +3040,4 @@ interceptor.useRequest('addAuth', (ctx) => ({ ...ctx, headers: { Authorization: 
 
 ## License
 
-MIT
+SEE LICENSE IN LICENSE
