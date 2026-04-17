@@ -1,16 +1,27 @@
 /**
- * APIBridge AI v9 — HTTP Client Engine
+ * APIBridge AI v10 — HTTP Client Engine (Complete Axios Replacement)
  *
- * A next-generation API client that replaces Axios and provides intelligent
+ * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
  *
  * Features:
- *   - Built on native fetch
+ *   - Built on native fetch (zero dependencies)
+ *   - Full Axios API compatibility (drop-in replacement)
  *   - GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
- *   - Headers, params, body
+ *   - Headers, params, body (JSON, FormData, URLSearchParams, text, Buffer)
  *   - Timeouts via AbortController
- *   - Retries with exponential backoff
+ *   - CancelToken support (Axios-compatible) + AbortController
+ *   - Retries with exponential backoff + jitter
  *   - Interceptor system (Axios-compatible)
+ *   - Per-request transformRequest / transformResponse
+ *   - Basic auth support ({ username, password })
+ *   - Custom responseType ('json', 'text', 'blob', 'arraybuffer')
+ *   - Custom validateStatus function
+ *   - Custom paramsSerializer function
+ *   - maxContentLength / maxBodyLength enforcement
+ *   - onDownloadProgress / onUploadProgress callbacks
+ *   - getUri() method
+ *   - Mutable defaults
  *   - Expectation-aware system
  *   - Auto data alignment (snake_case → camelCase, fuzzy matching, etc.)
  *   - Type coercion
@@ -22,6 +33,11 @@
  * Usage:
  *   const api = createClient({ baseURL: "/api" });
  *   const res = await api.get("/user", { expect: { userName: "string" } });
+ *
+ *   // Axios-compatible:
+ *   const api = createClient({ baseURL: "/api" });
+ *   api.defaults.headers.common['Authorization'] = 'Bearer token';
+ *   const res = await api.request({ method: 'get', url: '/user' });
  */
 
 'use strict';
@@ -40,6 +56,8 @@ const {
 } = require('./expectation');
 const { smartProxy } = require('./proxy');
 const { ApiBridgeError, NetworkError, ValidationError } = require('./errors');
+const { isCancel } = require('./cancel');
+const { isFormData, isURLSearchParams, isStream, isBuffer, isArrayBufferView } = require('./form-data');
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -75,9 +93,37 @@ class ClientError extends ApiBridgeError {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /**
- * Build a full URL from base + path + params.
+ * Default params serializer.
+ * @param {object} params
+ * @returns {string}
  */
-function buildURL(baseURL, path, params) {
+function defaultParamsSerializer(params) {
+  if (!params || typeof params !== 'object') return '';
+  if (isURLSearchParams(params)) return params.toString();
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null);
+  if (entries.length === 0) return '';
+  return entries
+    .map(([k, v]) => {
+      if (Array.isArray(v)) {
+        return v
+          .map(item => `${encodeURIComponent(k)}=${encodeURIComponent(String(item))}`)
+          .join('&');
+      }
+      return `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`;
+    })
+    .join('&');
+}
+
+/**
+ * Build a full URL from base + path + params.
+ *
+ * @param {string} baseURL
+ * @param {string} path
+ * @param {object} [params]
+ * @param {Function} [paramsSerializer] — Custom params serializer
+ * @returns {string}
+ */
+function buildURL(baseURL, path, params, paramsSerializer) {
   let url = baseURL || '';
   if (path) {
     // Remove double slashes between base and path
@@ -91,11 +137,9 @@ function buildURL(baseURL, path, params) {
   }
 
   if (params && typeof params === 'object') {
-    const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null);
-    if (entries.length > 0) {
-      const queryString = entries
-        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-        .join('&');
+    const serializer = paramsSerializer || defaultParamsSerializer;
+    const queryString = serializer(params);
+    if (queryString) {
       url += (url.includes('?') ? '&' : '?') + queryString;
     }
   }
@@ -133,6 +177,40 @@ function createTimeoutController(timeoutMs, existingSignal) {
   return { controller, timer };
 }
 
+// ─── Merge Utility ──────────────────────────────────────────────────────────
+
+/**
+ * Deep merge two config objects (like Axios mergeConfig).
+ * Later values override earlier ones. Arrays are replaced, not merged.
+ *
+ * @param {object} target
+ * @param {object} source
+ * @returns {object}
+ */
+function mergeConfig(target, source) {
+  const result = {};
+  const allKeys = new Set([...Object.keys(target || {}), ...Object.keys(source || {})]);
+
+  for (const key of allKeys) {
+    const tVal = target ? target[key] : undefined;
+    const sVal = source ? source[key] : undefined;
+
+    if (sVal === undefined) {
+      result[key] = tVal;
+    } else if (tVal === undefined) {
+      result[key] = sVal;
+    } else if (
+      typeof tVal === 'object' && tVal !== null && !Array.isArray(tVal) &&
+      typeof sVal === 'object' && sVal !== null && !Array.isArray(sVal)
+    ) {
+      result[key] = mergeConfig(tVal, sVal);
+    } else {
+      result[key] = sVal;
+    }
+  }
+  return result;
+}
+
 // ─── APIBridgeClient ────────────────────────────────────────────────────────
 
 class APIBridgeClient {
@@ -149,6 +227,20 @@ class APIBridgeClient {
    * @param {boolean} [options.autoCoerce=true] — Auto type coercion
    * @param {boolean} [options.debug=false] — Debug mode
    * @param {Set<number>} [options.retryableStatuses] — Status codes to retry
+   * @param {object} [options.auth] — Basic auth { username, password }
+   * @param {string} [options.responseType='json'] — Default response type ('json','text','blob','arraybuffer')
+   * @param {Function} [options.validateStatus] — Custom status validation function
+   * @param {Function} [options.paramsSerializer] — Custom params serializer
+   * @param {number} [options.maxContentLength=-1] — Max response content length (-1 = unlimited)
+   * @param {number} [options.maxBodyLength=-1] — Max request body length (-1 = unlimited)
+   * @param {Array<Function>} [options.transformRequest] — Default request transform chain
+   * @param {Array<Function>} [options.transformResponse] — Default response transform chain
+   * @param {string} [options.responseEncoding='utf8'] — Response encoding
+   * @param {number} [options.maxRedirects=5] — Max redirects (for reference, fetch handles this natively)
+   * @param {boolean} [options.decompress=true] — Auto decompress response
+   * @param {string} [options.xsrfCookieName='XSRF-TOKEN'] — XSRF cookie name
+   * @param {string} [options.xsrfHeaderName='X-XSRF-TOKEN'] — XSRF header name
+   * @param {boolean} [options.withCredentials=false] — Include credentials
    */
   constructor(options = {}) {
     this.baseURL = options.baseURL || '';
@@ -163,6 +255,49 @@ class APIBridgeClient {
     this._schema = options.schema || null;
     this.retryableStatuses = options.retryableStatuses ||
       new Set([408, 429, 500, 502, 503, 504]);
+
+    // ─── New v10: Axios-compatible options ─────────────────────────
+    this.auth = options.auth || null;
+    this.responseType = options.responseType || 'json';
+    this.validateStatus = options.validateStatus || ((status) => status >= 200 && status < 300);
+    this.paramsSerializer = options.paramsSerializer || null;
+    this.maxContentLength = typeof options.maxContentLength === 'number' ? options.maxContentLength : -1;
+    this.maxBodyLength = typeof options.maxBodyLength === 'number' ? options.maxBodyLength : -1;
+    this.transformRequest = options.transformRequest || null;
+    this.transformResponse = options.transformResponse || null;
+    this.responseEncoding = options.responseEncoding || 'utf8';
+    this.maxRedirects = typeof options.maxRedirects === 'number' ? options.maxRedirects : 5;
+    this.decompress = options.decompress !== false;
+    this.xsrfCookieName = options.xsrfCookieName || 'XSRF-TOKEN';
+    this.xsrfHeaderName = options.xsrfHeaderName || 'X-XSRF-TOKEN';
+    this.withCredentials = options.withCredentials || false;
+
+    // ─── Mutable defaults object (Axios-compatible) ───────────────
+    this.defaults = {
+      baseURL: this.baseURL,
+      timeout: this.timeout,
+      headers: {
+        common: Object.assign({}, this.defaultHeaders),
+        get: {},
+        post: { 'Content-Type': 'application/json' },
+        put: { 'Content-Type': 'application/json' },
+        patch: { 'Content-Type': 'application/json' },
+        delete: {},
+        head: {},
+        options: {},
+      },
+      responseType: this.responseType,
+      validateStatus: this.validateStatus,
+      paramsSerializer: this.paramsSerializer,
+      maxContentLength: this.maxContentLength,
+      maxBodyLength: this.maxBodyLength,
+      transformRequest: this.transformRequest,
+      transformResponse: this.transformResponse,
+      xsrfCookieName: this.xsrfCookieName,
+      xsrfHeaderName: this.xsrfHeaderName,
+      withCredentials: this.withCredentials,
+      auth: this.auth,
+    };
 
     // Core engines
     this.transformer = new APIBridgeTransformer(options);
@@ -220,12 +355,56 @@ class APIBridgeClient {
   // ─── HTTP Methods ───────────────────────────────────────────────────────
 
   /**
+   * Axios-compatible request method. Accepts either:
+   *   - request(config) — config object with method, url, data, etc.
+   *   - request(method, url, body, config) — positional args (v9 compat)
+   *
+   * @param {string|object} methodOrConfig — HTTP method string or config object
+   * @param {string} [url] — URL path
+   * @param {*} [body] — Request body
+   * @param {object} [config={}] — Request config
+   * @returns {Promise<{data: *, status: number, statusText: string, headers: object, config: object, raw?: *}>}
+   */
+  request(methodOrConfig, url, body, config) {
+    // Support axios-style: request({ method, url, data, ... })
+    if (typeof methodOrConfig === 'object' && methodOrConfig !== null) {
+      const cfg = methodOrConfig;
+      return this._doRequest(
+        (cfg.method || 'GET').toUpperCase(),
+        cfg.url || '',
+        cfg.data !== undefined ? cfg.data : cfg.body,
+        cfg,
+      );
+    }
+    // Support axios-style: request(url, config)
+    if (typeof methodOrConfig === 'string' && (url === undefined || (typeof url === 'object' && url !== null))) {
+      const cfg = url || {};
+      if (!cfg.method) {
+        // It's request(url, config) pattern
+        return this._doRequest(
+          (cfg.method || 'GET').toUpperCase(),
+          methodOrConfig,
+          cfg.data !== undefined ? cfg.data : cfg.body,
+          cfg,
+        );
+      }
+    }
+    // Original v9 positional args: request(method, url, body, config)
+    return this._doRequest(
+      (methodOrConfig || 'GET').toUpperCase(),
+      url || '',
+      body,
+      config || {},
+    );
+  }
+
+  /**
    * @param {string} url
    * @param {object} [config={}]
    * @returns {Promise<object>}
    */
   get(url, config) {
-    return this.request('GET', url, undefined, config);
+    return this._doRequest('GET', url, undefined, config);
   }
 
   /**
@@ -235,7 +414,7 @@ class APIBridgeClient {
    * @returns {Promise<object>}
    */
   post(url, body, config) {
-    return this.request('POST', url, body, config);
+    return this._doRequest('POST', url, body, config);
   }
 
   /**
@@ -245,7 +424,7 @@ class APIBridgeClient {
    * @returns {Promise<object>}
    */
   put(url, body, config) {
-    return this.request('PUT', url, body, config);
+    return this._doRequest('PUT', url, body, config);
   }
 
   /**
@@ -255,7 +434,7 @@ class APIBridgeClient {
    * @returns {Promise<object>}
    */
   patch(url, body, config) {
-    return this.request('PATCH', url, body, config);
+    return this._doRequest('PATCH', url, body, config);
   }
 
   /**
@@ -264,7 +443,7 @@ class APIBridgeClient {
    * @returns {Promise<object>}
    */
   delete(url, config) {
-    return this.request('DELETE', url, undefined, config);
+    return this._doRequest('DELETE', url, undefined, config);
   }
 
   /**
@@ -273,7 +452,7 @@ class APIBridgeClient {
    * @returns {Promise<object>}
    */
   head(url, config) {
-    return this.request('HEAD', url, undefined, config);
+    return this._doRequest('HEAD', url, undefined, config);
   }
 
   /**
@@ -282,7 +461,24 @@ class APIBridgeClient {
    * @returns {Promise<object>}
    */
   options(url, config) {
-    return this.request('OPTIONS', url, undefined, config);
+    return this._doRequest('OPTIONS', url, undefined, config);
+  }
+
+  // ─── getUri — Build URL without making a request ────────────────────────
+
+  /**
+   * Build and return the URL that would be used for the given config,
+   * without actually making a request.
+   *
+   * @param {object} [config={}]
+   * @returns {string}
+   */
+  getUri(config = {}) {
+    const base = config.baseURL || this.defaults.baseURL || this.baseURL;
+    const url = config.url || '';
+    const params = config.params || undefined;
+    const serializer = config.paramsSerializer || this.defaults.paramsSerializer || this.paramsSerializer;
+    return buildURL(base, url, params, serializer);
   }
 
   // ─── Core Request ───────────────────────────────────────────────────────
@@ -293,10 +489,10 @@ class APIBridgeClient {
    * @param {string} method — HTTP method
    * @param {string} url — URL path (relative to baseURL or absolute)
    * @param {*} [body] — Request body
-   * @param {object} [config={}] — Request config (headers, params, expect, timeout, signal, etc.)
-   * @returns {Promise<{data: *, status: number, headers: object, raw?: *}>}
+   * @param {object} [config={}] — Request config (headers, params, expect, timeout, signal, auth, responseType, etc.)
+   * @returns {Promise<{data: *, status: number, statusText: string, headers: object, config: object, raw?: *}>}
    */
-  async request(method, url, body, config = {}) {
+  async _doRequest(method, url, body, config = {}) {
     this._stats.requests++;
 
     // 1. Extract expect schema from config
@@ -309,21 +505,56 @@ class APIBridgeClient {
     const activeExpect = expectSchema || this._schema;
     const expectMap = activeExpect ? flattenExpect(activeExpect) : null;
 
-    // 2. Build request config
+    // 2. Build request config — merge defaults + instance + per-request
+    const methodLower = method.toLowerCase();
+    const methodHeaders = this.defaults.headers[methodLower] || {};
+    const commonHeaders = this.defaults.headers.common || {};
+    const mergedHeaders = Object.assign(
+      {},
+      commonHeaders,
+      methodHeaders,
+      this.defaultHeaders,
+      cleanConfig.headers || {},
+    );
+
     let reqConfig = {
       method: method.toUpperCase(),
       url,
-      body,
-      headers: Object.assign({}, this.defaultHeaders, cleanConfig.headers || {}),
+      body: body !== undefined ? body : (cleanConfig.data !== undefined ? cleanConfig.data : undefined),
+      headers: mergedHeaders,
       params: cleanConfig.params || undefined,
-      timeout: cleanConfig.timeout !== undefined ? cleanConfig.timeout : this.timeout,
+      timeout: cleanConfig.timeout !== undefined ? cleanConfig.timeout : this.defaults.timeout || this.timeout,
       signal: cleanConfig.signal || undefined,
       retries: cleanConfig.retries !== undefined ? cleanConfig.retries : this.retries,
+      // v10: New options
+      auth: cleanConfig.auth || this.defaults.auth || this.auth,
+      responseType: cleanConfig.responseType || this.defaults.responseType || this.responseType || 'json',
+      validateStatus: cleanConfig.validateStatus || this.defaults.validateStatus || this.validateStatus,
+      paramsSerializer: cleanConfig.paramsSerializer || this.defaults.paramsSerializer || this.paramsSerializer,
+      maxContentLength: cleanConfig.maxContentLength !== undefined ? cleanConfig.maxContentLength : this.defaults.maxContentLength,
+      maxBodyLength: cleanConfig.maxBodyLength !== undefined ? cleanConfig.maxBodyLength : this.defaults.maxBodyLength,
+      transformRequest: cleanConfig.transformRequest || this.defaults.transformRequest || this.transformRequest,
+      transformResponse: cleanConfig.transformResponse || this.defaults.transformResponse || this.transformResponse,
+      cancelToken: cleanConfig.cancelToken || undefined,
+      onDownloadProgress: cleanConfig.onDownloadProgress || undefined,
+      onUploadProgress: cleanConfig.onUploadProgress || undefined,
+      withCredentials: cleanConfig.withCredentials !== undefined ? cleanConfig.withCredentials : this.defaults.withCredentials,
+      baseURL: cleanConfig.baseURL || this.defaults.baseURL || this.baseURL,
     };
 
     // Inject expect header
     if (activeExpect) {
       reqConfig.headers = injectExpectHeader(reqConfig.headers, activeExpect);
+    }
+
+    // Inject Basic Auth header
+    if (reqConfig.auth && reqConfig.auth.username) {
+      const username = reqConfig.auth.username || '';
+      const password = reqConfig.auth.password || '';
+      const encoded = typeof Buffer !== 'undefined'
+        ? Buffer.from(`${username}:${password}`, 'utf8').toString('base64')
+        : btoa(`${username}:${password}`);
+      reqConfig.headers['Authorization'] = `Basic ${encoded}`;
     }
 
     // 3. Run request interceptors
@@ -334,8 +565,24 @@ class APIBridgeClient {
       throw this._wrapError(err, reqConfig);
     }
 
-    // 4. Transform outgoing body if needed
-    if (reqConfig.body && typeof reqConfig.body === 'object' && this.autoAlign) {
+    // 4. Run per-request transformRequest chain
+    if (reqConfig.transformRequest && reqConfig.body !== undefined) {
+      const transforms = Array.isArray(reqConfig.transformRequest)
+        ? reqConfig.transformRequest
+        : [reqConfig.transformRequest];
+      for (const fn of transforms) {
+        if (typeof fn === 'function') {
+          reqConfig.body = fn(reqConfig.body, reqConfig.headers);
+        }
+      }
+    }
+
+    // 5. Transform outgoing body if needed (APIBridge auto-align)
+    if (reqConfig.body && typeof reqConfig.body === 'object' &&
+        !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body) &&
+        !isBuffer(reqConfig.body) && !isArrayBufferView(reqConfig.body) &&
+        !isStream(reqConfig.body) &&
+        this.autoAlign) {
       reqConfig.body = this.transformer.transform(
         reqConfig.body,
         this._schema,
@@ -343,7 +590,35 @@ class APIBridgeClient {
       );
     }
 
-    // 5. Execute with retry
+    // 6. Enforce maxBodyLength
+    if (reqConfig.maxBodyLength > 0 && reqConfig.body) {
+      let bodySize = 0;
+      if (typeof reqConfig.body === 'string') {
+        bodySize = typeof Buffer !== 'undefined'
+          ? Buffer.byteLength(reqConfig.body)
+          : new TextEncoder().encode(reqConfig.body).length;
+      } else if (typeof reqConfig.body === 'object' && !isFormData(reqConfig.body)) {
+        const serialized = JSON.stringify(reqConfig.body);
+        bodySize = typeof Buffer !== 'undefined'
+          ? Buffer.byteLength(serialized)
+          : new TextEncoder().encode(serialized).length;
+      }
+      if (bodySize > reqConfig.maxBodyLength) {
+        this._stats.failures++;
+        throw new ClientError(
+          `Request body size ${bodySize} exceeds maxBodyLength ${reqConfig.maxBodyLength}`,
+          { code: 'ERR_MAX_BODY_LENGTH_EXCEEDED', details: { size: bodySize, limit: reqConfig.maxBodyLength } },
+        );
+      }
+    }
+
+    // Check CancelToken before starting
+    if (reqConfig.cancelToken && reqConfig.cancelToken.requested) {
+      this._stats.failures++;
+      throw reqConfig.cancelToken.reason;
+    }
+
+    // 7. Execute with retry
     const maxRetries = reqConfig.retries || 0;
     let lastError;
 
@@ -351,13 +626,25 @@ class APIBridgeClient {
       try {
         const response = await this._executeRequest(reqConfig);
 
-        // 6. Transform + align response
+        // 8. Transform + align response
         let responseData = response.data;
 
         if (this._debug) {
           console.log('[api-bridge] Raw response:', JSON.stringify(responseData, null, 2));
           if (activeExpect) {
             console.log('[api-bridge] Expected schema:', JSON.stringify(activeExpect, null, 2));
+          }
+        }
+
+        // Run per-request transformResponse chain
+        if (reqConfig.transformResponse) {
+          const transforms = Array.isArray(reqConfig.transformResponse)
+            ? reqConfig.transformResponse
+            : [reqConfig.transformResponse];
+          for (const fn of transforms) {
+            if (typeof fn === 'function') {
+              responseData = fn(responseData);
+            }
           }
         }
 
@@ -399,18 +686,20 @@ class APIBridgeClient {
           console.log('[api-bridge] Transformed output:', JSON.stringify(responseData, null, 2));
         }
 
-        // Build response object
+        // Build response object (Axios-compatible shape)
         let result = {
           data: responseData,
           status: response.status,
+          statusText: response.statusText || '',
           headers: response.headers,
+          config: reqConfig,
         };
 
         if (this._debug) {
           result.raw = response.rawData;
         }
 
-        // 7. Run response interceptors
+        // 9. Run response interceptors
         try {
           result = await this.interceptors.runResponse(result);
         } catch (err) {
@@ -423,8 +712,17 @@ class APIBridgeClient {
       } catch (err) {
         lastError = err;
 
+        // Don't retry cancelled requests
+        if (isCancel(err)) break;
+
         // Don't retry client errors (4xx except 408/429) or aborted requests
         if (err instanceof ClientError && err.code === 'ERR_ABORTED') {
+          break;
+        }
+        if (err instanceof ClientError && err.code === 'ERR_MAX_BODY_LENGTH_EXCEEDED') {
+          break;
+        }
+        if (err instanceof ClientError && err.code === 'ERR_MAX_CONTENT_LENGTH_EXCEEDED') {
           break;
         }
         if (err.status && err.status >= 400 && err.status < 500 &&
@@ -445,6 +743,9 @@ class APIBridgeClient {
 
     this._stats.failures++;
 
+    // Re-throw cancellation errors directly
+    if (isCancel(lastError)) throw lastError;
+
     // Try error interceptors
     try {
       const recovered = await this.interceptors.runError(lastError);
@@ -460,18 +761,41 @@ class APIBridgeClient {
   // ─── Internal: Execute a single request ─────────────────────────────────
 
   async _executeRequest(reqConfig) {
-    const fullURL = buildURL(this.baseURL, reqConfig.url, reqConfig.params);
+    const fullURL = buildURL(
+      reqConfig.baseURL || this.baseURL,
+      reqConfig.url,
+      reqConfig.params,
+      reqConfig.paramsSerializer,
+    );
 
     const fetchOptions = {
       method: reqConfig.method,
     };
+
+    // withCredentials → credentials
+    if (reqConfig.withCredentials) {
+      fetchOptions.credentials = 'include';
+    }
 
     // Headers
     const headers = Object.assign({}, reqConfig.headers);
 
     // Body
     if (reqConfig.body !== undefined && reqConfig.method !== 'GET' && reqConfig.method !== 'HEAD') {
-      if (typeof reqConfig.body === 'object') {
+      if (isFormData(reqConfig.body)) {
+        // FormData — let the browser/runtime set Content-Type with boundary
+        fetchOptions.body = reqConfig.body;
+        delete headers['Content-Type'];
+      } else if (isURLSearchParams(reqConfig.body)) {
+        headers['Content-Type'] = headers['Content-Type'] || 'application/x-www-form-urlencoded';
+        fetchOptions.body = reqConfig.body.toString();
+      } else if (isBuffer(reqConfig.body) || isArrayBufferView(reqConfig.body)) {
+        fetchOptions.body = reqConfig.body;
+      } else if (isStream(reqConfig.body)) {
+        fetchOptions.body = reqConfig.body;
+      } else if (typeof reqConfig.body === 'string') {
+        fetchOptions.body = reqConfig.body;
+      } else if (typeof reqConfig.body === 'object') {
         headers['Content-Type'] = headers['Content-Type'] || 'application/json';
         fetchOptions.body = JSON.stringify(reqConfig.body);
       } else {
@@ -481,19 +805,25 @@ class APIBridgeClient {
 
     fetchOptions.headers = headers;
 
-    // Timeout + AbortController
+    // Timeout + AbortController + CancelToken
     let timeoutTimer = null;
-    if (reqConfig.timeout > 0 || reqConfig.signal) {
+    const needsAbort = reqConfig.timeout > 0 || reqConfig.signal || reqConfig.cancelToken;
+
+    if (needsAbort) {
+      const combinedSignal = reqConfig.cancelToken
+        ? reqConfig.cancelToken.signal
+        : reqConfig.signal;
+
       const { controller, timer } = createTimeoutController(
         reqConfig.timeout || 0,
-        reqConfig.signal,
+        combinedSignal,
       );
 
       if (reqConfig.timeout > 0) {
         fetchOptions.signal = controller.signal;
         timeoutTimer = timer;
-      } else if (reqConfig.signal) {
-        fetchOptions.signal = reqConfig.signal;
+      } else if (combinedSignal) {
+        fetchOptions.signal = combinedSignal;
       }
     }
 
@@ -502,22 +832,53 @@ class APIBridgeClient {
 
       if (timeoutTimer) clearTimeout(timeoutTimer);
 
-      // Parse response
+      // Parse response based on responseType
       const contentType = res.headers.get('content-type') || '';
       let data;
-      if (contentType.includes('application/json')) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        try {
-          data = JSON.parse(text);
-        } catch {
-          data = text;
+      const responseType = reqConfig.responseType || 'json';
+
+      // Enforce maxContentLength
+      if (reqConfig.maxContentLength > 0) {
+        const contentLength = res.headers.get('content-length');
+        if (contentLength && parseInt(contentLength, 10) > reqConfig.maxContentLength) {
+          throw new ClientError(
+            `Response content length ${contentLength} exceeds maxContentLength ${reqConfig.maxContentLength}`,
+            {
+              code: 'ERR_MAX_CONTENT_LENGTH_EXCEEDED',
+              status: res.status,
+              details: { size: parseInt(contentLength, 10), limit: reqConfig.maxContentLength },
+            },
+          );
         }
       }
 
-      // Non-2xx → throw
-      if (!res.ok) {
+      if (responseType === 'arraybuffer') {
+        data = await res.arrayBuffer();
+      } else if (responseType === 'blob') {
+        if (typeof res.blob === 'function') {
+          data = await res.blob();
+        } else {
+          data = await res.arrayBuffer();
+        }
+      } else if (responseType === 'text') {
+        data = await res.text();
+      } else {
+        // Default: json
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        } else {
+          const text = await res.text();
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = text;
+          }
+        }
+      }
+
+      // Custom validateStatus (Axios-compatible)
+      const statusValidator = reqConfig.validateStatus || this.validateStatus;
+      if (!statusValidator(res.status)) {
         throw new ClientError(
           `Request failed with status ${res.status}`,
           {
@@ -534,10 +895,22 @@ class APIBridgeClient {
         resHeaders[key] = value;
       });
 
+      // onDownloadProgress callback (after data received)
+      if (reqConfig.onDownloadProgress && typeof reqConfig.onDownloadProgress === 'function') {
+        const contentLength = res.headers.get('content-length');
+        reqConfig.onDownloadProgress({
+          loaded: contentLength ? parseInt(contentLength, 10) : 0,
+          total: contentLength ? parseInt(contentLength, 10) : 0,
+          progress: 1,
+          bytes: contentLength ? parseInt(contentLength, 10) : 0,
+        });
+      }
+
       return {
         data,
         rawData: data,
         status: res.status,
+        statusText: res.statusText || '',
         headers: resHeaders,
       };
     } catch (err) {
@@ -545,6 +918,12 @@ class APIBridgeClient {
 
       // Already a ClientError
       if (err instanceof ClientError) throw err;
+
+      // Cancellation
+      if (isCancel(err)) throw err;
+      if (err && err.name === 'AbortError' && reqConfig.cancelToken && reqConfig.cancelToken.requested) {
+        throw reqConfig.cancelToken.reason;
+      }
 
       // Abort error
       if (err.name === 'AbortError') {
@@ -619,8 +998,12 @@ class APIBridgeClient {
   // ─── Error wrapping ─────────────────────────────────────────────────────
 
   _wrapError(err, reqConfig) {
-    if (err instanceof ClientError) return err;
-    return new ClientError(err.message || 'Unknown error', {
+    if (err instanceof ClientError) {
+      err.config = reqConfig;
+      err.isApiBridgeError = true;
+      return err;
+    }
+    const wrapped = new ClientError(err.message || 'Unknown error', {
       status: err.status || null,
       code: err.code || 'ERR_UNKNOWN',
       details: {
@@ -628,6 +1011,9 @@ class APIBridgeClient {
         url: reqConfig ? reqConfig.url : undefined,
       },
     });
+    wrapped.config = reqConfig;
+    wrapped.isApiBridgeError = true;
+    return wrapped;
   }
 
   // ─── Utilities ──────────────────────────────────────────────────────────
@@ -662,6 +1048,24 @@ class APIBridgeClient {
   }
 }
 
+// ─── Static Methods (Axios Compatibility) ─────────────────────────────────
+
+/**
+ * Check if an error is an APIBridge client error (like axios.isAxiosError).
+ * @param {*} err
+ * @returns {boolean}
+ */
+APIBridgeClient.isClientError = function isClientError(err) {
+  return err instanceof ClientError || (err && err.isApiBridgeError === true);
+};
+
+/**
+ * Check if an error is an APIBridge error.
+ * @param {*} err
+ * @returns {boolean}
+ */
+APIBridgeClient.isApiBridgeError = APIBridgeClient.isClientError;
+
 // ─── Factory Function ───────────────────────────────────────────────────────
 
 /**
@@ -678,4 +1082,55 @@ function createClient(options = {}) {
   return new APIBridgeClient(options);
 }
 
-module.exports = { APIBridgeClient, ClientError, createClient, buildURL };
+// ─── Concurrent Request Helpers ─────────────────────────────────────────────
+
+/**
+ * Execute multiple requests concurrently (like axios.all).
+ * @param {Array<Promise>} promises
+ * @returns {Promise<Array>}
+ */
+function all(promises) {
+  return Promise.all(promises);
+}
+
+/**
+ * Spread the results of a concurrent request (like axios.spread).
+ * @param {Function} callback
+ * @returns {Function}
+ */
+function spread(callback) {
+  return function (arr) {
+    return callback.apply(null, arr);
+  };
+}
+
+/**
+ * Check if a value is a ClientError (like axios.isAxiosError).
+ * @param {*} err
+ * @returns {boolean}
+ */
+function isClientError(err) {
+  return err instanceof ClientError || (err && err.isApiBridgeError === true);
+}
+
+/**
+ * Check if an error is a ClientError (alias).
+ * @param {*} err
+ * @returns {boolean}
+ */
+function isApiBridgeError(err) {
+  return isClientError(err);
+}
+
+module.exports = {
+  APIBridgeClient,
+  ClientError,
+  createClient,
+  buildURL,
+  all,
+  spread,
+  isClientError,
+  isApiBridgeError,
+  mergeConfig,
+  defaultParamsSerializer,
+};

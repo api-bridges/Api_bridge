@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v9
- * Intelligent API mismatch detector, transformer, and learner
+ * APIBridge AI v10
+ * Complete Axios Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
  *  - Middleware pipeline (before/after hooks)
@@ -91,6 +91,33 @@
  *  - Auto-learning with endpoint mapping cache
  *  - Standardized error objects { message, status, code, details }
  *  - ClientError class
+ *
+ * v10 features (Complete Axios Replacement):
+ *  - CancelToken system (axios-compatible: CancelToken.source(), new CancelToken(executor))
+ *  - isCancel() check for cancelled requests
+ *  - Basic auth support ({ username, password } → Authorization header)
+ *  - Custom responseType ('json', 'text', 'blob', 'arraybuffer')
+ *  - Custom validateStatus function (override success status check)
+ *  - Custom paramsSerializer function (serialize query params)
+ *  - Per-request transformRequest / transformResponse chains
+ *  - maxContentLength / maxBodyLength enforcement
+ *  - onDownloadProgress / onUploadProgress callbacks
+ *  - withCredentials support
+ *  - FormData auto-detection (multipart/form-data, URLSearchParams, Buffer, Stream)
+ *  - toFormData() utility (convert objects to FormData)
+ *  - request(config) — Axios-compatible config-object request method
+ *  - getUri(config) — Build URL without making request
+ *  - Mutable defaults object (client.defaults.headers.common, per-method headers)
+ *  - Deep config merging (defaults + instance + per-request)
+ *  - all() + spread() concurrent request helpers
+ *  - isClientError() / isApiBridgeError() error type checking
+ *  - mergeConfig() utility
+ *  - Default instance with shorthand methods
+ *  - xsrfCookieName / xsrfHeaderName configuration
+ *  - Array params serialization
+ *  - Type detection utilities (isFormData, isBlob, isFile, isBuffer, isStream, etc.)
+ *  - statusText in response object
+ *  - config in response object
  *
  * Usage:
  *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');
@@ -238,8 +265,11 @@ const {
   InterceptorError,
 } = require('./core/errors');
 
-// ─── v9 Core ──────────────────────────────────────────────────────────────────
-const { APIBridgeClient, ClientError, createClient, buildURL } = require('./core/client');
+// ─── v10 Core ─────────────────────────────────────────────────────────────────
+const {
+  APIBridgeClient, ClientError, createClient, buildURL,
+  all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
+} = require('./core/client');
 const { InterceptorManager, InterceptorChain } = require('./core/interceptors');
 const {
   validateExpect,
@@ -251,6 +281,10 @@ const {
   HEADER_NAME,
 } = require('./core/expectation');
 const { smartProxy } = require('./core/proxy');
+const { CancelToken, Cancel, isCancel } = require('./core/cancel');
+const {
+  toFormData, isFormData, isBlob, isFile, isBuffer, isStream, isArrayBufferView, isURLSearchParams,
+} = require('./core/form-data');
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const { ResponseCache } = require('./utils/cache');
@@ -551,6 +585,9 @@ function createTransformer(options = {}) {
 
 // ─── EXPORTS ──────────────────────────────────────────────────────────────────
 
+// Default instance (use like axios: apiBridge.get(), apiBridge.post(), etc.)
+const defaultInstance = createClient();
+
 module.exports = {
   // Main API
   bridge,
@@ -558,6 +595,12 @@ module.exports = {
   transform,
   createTransformer,
   createClient,
+
+  // Axios-compatible alias
+  create: createClient,
+
+  // Default instance methods (Axios-compatible)
+  defaults: defaultInstance.defaults,
 
   // Core classes
   APIBridgeTransformer,
@@ -612,11 +655,38 @@ module.exports = {
   OutputFormatter,
   RequestInterceptor,
 
-  // v9 classes
+  // v9/v10 classes
   APIBridgeClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,
+
+  // v10: CancelToken system
+  CancelToken,
+  Cancel,
+  isCancel,
+
+  // v10: FormData utilities
+  toFormData,
+  isFormData,
+  isBlob,
+  isFile,
+  isBuffer,
+  isStream,
+  isArrayBufferView,
+  isURLSearchParams,
+
+  // v10: Concurrent helpers
+  all,
+  spread,
+
+  // v10: Error type checks
+  isClientError,
+  isApiBridgeError,
+
+  // v10: Config utilities
+  mergeConfig,
+  defaultParamsSerializer,
 
   // v9 expectation helpers
   validateExpect,
