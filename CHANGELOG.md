@@ -5,6 +5,74 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.0.0] - 2026-04-20
+
+### Added — Maximum Security & Power (Enterprise-Grade Hardening)
+- **SSRF Protection (`SSRFGuard`)** — Server-Side Request Forgery prevention
+  - Blocks private IP ranges (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16)
+  - Blocks cloud metadata endpoints (169.254.169.254, metadata.google.internal, metadata.azure.com)
+  - Blocks dangerous protocols (file://, data://, javascript://, vbscript://)
+  - Blocks localhost aliases (localhost, 0.0.0.0, [::1], [::ffff:127.0.0.1])
+  - Configurable allowlist — bypass SSRF checks for trusted hosts
+  - Configurable blocklist — block additional hosts
+  - **Enabled by default** on all client instances — zero-config security
+  - `ssrf: { enabled: false }` to disable for testing
+- **Header Injection Prevention (`HeaderValidator`)** — CRLF attack prevention
+  - Validates all header names against RFC 7230 token spec
+  - Rejects header names/values containing CR (\r) or LF (\n) characters
+  - `maxHeadersCount` — configurable limit on number of headers (default 100)
+  - `maxHeaderSize` — configurable max single header value size (default 8192 bytes)
+  - Integrated into request pipeline — validates headers before every request
+- **Client-Side Rate Limiting (`RequestRateLimiter`)** — Token bucket algorithm
+  - `maxRequests` — max requests in time window (default 100)
+  - `windowMs` — time window in ms (default 60000)
+  - Per-endpoint rate limiting — separate buckets per URL
+  - `acquire()` — check if request can proceed
+  - `reset()` — reset global or per-endpoint bucket
+  - `rateLimiter: { maxRequests: 50, windowMs: 10000 }` in client config
+- **Response Size Guard (`ResponseSizeGuard`)** — Memory exhaustion prevention
+  - `maxResponseSize` — max response body size (default 10MB)
+  - Content-Length header validation before reading body
+  - Streaming byte tracker — `createSizeTracker()` for chunked responses
+  - Integrated into response pipeline after maxContentLength check
+- **Sensitive Data Redaction (`SensitiveDataRedactor`)** — Credential leak prevention
+  - Auto-strips sensitive headers from error objects (Authorization, Cookie, Set-Cookie, X-API-Key, etc.)
+  - `redactConfig()` — sanitize entire request config for safe logging
+  - `redactHeaders()` — replace sensitive header values with [REDACTED]
+  - `redactURL()` — strip token/key/secret/password query parameters
+  - Custom sensitive header patterns via `sensitiveHeaders` option
+  - Error objects automatically contain redacted configs — safe to log/report
+- **Request Fingerprinting (`RequestFingerprinter`)** — Replay detection
+  - SHA-256 content-based request fingerprinting
+  - `isDuplicate(config, windowMs)` — detect replay requests within time window
+  - `replayDetection: 5000` in client config — auto-block duplicate requests
+  - Configurable window, auto-cleanup of stale entries
+- **Prototype Pollution Hardening** — Deep defense
+  - `safeMerge()` — deep merge that skips __proto__, constructor, prototype keys
+  - `sanitizeObject()` — recursively remove dangerous keys from object graphs
+  - `isPrivateIP()` — utility to check if an IP is in private/reserved ranges
+- **Request Journey Tracking** — Per-request observability
+  - `journeyTracking: true` in client config
+  - Every response includes `response.journey` with attempt history
+  - Tracks: attempts, cache hits, dedup, token refresh, redirects, timing
+  - `journey.totalDuration` — end-to-end request time
+  - `journey.attempts[]` — per-attempt status and duration
+- **5 New Error Codes** on `ClientError`:
+  - `ERR_SSRF_BLOCKED` — Request blocked by SSRF guard
+  - `ERR_HEADER_VALIDATION` — Header validation failed (CRLF injection, invalid chars)
+  - `ERR_RATE_LIMITED` — Client-side rate limit exceeded
+  - `ERR_DUPLICATE_REQUEST` — Replay/duplicate request detected
+  - `ERR_RESPONSE_TOO_LARGE` — Response exceeds maximum allowed size
+- 73 new tests (991 total)
+
+### Changed
+- Security checks integrated into request pipeline: SSRF → Headers → Rate Limit → Replay Detection
+- Error objects now automatically redact sensitive config data (Authorization, Cookie, auth, etc.)
+- Response pipeline includes size guard after maxContentLength check
+- Package description updated to reflect security-first positioning
+- Added 13 new keywords: ssrf-protection, crlf-prevention, header-validation, rate-limiter-client, replay-detection, response-size-guard, sensitive-data-redaction, prototype-pollution, request-fingerprinting, security-hardening, journey-tracking, request-tracing
+- TypeScript definitions updated with all v16 classes, interfaces, and options
+
 ## [15.0.0] - 2026-04-20
 
 ### Added — Full Axios Replacement (Complete API Gap Closure + All Features Preserved)
