@@ -402,7 +402,7 @@ api.exportCSV('./mismatches.csv');
 | It remembers | Learnings saved to `.apibridge/learned.json` |
 | Review flags | `getPending()` shows low-confidence mappings that need your approval |
 | Accuracy | 99%+ for standard fields, 92%+ for synonyms, 70-95% for fuzzy matches |
-| V14 modules | 60+ source modules, 27 error types, 887 tests |
+| V18 modules | 80+ source modules, 27 error types + 21 security error codes, 1178 tests |
 
 ---
 
@@ -430,3 +430,111 @@ Enable `timing: true` to get `response.duration` (ms) and `response.timing` `{ s
 
 ### Lifecycle Hooks
 Add `onRequest`, `onResponse`, `onError`, and `onRetry` hooks for logging, analytics, error tracking, and observability. Hooks are fire-and-forget observers — they never affect the request pipeline.
+
+---
+
+## V15: Full Axios API Parity
+
+Version 15 closes the remaining Axios API gaps:
+
+### Interceptor runWhen / synchronous
+Conditional interceptor execution with `runWhen: (config) => boolean` — skip interceptors that don't apply. Synchronous mode with `synchronous: true` reduces overhead for simple handlers.
+
+### Auto Content-Type Serialization
+Plain objects are automatically converted to `URLSearchParams` or `FormData` based on the Content-Type header. No manual conversion needed.
+
+### Enhanced paramsSerializer
+Accepts Axios 1.x object form `{ encode, serialize }` in addition to the legacy function form.
+
+### beforeRedirect Callback
+Intercept and modify redirect requests before they are followed — useful for adding auth headers or logging redirects.
+
+### Request Correlation IDs
+Enable `requestId: true` to auto-generate a unique `x-request-id` header on every request for distributed tracing.
+
+---
+
+## V16: Security Hardening
+
+Version 16 adds enterprise-grade security hardening — many features enabled by default:
+
+### SSRF Protection
+Blocks requests to private IPs, cloud metadata endpoints, and dangerous protocols. Enabled by default on all client instances. Configurable allowlist for trusted internal hosts.
+
+### Header Injection Prevention
+Validates all header names/values against RFC 7230. Rejects headers containing CR/LF characters to prevent CRLF injection attacks.
+
+### Client-Side Rate Limiting
+Token bucket algorithm with configurable `maxRequests` and `windowMs`. Supports per-endpoint rate limiting with separate buckets.
+
+### Response Size Guard
+Prevents memory exhaustion by enforcing `maxResponseSize` limits. Validates Content-Length before reading the response body.
+
+### Sensitive Data Redaction
+Automatically strips Authorization, Cookie, API keys, and other sensitive headers from error objects. URL query parameters containing tokens/secrets are also redacted.
+
+### Request Fingerprinting
+SHA-256 content-based fingerprinting detects replay attacks. Configure `replayDetection: 5000` to block duplicate requests within a time window.
+
+### Journey Tracking
+Enable `journeyTracking: true` to get a complete history of each request — attempts, cache hits, dedup, token refresh, redirects, and timing.
+
+---
+
+## V17: Advanced Security
+
+Version 17 adds military-grade security features:
+
+### Content Security Policy
+Build standards-compliant CSP headers from configurable directives. Supports nonce generation, report-only mode, and custom directives.
+
+### Certificate Pinning
+Pin SHA-256 certificate hashes per host. Enforce or report mode. Supports subdomain pinning and dynamic pin management.
+
+### Request Signing
+HMAC-SHA256 request signing with canonical string construction. Auto-injects signature + timestamp headers for integrity verification.
+
+### Input Sanitizer
+XSS prevention (HTML escaping, script/event handler removal), SQL injection detection, and path traversal detection. Three modes: `escape`, `strip`, `reject`.
+
+### Security Audit Logger
+Tamper-proof append-only event log with SHA-256 hash chain. Supports severity levels, filtering, and automatic rotation.
+
+### Permission Policy (RBAC)
+Role-based method + endpoint access control with wildcard patterns. Configure policies per role and check authorization before each request.
+
+### Payload Encryptor
+AES-256-GCM authenticated encryption for request/response payloads. Auto-generates keys, supports key rotation, and provides key fingerprinting.
+
+### Idempotency Manager
+Automatic UUID-based idempotency key generation for POST/PUT/PATCH requests. Caches responses with configurable TTL to safely handle retries.
+
+---
+
+## V18: Elite Security Architecture
+
+Version 18 adds the most advanced security layer — zero trust, threat intelligence, and cryptographic integrity:
+
+### Zero Trust Engine
+Every request is evaluated against an accumulated trust score. Trust factors include known context, consistent IP, consistent user-agent, and non-suspicious methods. Trust decays over time with configurable rates.
+
+### Threat Intelligence
+Real-time IP blocklist management with automatic blocking after suspicious activity threshold. URL pattern blocking and known attack pattern detection in headers (SQL injection, path traversal).
+
+### Secure Session Manager
+Cryptographic session tokens (32 bytes, hex-encoded) bound to IP and User-Agent for hijack prevention. Automatic session rotation with configurable intervals.
+
+### Request Integrity Chain
+Blockchain-inspired immutable request lineage. Every request is hashed with SHA-256: `hash = H(previousHash + method + url + timestamp + bodyHash)`. The full chain can be verified to detect tampering.
+
+### Adaptive Rate Limiter
+Token bucket with dynamically adapted rates based on traffic statistics. Standard deviation-based anomaly detection flags unusual traffic patterns and adjusts rates automatically.
+
+### Security Headers Manager
+Auto-generates all OWASP-recommended security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin headers (COEP, COOP, CORP).
+
+### Encrypted Config Vault
+AES-256-GCM encrypted storage for API keys, secrets, and sensitive configuration. Supports master key rotation, fingerprinting, and backup/restore.
+
+### Mutual TLS Manager
+Client certificate validation with trusted CA fingerprint store, certificate revocation list management, and configurable certificate age limits.
