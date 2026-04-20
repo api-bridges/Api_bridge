@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v17 — HTTP Client Engine (Full Axios Replacement + All APIBridge Features)
+ * APIBridge AI v18 — HTTP Client Engine (Full Axios Replacement + All APIBridge Features)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -74,6 +74,7 @@
 
 'use strict';
 
+const crypto = require('crypto');
 const { APIBridgeTransformer } = require('./transformer');
 const { LearningEngine } = require('./learning');
 const { FuzzyMatcher } = require('./fuzzy-matcher');
@@ -96,12 +97,13 @@ const { AxiosHeaders } = require('./headers');
 const { generateUID, isPlainObject } = require('./helpers');
 const { SSRFGuard, HeaderValidator, RequestRateLimiter, ResponseSizeGuard, SensitiveDataRedactor, RequestFingerprinter, safeMerge, sanitizeObject } = require('./security');
 const { ContentSecurityPolicy, CertificatePinning, RequestSigning, InputSanitizer, SecurityAuditLogger, PermissionPolicy, PayloadEncryptor, IdempotencyManager } = require('./security-advanced');
+const { ZeroTrustEngine, ThreatIntelligence, SecureSessionManager, RequestIntegrityChain, AdaptiveRateLimiter, SecurityHeadersManager, EncryptedConfigVault, MutualTLSManager } = require('./security-elite');
 
 /**
  * Library version.
  * @type {string}
  */
-const VERSION = '17.0.0';
+const VERSION = '18.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -180,6 +182,15 @@ ClientError.ERR_PERMISSION_DENIED = 'ERR_PERMISSION_DENIED';
 ClientError.ERR_ENCRYPTION_FAILED = 'ERR_ENCRYPTION_FAILED';
 ClientError.ERR_DECRYPTION_FAILED = 'ERR_DECRYPTION_FAILED';
 ClientError.ERR_IDEMPOTENCY_CONFLICT = 'ERR_IDEMPOTENCY_CONFLICT';
+// v18: Elite security error codes
+ClientError.ERR_ZERO_TRUST_DENIED = 'ERR_ZERO_TRUST_DENIED';
+ClientError.ERR_THREAT_DETECTED = 'ERR_THREAT_DETECTED';
+ClientError.ERR_SESSION_INVALID = 'ERR_SESSION_INVALID';
+ClientError.ERR_INTEGRITY_VIOLATION = 'ERR_INTEGRITY_VIOLATION';
+ClientError.ERR_ADAPTIVE_RATE_LIMITED = 'ERR_ADAPTIVE_RATE_LIMITED';
+ClientError.ERR_MTLS_FAILED = 'ERR_MTLS_FAILED';
+ClientError.ERR_VAULT_ACCESS_DENIED = 'ERR_VAULT_ACCESS_DENIED';
+ClientError.ERR_SECURITY_HEADER_VIOLATION = 'ERR_SECURITY_HEADER_VIOLATION';
 
 /**
  * Create a ClientError with full context (like AxiosError.from).
@@ -415,6 +426,14 @@ class APIBridgeClient {
    * @param {object} [options.permissions] — Permission policy options { policies, defaultAllow } (v17)
    * @param {object} [options.encryption] — Payload encryption options { key, algorithm } (v17)
    * @param {object} [options.idempotency] — Idempotency options { headerName, ttl, methods } (v17)
+   * @param {object} [options.zeroTrust] — Zero Trust Engine options { trustThreshold, maxTrustScore, decayRate } (v18)
+   * @param {object} [options.threatIntel] — Threat Intelligence options { blockedIPs, suspiciousThreshold, autoBlock } (v18)
+   * @param {object} [options.sessionManager] — Secure Session Manager options { tokenLength, maxAge, rotationInterval, bindToIP } (v18)
+   * @param {object} [options.integrityChain] — Request Integrity Chain options { algorithm, maxChainLength } (v18)
+   * @param {object} [options.adaptiveRateLimiter] — Adaptive Rate Limiter options { baseRate, anomalyThreshold } (v18)
+   * @param {object} [options.securityHeaders] — Security Headers Manager options { hsts, xFrameOptions, referrerPolicy } (v18)
+   * @param {object} [options.configVault] — Encrypted Config Vault options { masterKey } (v18)
+   * @param {object} [options.mtls] — Mutual TLS Manager options { trustedCerts, requireClientCert } (v18)
    */
   constructor(options = {}) {
     this.baseURL = options.baseURL || '';
@@ -544,6 +563,24 @@ class APIBridgeClient {
     // Idempotency manager
     this._idempotency = options.idempotency ? new IdempotencyManager(options.idempotency) : null;
 
+    // ─── v18: Elite Security ──────────────────────────────────────
+    // Zero Trust Engine
+    this._zeroTrust = options.zeroTrust ? new ZeroTrustEngine(options.zeroTrust) : null;
+    // Threat Intelligence
+    this._threatIntel = options.threatIntel ? new ThreatIntelligence(options.threatIntel) : null;
+    // Secure Session Manager
+    this._sessionManager = options.sessionManager ? new SecureSessionManager(options.sessionManager) : null;
+    // Request Integrity Chain
+    this._integrityChain = options.integrityChain ? new RequestIntegrityChain(options.integrityChain) : null;
+    // Adaptive Rate Limiter
+    this._adaptiveRateLimiter = options.adaptiveRateLimiter ? new AdaptiveRateLimiter(options.adaptiveRateLimiter) : null;
+    // Security Headers Manager
+    this._securityHeaders = options.securityHeaders ? new SecurityHeadersManager(options.securityHeaders) : null;
+    // Encrypted Config Vault
+    this._configVault = options.configVault ? new EncryptedConfigVault(options.configVault) : null;
+    // Mutual TLS Manager
+    this._mtls = options.mtls ? new MutualTLSManager(options.mtls) : null;
+
     // v14: Internal state for caching, dedup, and token refresh
     this._responseCache = new Map();
     this._inflightRequests = new Map();
@@ -620,6 +657,15 @@ class APIBridgeClient {
       permissions: options.permissions || null,
       encryption: options.encryption || null,
       idempotency: options.idempotency || null,
+      // v18: Elite security options
+      zeroTrust: options.zeroTrust || null,
+      threatIntel: options.threatIntel || null,
+      sessionManager: options.sessionManager || null,
+      integrityChain: options.integrityChain || null,
+      adaptiveRateLimiter: options.adaptiveRateLimiter || null,
+      securityHeaders: options.securityHeaders || null,
+      configVault: options.configVault || null,
+      mtls: options.mtls || null,
     };
 
     // Core engines
@@ -1194,7 +1240,93 @@ class APIBridgeClient {
       this._auditLog.log({ event: 'request_start', severity: 'info', details: { method: reqConfig.method, url: reqConfig.url } });
     }
 
-    // 3.10. Form submission: convert plain object to FormData (v11)
+    // 3.10 v18: Threat intelligence assessment
+    if (this._threatIntel) {
+      const threatContext = {
+        ip: reqConfig._clientIP || reqConfig.clientIP || null,
+        url: reqConfig.url,
+        method: reqConfig.method,
+        headers: reqConfig.headers,
+      };
+      const threatResult = this._threatIntel.assess(threatContext);
+      if (threatResult.blocked) {
+        this._stats.failures++;
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'threat_blocked', severity: 'critical', details: { reasons: threatResult.reasons, level: threatResult.level } });
+        }
+        throw new ClientError('Request blocked by threat intelligence', {
+          code: 'ERR_THREAT_DETECTED',
+          details: { level: threatResult.level, reasons: threatResult.reasons },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.11 v18: Zero trust evaluation
+    if (this._zeroTrust) {
+      const trustContext = {
+        contextId: reqConfig._contextId || reqConfig.contextId || 'default',
+        ip: reqConfig._clientIP || reqConfig.clientIP || null,
+        userAgent: reqConfig.headers && (reqConfig.headers['User-Agent'] || reqConfig.headers['user-agent']) || null,
+        method: reqConfig.method,
+        url: reqConfig.url,
+      };
+      const trustResult = this._zeroTrust.evaluate(trustContext);
+      if (!trustResult.allowed) {
+        this._stats.failures++;
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'zero_trust_denied', severity: 'warn', details: { score: trustResult.score, factors: trustResult.factors } });
+        }
+        throw new ClientError('Zero trust verification failed', {
+          code: 'ERR_ZERO_TRUST_DENIED',
+          details: { score: trustResult.score, factors: trustResult.factors },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.12 v18: Adaptive rate limiting
+    if (this._adaptiveRateLimiter) {
+      const adaptiveKey = `${reqConfig.method}:${reqConfig.url}`;
+      const adaptiveResult = this._adaptiveRateLimiter.acquire(adaptiveKey);
+      if (!adaptiveResult.allowed) {
+        this._stats.failures++;
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'adaptive_rate_limited', severity: 'warn', details: { key: adaptiveKey, anomaly: adaptiveResult.anomaly } });
+        }
+        throw new ClientError('Adaptive rate limit exceeded', {
+          code: 'ERR_ADAPTIVE_RATE_LIMITED',
+          details: { remaining: adaptiveResult.remaining, anomaly: adaptiveResult.anomaly, currentRate: adaptiveResult.currentRate },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.13 v18: Request integrity chain — record request
+    if (this._integrityChain) {
+      const bodyHash = reqConfig.body
+        ? crypto.createHash('sha256').update(typeof reqConfig.body === 'string' ? reqConfig.body : JSON.stringify(reqConfig.body)).digest('hex')
+        : '0'.repeat(64);
+      this._integrityChain.addRequest({
+        method: reqConfig.method,
+        url: reqConfig.url,
+        timestamp: Date.now(),
+        headers: reqConfig.headers,
+        bodyHash,
+      });
+    }
+
+    // 3.14 v18: Security headers injection
+    if (this._securityHeaders) {
+      const secHeaders = this._securityHeaders.buildHeaders();
+      for (const [hName, hValue] of Object.entries(secHeaders)) {
+        if (!reqConfig.headers[hName]) {
+          reqConfig.headers[hName] = hValue;
+        }
+      }
+    }
+
+    // 3.15. Form submission: convert plain object to FormData (v11)
     if (reqConfig._formSubmission && reqConfig.body && typeof reqConfig.body === 'object' &&
         !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body)) {
       try {
@@ -1204,7 +1336,7 @@ class APIBridgeClient {
       }
     }
 
-    // 3.11 v15: Auto Content-Type serialization
+    // 3.16 v15: Auto Content-Type serialization
     // When body is a plain object, auto-serialize based on Content-Type header
     const autoContentTypeSetting = this.autoContentType !== false && this.defaults.autoContentType !== false;
     if (autoContentTypeSetting && reqConfig.body && typeof reqConfig.body === 'object' &&
@@ -2224,4 +2356,13 @@ module.exports = {
   PermissionPolicy,
   PayloadEncryptor,
   IdempotencyManager,
+  // v18: Elite Security
+  ZeroTrustEngine,
+  ThreatIntelligence,
+  SecureSessionManager,
+  RequestIntegrityChain,
+  AdaptiveRateLimiter,
+  SecurityHeadersManager,
+  EncryptedConfigVault,
+  MutualTLSManager,
 };

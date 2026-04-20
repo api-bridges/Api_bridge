@@ -6149,7 +6149,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '17.0.0');
+  assertEqual(VERSION, '18.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7209,7 +7209,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '17.0.0');
+  assertEqual(apiBridge.VERSION, '18.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7889,7 +7889,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '17.0.0');
+  assertEqual(api.VERSION, '18.0.0');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
@@ -8767,7 +8767,7 @@ test('v14: full API surface check', () => {
   const api = require('./src/index');
 
   // Version
-  assertEqual(api.VERSION, '17.0.0');
+  assertEqual(api.VERSION, '18.0.0');
 
   // v14 options available in client defaults
   const client = api.createClient({
@@ -9300,7 +9300,7 @@ test('v15: full API surface check', () => {
   // v15 new exports available
   const api = { resolveParamsSerializer, VERSION };
   assertEqual(typeof resolveParamsSerializer, 'function');
-  assertEqual(api.VERSION, '17.0.0');
+  assertEqual(api.VERSION, '18.0.0');
 
   // AxiosHeaders v15 enhancements
   assert(typeof AxiosHeaders.fromString === 'function', 'AxiosHeaders.fromString exists');
@@ -9995,8 +9995,8 @@ test('v16: new error codes exist on ClientError', () => {
   assertEqual(ClientError.ERR_RESPONSE_TOO_LARGE, 'ERR_RESPONSE_TOO_LARGE');
 });
 
-test('v17: VERSION is 17.0.0', () => {
-  assertEqual(VERSION, '17.0.0');
+test('v18: VERSION is 18.0.0', () => {
+  assertEqual(VERSION, '18.0.0');
 });
 
 // ─── v16 Export Tests ─────────────────────────────────────────────────────────
