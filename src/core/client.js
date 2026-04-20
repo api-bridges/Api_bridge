@@ -959,8 +959,7 @@ class APIBridgeClient {
     // v14: Fire onRequest hooks
     this._fireHooks('onRequest', reqConfig);
 
-    // v14: Request timing
-    const timingEnabled = reqConfig.retryConfig ? false : (this.timing || this.defaults.timing);
+    // v14: Request timing — record start time
     const requestStartTime = Date.now();
 
     // v14: Response caching — check cache before executing
