@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v13 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2-v13 features.
+ * APIBridge AI v14 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2-v14 features.
  */
 
 const {
@@ -6127,7 +6127,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '13.0.0');
+  assertEqual(VERSION, '14.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7187,7 +7187,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '13.0.0');
+  assertEqual(apiBridge.VERSION, '14.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7867,7 +7867,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '13.0.0');
+  assertEqual(api.VERSION, '14.0.0');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
@@ -7949,6 +7949,943 @@ test('v13: default instance transformRequest in defaults', () => {
   const api = require('./src/index');
   assert(Array.isArray(api.defaults.transformRequest), 'module defaults.transformRequest');
   assert(Array.isArray(api.defaults.transformResponse), 'module defaults.transformResponse');
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// v14 Tests — Enterprise-Grade HTTP Client Features
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+console.log('\n━━━ v14: Auto-Retry Engine ━━━');
+
+test('v14: retryConfig stored in defaults', () => {
+  const retryConfig = {
+    retries: 3,
+    retryCondition: (err) => err.status >= 500,
+    retryDelay: (count) => count * 500,
+    shouldResetTimeout: false,
+    onRetry: () => {},
+  };
+  const client = createClient({ retryConfig });
+  assertEqual(client.defaults.retryConfig.retries, 3);
+  assert(typeof client.defaults.retryConfig.retryCondition === 'function', 'retryCondition is function');
+  assert(typeof client.defaults.retryConfig.retryDelay === 'function', 'retryDelay is function');
+  assertEqual(client.defaults.retryConfig.shouldResetTimeout, false);
+  assert(typeof client.defaults.retryConfig.onRetry === 'function', 'onRetry is function');
+});
+
+test('v14: retryConfig.retryCondition controls whether to retry', async () => {
+  let attempts = 0;
+  const customAdapter = async () => {
+    attempts++;
+    return {
+      data: null,
+      rawData: null,
+      status: 400,
+      statusText: 'Bad Request',
+      headers: {},
+      request: {},
+    };
+  };
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    retryConfig: {
+      retries: 3,
+      retryCondition: (err) => err.status >= 500, // only retry 5xx
+    },
+  });
+  try {
+    await client.get('/test');
+    assert(false, 'should have thrown');
+  } catch (err) {
+    assertEqual(attempts, 1); // no retries because 400 doesn't match retryCondition
+  }
+});
+
+test('v14: retryConfig.retryDelay function controls delay', async () => {
+  let attempts = 0;
+  const delays = [];
+  const customAdapter = async () => {
+    attempts++;
+    if (attempts < 3) {
+      return {
+        data: null, rawData: null,
+        status: 500, statusText: 'Error',
+        headers: {}, request: {},
+      };
+    }
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    retryConfig: {
+      retries: 5,
+      retryDelay: (count) => {
+        delays.push(count);
+        return 1; // 1ms for testing speed
+      },
+    },
+  });
+
+  const res = await client.get('/test');
+  assertEqual(res.status, 200);
+  assertEqual(attempts, 3);
+  assert(delays.length >= 1, 'retryDelay was called');
+});
+
+test('v14: retryConfig.onRetry callback called on each retry', async () => {
+  let attempts = 0;
+  const onRetryCalls = [];
+  const customAdapter = async () => {
+    attempts++;
+    if (attempts < 3) {
+      return {
+        data: null, rawData: null,
+        status: 503, statusText: 'Service Unavailable',
+        headers: {}, request: {},
+      };
+    }
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    retryConfig: {
+      retries: 5,
+      retryDelay: () => 1,
+      onRetry: (count, err, config) => {
+        onRetryCalls.push({ count, errMsg: err.message, url: config.url });
+      },
+    },
+  });
+
+  await client.get('/retry-test');
+  assertEqual(onRetryCalls.length, 2);
+  assertEqual(onRetryCalls[0].count, 1);
+  assertEqual(onRetryCalls[1].count, 2);
+});
+
+test('v14: per-request retryConfig overrides client retryConfig', async () => {
+  let attempts = 0;
+  const customAdapter = async () => {
+    attempts++;
+    return {
+      data: null, rawData: null,
+      status: 500, statusText: 'Error',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    retryConfig: { retries: 5, retryDelay: () => 1 },
+  });
+
+  try {
+    await client.get('/test', {
+      retryConfig: { retries: 1, retryDelay: () => 1 }, // override to 1 retry
+    });
+  } catch (_) {}
+  assertEqual(attempts, 2); // 1 original + 1 retry
+});
+
+console.log('\n━━━ v14: Response Caching ━━━');
+
+test('v14: cache config stored in defaults', () => {
+  const cacheConfig = {
+    ttl: 60000,
+    maxSize: 100,
+    methods: ['GET'],
+    exclude: ['/no-cache'],
+    staleWhileRevalidate: false,
+  };
+  const client = createClient({ cache: cacheConfig });
+  assertEqual(client.defaults.cache.ttl, 60000);
+  assertEqual(client.defaults.cache.maxSize, 100);
+  assert(Array.isArray(client.defaults.cache.methods), 'methods is array');
+  assertEqual(client.defaults.cache.staleWhileRevalidate, false);
+});
+
+test('v14: response caching returns cached result on second request', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { id: callCount }, rawData: { id: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+  });
+
+  const res1 = await client.get('/users');
+  const res2 = await client.get('/users');
+
+  assertEqual(callCount, 1); // only 1 actual request
+  assertEqual(res1.data.id, 1);
+  assertEqual(res2.data.id, 1); // same cached result
+});
+
+test('v14: cache only applies to configured methods', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { id: callCount }, rawData: { id: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+  });
+
+  await client.post('/users', { name: 'A' });
+  await client.post('/users', { name: 'B' });
+
+  assertEqual(callCount, 2); // POST not cached
+});
+
+test('v14: cache excludes matching URL patterns', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { id: callCount }, rawData: { id: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'], exclude: ['/no-cache'] },
+  });
+
+  await client.get('/no-cache/data');
+  await client.get('/no-cache/data');
+
+  assertEqual(callCount, 2); // excluded from cache
+});
+
+test('v14: clearResponseCache() clears the cache', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { id: callCount }, rawData: { id: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+  });
+
+  await client.get('/users');
+  assertEqual(callCount, 1);
+
+  client.clearResponseCache();
+
+  await client.get('/users');
+  assertEqual(callCount, 2); // fresh request after cache clear
+});
+
+test('v14: cache evicts oldest entry when maxSize exceeded', async () => {
+  let callCount = 0;
+  const customAdapter = async (config) => {
+    callCount++;
+    return {
+      data: { url: config.url, count: callCount }, rawData: { url: config.url, count: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 60000, methods: ['GET'], maxSize: 2 },
+  });
+
+  await client.get('/a');
+  await client.get('/b');
+  await client.get('/c'); // should evict /a
+  const startCount = callCount;
+
+  await client.get('/a'); // should be a cache miss (was evicted)
+  assertEqual(callCount, startCount + 1);
+
+  await client.get('/c'); // should be a cache hit
+  assertEqual(callCount, startCount + 1);
+});
+
+test('v14: cache custom keyGenerator', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { id: callCount }, rawData: { id: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: {
+      ttl: 10000,
+      methods: ['GET'],
+      keyGenerator: (config) => `custom:${config.url}`,
+    },
+  });
+
+  await client.get('/users');
+  await client.get('/users');
+  assertEqual(callCount, 1); // cached with custom key
+});
+
+console.log('\n━━━ v14: Request Deduplication ━━━');
+
+test('v14: dedupe config stored in defaults', () => {
+  const client = createClient({
+    dedupe: { enabled: true, methods: ['GET', 'HEAD'] },
+  });
+  assert(client.defaults.dedupe.enabled === true, 'dedupe enabled');
+  assert(Array.isArray(client.defaults.dedupe.methods), 'dedupe methods is array');
+});
+
+test('v14: deduplication coalesces identical in-flight GET requests', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    await new Promise(r => setTimeout(r, 50)); // simulate delay
+    return {
+      data: { value: callCount }, rawData: { value: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    dedupe: { enabled: true, methods: ['GET'] },
+  });
+
+  // Fire two identical requests concurrently
+  const [res1, res2] = await Promise.all([
+    client.get('/data'),
+    client.get('/data'),
+  ]);
+
+  assertEqual(callCount, 1); // only 1 actual request
+  assertEqual(res1.data.value, res2.data.value);
+});
+
+test('v14: deduplication does not affect POST requests by default', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    await new Promise(r => setTimeout(r, 10));
+    return {
+      data: { id: callCount }, rawData: { id: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    dedupe: { enabled: true, methods: ['GET'] },
+  });
+
+  await Promise.all([
+    client.post('/data', { a: 1 }),
+    client.post('/data', { a: 1 }),
+  ]);
+
+  assertEqual(callCount, 2); // POST not deduped
+});
+
+test('v14: deduplication with custom keyGenerator', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    await new Promise(r => setTimeout(r, 50));
+    return {
+      data: { v: callCount }, rawData: { v: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    dedupe: {
+      enabled: true,
+      methods: ['GET'],
+      keyGenerator: (config) => `dedup:${config.url}`,
+    },
+  });
+
+  const [r1, r2] = await Promise.all([
+    client.get('/items'),
+    client.get('/items'),
+  ]);
+
+  assertEqual(callCount, 1);
+  assertEqual(r1.data.v, r2.data.v);
+});
+
+test('v14: deduplication removes inflight after completion', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { v: callCount }, rawData: { v: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    dedupe: { enabled: true, methods: ['GET'] },
+  });
+
+  await client.get('/data');
+  await client.get('/data'); // sequential — should make a new request
+  assertEqual(callCount, 2);
+});
+
+console.log('\n━━━ v14: Auto Token Refresh ━━━');
+
+test('v14: tokenRefresh config stored in defaults', () => {
+  const client = createClient({
+    tokenRefresh: {
+      onRefresh: async () => 'new-token',
+      statusCodes: [401],
+      maxRetries: 1,
+      headerName: 'Authorization',
+      tokenPrefix: 'Bearer ',
+    },
+  });
+  assertEqual(client.defaults.tokenRefresh.statusCodes[0], 401);
+  assertEqual(client.defaults.tokenRefresh.maxRetries, 1);
+  assertEqual(client.defaults.tokenRefresh.headerName, 'Authorization');
+  assertEqual(client.defaults.tokenRefresh.tokenPrefix, 'Bearer ');
+  assert(typeof client.defaults.tokenRefresh.onRefresh === 'function', 'onRefresh is function');
+});
+
+test('v14: token refresh retries on 401 with new token', async () => {
+  let callCount = 0;
+  let receivedAuthHeader = null;
+  const customAdapter = async (config) => {
+    callCount++;
+    if (callCount === 1) {
+      return {
+        data: { error: 'Unauthorized' }, rawData: { error: 'Unauthorized' },
+        status: 401, statusText: 'Unauthorized',
+        headers: {}, request: {},
+      };
+    }
+    receivedAuthHeader = config.headers['Authorization'];
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    tokenRefresh: {
+      onRefresh: async () => 'fresh-token-123',
+      statusCodes: [401],
+      maxRetries: 1,
+    },
+  });
+
+  const res = await client.get('/protected');
+  assertEqual(res.status, 200);
+  assertEqual(callCount, 2);
+  assertEqual(receivedAuthHeader, 'Bearer fresh-token-123');
+});
+
+test('v14: token refresh custom headerName and prefix', async () => {
+  let callCount = 0;
+  let receivedHeader = null;
+  const customAdapter = async (config) => {
+    callCount++;
+    if (callCount === 1) {
+      return {
+        data: null, rawData: null,
+        status: 401, statusText: 'Unauthorized',
+        headers: {}, request: {},
+      };
+    }
+    receivedHeader = config.headers['X-API-Key'];
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    tokenRefresh: {
+      onRefresh: async () => 'api-key-456',
+      headerName: 'X-API-Key',
+      tokenPrefix: '',
+      statusCodes: [401],
+    },
+  });
+
+  await client.get('/api-resource');
+  assertEqual(receivedHeader, 'api-key-456');
+});
+
+test('v14: token refresh does not retry on non-configured status codes', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: null, rawData: null,
+      status: 403, statusText: 'Forbidden',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    tokenRefresh: {
+      onRefresh: async () => 'new-token',
+      statusCodes: [401], // only refresh on 401, not 403
+    },
+  });
+
+  try {
+    await client.get('/forbidden');
+    assert(false, 'should have thrown');
+  } catch (err) {
+    assertEqual(callCount, 1); // no refresh retry for 403
+  }
+});
+
+console.log('\n━━━ v14: Request Timing ━━━');
+
+test('v14: timing disabled by default', async () => {
+  const customAdapter = async () => ({
+    data: { ok: true }, rawData: { ok: true },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+  });
+
+  const res = await client.get('/data');
+  assert(res.duration === undefined, 'no duration by default');
+  assert(res.timing === undefined, 'no timing by default');
+});
+
+test('v14: timing enabled adds duration and timing to response', async () => {
+  const customAdapter = async () => {
+    await new Promise(r => setTimeout(r, 10));
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    timing: true,
+  });
+
+  const res = await client.get('/data');
+  assert(typeof res.duration === 'number', 'duration is number');
+  assert(res.duration >= 0, 'duration >= 0');
+  assert(typeof res.timing === 'object', 'timing is object');
+  assert(typeof res.timing.start === 'number', 'timing.start is number');
+  assert(typeof res.timing.end === 'number', 'timing.end is number');
+  assert(typeof res.timing.duration === 'number', 'timing.duration is number');
+  assertEqual(res.timing.duration, res.duration);
+  assert(res.timing.end >= res.timing.start, 'end >= start');
+});
+
+test('v14: timing in defaults', () => {
+  const client = createClient({ timing: true });
+  assertEqual(client.defaults.timing, true);
+});
+
+console.log('\n━━━ v14: Lifecycle Hooks ━━━');
+
+test('v14: hooks config stored in defaults', () => {
+  const hooks = {
+    onRequest: [(config) => {}],
+    onResponse: [(res) => {}],
+    onError: [(err) => {}],
+    onRetry: [(count, err, config) => {}],
+  };
+  const client = createClient({ hooks });
+  assert(Array.isArray(client.defaults.hooks.onRequest), 'onRequest is array');
+  assert(Array.isArray(client.defaults.hooks.onResponse), 'onResponse is array');
+  assert(Array.isArray(client.defaults.hooks.onError), 'onError is array');
+  assert(Array.isArray(client.defaults.hooks.onRetry), 'onRetry is array');
+});
+
+test('v14: onRequest hook fires before request', async () => {
+  const hookCalls = [];
+  const customAdapter = async () => ({
+    data: { ok: true }, rawData: { ok: true },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    hooks: {
+      onRequest: [(config) => { hookCalls.push({ hook: 'onRequest', method: config.method }); }],
+    },
+  });
+
+  await client.get('/data');
+  assertEqual(hookCalls.length, 1);
+  assertEqual(hookCalls[0].hook, 'onRequest');
+  assertEqual(hookCalls[0].method, 'GET');
+});
+
+test('v14: onResponse hook fires after response', async () => {
+  const hookCalls = [];
+  const customAdapter = async () => ({
+    data: { userId: 1 }, rawData: { userId: 1 },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    hooks: {
+      onResponse: [(res) => { hookCalls.push({ status: res.status }); }],
+    },
+  });
+
+  await client.get('/data');
+  assertEqual(hookCalls.length, 1);
+  assertEqual(hookCalls[0].status, 200);
+});
+
+test('v14: onError hook fires on error', async () => {
+  const hookCalls = [];
+  const customAdapter = async () => ({
+    data: null, rawData: null,
+    status: 500, statusText: 'Error',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    hooks: {
+      onError: [(err) => { hookCalls.push({ msg: err.message }); }],
+    },
+  });
+
+  try {
+    await client.get('/fail');
+  } catch (_) {}
+
+  assert(hookCalls.length >= 1, 'onError was called');
+});
+
+test('v14: onRetry hook fires on retry', async () => {
+  let attempts = 0;
+  const hookCalls = [];
+  const customAdapter = async () => {
+    attempts++;
+    if (attempts < 3) {
+      return {
+        data: null, rawData: null,
+        status: 503, statusText: 'Unavailable',
+        headers: {}, request: {},
+      };
+    }
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    retryConfig: { retries: 5, retryDelay: () => 1 },
+    hooks: {
+      onRetry: [(count, err) => { hookCalls.push({ count, msg: err.message }); }],
+    },
+  });
+
+  await client.get('/retry');
+  assert(hookCalls.length >= 1, 'onRetry was called');
+  assertEqual(hookCalls[0].count, 1);
+});
+
+test('v14: hooks are fire-and-forget (errors swallowed)', async () => {
+  const customAdapter = async () => ({
+    data: { ok: true }, rawData: { ok: true },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    hooks: {
+      onRequest: [() => { throw new Error('hook error!'); }],
+      onResponse: [() => { throw new Error('response hook error!'); }],
+    },
+  });
+
+  // Should not throw despite hooks throwing
+  const res = await client.get('/data');
+  assertEqual(res.status, 200);
+});
+
+test('v14: multiple hooks in same lifecycle', async () => {
+  const calls = [];
+  const customAdapter = async () => ({
+    data: { ok: true }, rawData: { ok: true },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    hooks: {
+      onRequest: [
+        () => calls.push('hook1'),
+        () => calls.push('hook2'),
+        () => calls.push('hook3'),
+      ],
+    },
+  });
+
+  await client.get('/data');
+  assertEqual(calls.length, 3);
+  assertEqual(calls[0], 'hook1');
+  assertEqual(calls[1], 'hook2');
+  assertEqual(calls[2], 'hook3');
+});
+
+test('v14: hooks accept single function (not just arrays)', async () => {
+  let called = false;
+  const customAdapter = async () => ({
+    data: { ok: true }, rawData: { ok: true },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    hooks: {
+      onRequest: () => { called = true; }, // single function, not array
+    },
+  });
+
+  await client.get('/data');
+  assert(called, 'single function hook was called');
+});
+
+console.log('\n━━━ v14: Complete API Surface Verification ━━━');
+
+test('v14: full API surface check', () => {
+  const api = require('./src/index');
+
+  // Version
+  assertEqual(api.VERSION, '14.0.0');
+
+  // v14 options available in client defaults
+  const client = api.createClient({
+    retryConfig: { retries: 2 },
+    cache: { ttl: 5000 },
+    dedupe: { enabled: true },
+    tokenRefresh: { onRefresh: async () => 'token' },
+    timing: true,
+    hooks: { onRequest: [() => {}] },
+  });
+
+  assert('retryConfig' in client.defaults, 'defaults.retryConfig');
+  assert('cache' in client.defaults, 'defaults.cache');
+  assert('dedupe' in client.defaults, 'defaults.dedupe');
+  assert('tokenRefresh' in client.defaults, 'defaults.tokenRefresh');
+  assert('timing' in client.defaults, 'defaults.timing');
+  assert('hooks' in client.defaults, 'defaults.hooks');
+
+  // New methods
+  assert(typeof client.clearResponseCache === 'function', 'clearResponseCache is function');
+});
+
+test('v14: defaults are null when not configured', () => {
+  const client = createClient();
+  assertEqual(client.defaults.retryConfig, null);
+  assertEqual(client.defaults.cache, null);
+  assertEqual(client.defaults.dedupe, null);
+  assertEqual(client.defaults.tokenRefresh, null);
+  assertEqual(client.defaults.timing, false);
+  assertEqual(client.defaults.hooks, null);
+});
+
+test('v14: client still works perfectly without any v14 config', async () => {
+  const customAdapter = async () => ({
+    data: { name: 'test' }, rawData: { name: 'test' },
+    status: 200, statusText: 'OK',
+    headers: { 'content-type': 'application/json' },
+    request: { url: 'http://test.local/basic', method: 'GET' },
+  });
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+  });
+
+  const res = await client.get('/basic');
+  assertEqual(res.status, 200);
+  assertEqual(res.data.name, 'test');
+});
+
+test('v14: cache + dedup + timing combined', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    await new Promise(r => setTimeout(r, 10));
+    return {
+      data: { v: callCount }, rawData: { v: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+    dedupe: { enabled: true, methods: ['GET'] },
+    timing: true,
+  });
+
+  const res = await client.get('/combined');
+  assert(typeof res.duration === 'number', 'has duration');
+  assert(res.timing.duration >= 0, 'timing duration >= 0');
+  assertEqual(callCount, 1);
+});
+
+test('v14: retryConfig + hooks combined', async () => {
+  let attempts = 0;
+  const hookLog = [];
+  const customAdapter = async () => {
+    attempts++;
+    if (attempts < 2) {
+      return {
+        data: null, rawData: null,
+        status: 502, statusText: 'Bad Gateway',
+        headers: {}, request: {},
+      };
+    }
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    retryConfig: { retries: 3, retryDelay: () => 1 },
+    hooks: {
+      onRequest: [(config) => hookLog.push('req')],
+      onResponse: [(res) => hookLog.push('res')],
+      onError: [(err) => hookLog.push('err')],
+      onRetry: [(count) => hookLog.push(`retry:${count}`)],
+    },
+  });
+
+  const res = await client.get('/test');
+  assertEqual(res.status, 200);
+  assert(hookLog.includes('req'), 'onRequest fired');
+  assert(hookLog.includes('res'), 'onResponse fired');
+});
+
+test('v14: staleWhileRevalidate returns stale data immediately', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { v: callCount }, rawData: { v: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 1, methods: ['GET'], staleWhileRevalidate: true }, // 1ms TTL
+  });
+
+  // First request — fills cache
+  const res1 = await client.get('/stale-test');
+  assertEqual(res1.data.v, 1);
+
+  // Wait for cache to expire
+  await new Promise(r => setTimeout(r, 10));
+
+  // Second request — should return stale data immediately
+  const res2 = await client.get('/stale-test');
+  assertEqual(res2.data.v, 1); // stale data returned immediately
 });
 
 // Wait a tick for async tests

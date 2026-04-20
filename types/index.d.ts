@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v13
-// Type definitions for api-bridge-ai 13.0.0
+// TypeScript Type Declarations for APIBridge AI v14
+// Type definitions for api-bridge-ai 14.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -374,6 +374,59 @@ declare namespace ApiBridgeAI {
     // v13 options
     maxRate?: number | [number, number] | null;
     lookup?: ((hostname: string, options?: any, callback?: Function) => void) | null;
+    // v14 options
+    retryConfig?: RetryConfig | null;
+    cache?: CacheConfig | null;
+    dedupe?: DedupeConfig | null;
+    tokenRefresh?: TokenRefreshConfig | null;
+    timing?: boolean;
+    hooks?: LifecycleHooks | null;
+  }
+
+  // ─── v14 Configuration Interfaces ──────────────────────────────────────
+
+  interface RetryConfig {
+    retries?: number;
+    retryCondition?: (error: ClientError) => boolean;
+    retryDelay?: (retryCount: number, error: ClientError) => number;
+    shouldResetTimeout?: boolean;
+    onRetry?: (retryCount: number, error: ClientError, config: ClientRequestConfig) => void;
+  }
+
+  interface CacheConfig {
+    ttl?: number;
+    maxSize?: number;
+    methods?: string[];
+    keyGenerator?: (config: ClientRequestConfig) => string;
+    exclude?: string[];
+    staleWhileRevalidate?: boolean;
+  }
+
+  interface DedupeConfig {
+    enabled?: boolean;
+    methods?: string[];
+    keyGenerator?: (config: ClientRequestConfig) => string;
+  }
+
+  interface TokenRefreshConfig {
+    onRefresh: () => Promise<string>;
+    statusCodes?: number[];
+    maxRetries?: number;
+    headerName?: string;
+    tokenPrefix?: string;
+  }
+
+  interface LifecycleHooks {
+    onRequest?: Array<(config: ClientRequestConfig) => void> | ((config: ClientRequestConfig) => void);
+    onResponse?: Array<(response: ClientResponse) => void> | ((response: ClientResponse) => void);
+    onError?: Array<(error: ClientError) => void> | ((error: ClientError) => void);
+    onRetry?: Array<(retryCount: number, error: ClientError, config: ClientRequestConfig) => void> | ((retryCount: number, error: ClientError, config: ClientRequestConfig) => void);
+  }
+
+  interface ResponseTiming {
+    start: number;
+    end: number;
+    duration: number;
   }
 
   interface ClientRequestConfig {
@@ -408,6 +461,8 @@ declare namespace ApiBridgeAI {
     socketPath?: string;
     formSerializer?: { indexes?: boolean; dots?: boolean; metaTokens?: boolean } | null;
     env?: { FormData?: any };
+    // v14 options
+    retryConfig?: RetryConfig | null;
   }
 
   interface ClientResponse<T = any> {
@@ -418,6 +473,9 @@ declare namespace ApiBridgeAI {
     config: ClientRequestConfig;
     request: any;
     raw?: any;
+    // v14 timing (when timing: true)
+    duration?: number;
+    timing?: ResponseTiming;
   }
 
   interface ProgressEvent {
@@ -472,6 +530,13 @@ declare namespace ApiBridgeAI {
     // v13 defaults
     maxRate: number | [number, number] | null;
     lookup: ((hostname: string, options?: any, callback?: Function) => void) | null;
+    // v14 defaults
+    retryConfig: RetryConfig | null;
+    cache: CacheConfig | null;
+    dedupe: DedupeConfig | null;
+    tokenRefresh: TokenRefreshConfig | null;
+    timing: boolean;
+    hooks: LifecycleHooks | null;
   }
 
   // ─── v11 Client Class ──────────────────────────────────────────────────
@@ -517,6 +582,13 @@ declare namespace ApiBridgeAI {
     // v13 properties
     maxRate: number | [number, number] | null;
     lookup: ((hostname: string, options?: any, callback?: Function) => void) | null;
+    // v14 properties
+    retryConfig: RetryConfig | null;
+    cache: CacheConfig | null;
+    dedupe: DedupeConfig | null;
+    tokenRefresh: TokenRefreshConfig | null;
+    timing: boolean;
+    hooks: LifecycleHooks | null;
 
     get<T = any>(url: string, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
     post<T = any>(url: string, body?: any, config?: ClientRequestConfig): Promise<ClientResponse<T>>;
@@ -537,6 +609,7 @@ declare namespace ApiBridgeAI {
     enableProxy(enabled: boolean): void;
     getStats(): any;
     clearCache(): void;
+    clearResponseCache(): void;
     reset(): void;
     _coerceValue(value: any, targetType: string): any;
     _coerceToExpect(data: any, expectMap: Map<string, string>): any;

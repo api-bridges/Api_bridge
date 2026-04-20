@@ -81,7 +81,7 @@ const { AxiosHeaders } = require('./headers');
  * Library version.
  * @type {string}
  */
-const VERSION = '13.0.0';
+const VERSION = '14.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -409,6 +409,20 @@ class APIBridgeClient {
     this.maxRate = options.maxRate || null;
     this.lookup = options.lookup || null;
 
+    // ─── v14: Auto-Retry Engine, Caching, Dedup, Token Refresh, Timing, Hooks ──
+    this.retryConfig = options.retryConfig || null;
+    this.cache = options.cache || null;
+    this.dedupe = options.dedupe || null;
+    this.tokenRefresh = options.tokenRefresh || null;
+    this.timing = options.timing !== undefined ? options.timing : false;
+    this.hooks = options.hooks || null;
+
+    // v14: Internal state for caching, dedup, and token refresh
+    this._responseCache = new Map();
+    this._inflightRequests = new Map();
+    this._isRefreshing = false;
+    this._refreshQueue = [];
+
     // ─── Mutable defaults object (Axios-compatible) ───────────────
     this.defaults = {
       baseURL: this.baseURL,
@@ -451,6 +465,13 @@ class APIBridgeClient {
       // v13: New defaults
       maxRate: this.maxRate,
       lookup: this.lookup,
+      // v14: New defaults
+      retryConfig: this.retryConfig,
+      cache: this.cache,
+      dedupe: this.dedupe,
+      tokenRefresh: this.tokenRefresh,
+      timing: this.timing,
+      hooks: this.hooks,
     };
 
     // Core engines
@@ -697,6 +718,86 @@ class APIBridgeClient {
     return buildURL(base, url, params, serializer);
   }
 
+  // ─── v14: Response Cache Management ──────────────────────────────────────
+
+  /**
+   * Clear the response cache.
+   */
+  clearResponseCache() {
+    this._responseCache.clear();
+  }
+
+  // ─── v14: Internal Helpers ──────────────────────────────────────────────
+
+  /**
+   * Fire lifecycle hooks (fire-and-forget, errors are swallowed).
+   * @param {string} hookName
+   * @param  {...any} args
+   */
+  _fireHooks(hookName, ...args) {
+    const hooks = this.hooks || this.defaults.hooks;
+    if (!hooks || !hooks[hookName]) return;
+    const fns = Array.isArray(hooks[hookName]) ? hooks[hookName] : [hooks[hookName]];
+    for (const fn of fns) {
+      if (typeof fn === 'function') {
+        try { fn(...args); } catch (_) { /* hooks are fire-and-forget */ }
+      }
+    }
+  }
+
+  /**
+   * Generate a cache key for a request config.
+   * @param {object} reqConfig
+   * @param {object} cacheConfig
+   * @returns {string}
+   */
+  _generateCacheKey(reqConfig, cacheConfig) {
+    if (cacheConfig.keyGenerator && typeof cacheConfig.keyGenerator === 'function') {
+      return cacheConfig.keyGenerator(reqConfig);
+    }
+    const params = reqConfig.params ? JSON.stringify(reqConfig.params) : '';
+    return `${reqConfig.method}:${reqConfig.url}:${params}`;
+  }
+
+  /**
+   * Generate a dedup key for a request config.
+   * @param {object} reqConfig
+   * @param {object} dedupeConfig
+   * @returns {string}
+   */
+  _generateDedupKey(reqConfig, dedupeConfig) {
+    if (dedupeConfig.keyGenerator && typeof dedupeConfig.keyGenerator === 'function') {
+      return dedupeConfig.keyGenerator(reqConfig);
+    }
+    const params = reqConfig.params ? JSON.stringify(reqConfig.params) : '';
+    return `${reqConfig.method}:${reqConfig.url}:${params}`;
+  }
+
+  /**
+   * Check if a URL matches any exclusion patterns.
+   * @param {string} url
+   * @param {string[]} excludePatterns
+   * @returns {boolean}
+   */
+  _isExcludedFromCache(url, excludePatterns) {
+    if (!excludePatterns || excludePatterns.length === 0) return false;
+    for (const pattern of excludePatterns) {
+      if (url.includes(pattern)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Evict oldest cache entry if maxSize is exceeded.
+   * @param {number} maxSize
+   */
+  _evictCacheIfNeeded(maxSize) {
+    if (maxSize > 0 && this._responseCache.size >= maxSize) {
+      const oldestKey = this._responseCache.keys().next().value;
+      this._responseCache.delete(oldestKey);
+    }
+  }
+
   // ─── Core Request ───────────────────────────────────────────────────────
 
   /**
@@ -765,6 +866,8 @@ class APIBridgeClient {
       formSerializer: cleanConfig.formSerializer || this.defaults.formSerializer || this.formSerializer,
       env: cleanConfig.env || this.defaults.env || this.env,
       _formSubmission: cleanConfig._formSubmission || false,
+      // v14: Per-request retryConfig
+      retryConfig: cleanConfig.retryConfig || this.defaults.retryConfig || this.retryConfig,
     };
 
     // Inject expect header
@@ -853,12 +956,87 @@ class APIBridgeClient {
       throw reqConfig.cancelToken.reason;
     }
 
-    // 7. Execute with retry
-    const maxRetries = reqConfig.retries || 0;
+    // v14: Fire onRequest hooks
+    this._fireHooks('onRequest', reqConfig);
+
+    // v14: Request timing — record start time
+    const requestStartTime = Date.now();
+
+    // v14: Response caching — check cache before executing
+    const cacheConfig = this.cache || this.defaults.cache;
+    if (cacheConfig && cacheConfig.ttl > 0) {
+      const cacheMethods = (cacheConfig.methods || ['GET']).map(m => m.toUpperCase());
+      if (cacheMethods.includes(reqConfig.method.toUpperCase()) &&
+          !this._isExcludedFromCache(reqConfig.url, cacheConfig.exclude)) {
+        const cacheKey = this._generateCacheKey(reqConfig, cacheConfig);
+        const cached = this._responseCache.get(cacheKey);
+        if (cached) {
+          const age = Date.now() - cached.timestamp;
+          if (age < cacheConfig.ttl) {
+            // Cache hit — return cached response
+            this._stats.successes++;
+            return cached.response;
+          } else if (cacheConfig.staleWhileRevalidate) {
+            // Serve stale and revalidate in background
+            this._doRequestCore(reqConfig, activeExpect, expectMap, requestStartTime, true).then(freshResponse => {
+              this._evictCacheIfNeeded(cacheConfig.maxSize || 100);
+              this._responseCache.set(cacheKey, { response: freshResponse, timestamp: Date.now() });
+            }).catch(() => { /* background revalidation failed — keep stale */ });
+            this._stats.successes++;
+            return cached.response;
+          } else {
+            // Stale — remove from cache
+            this._responseCache.delete(cacheKey);
+          }
+        }
+      }
+    }
+
+    // v14: Request deduplication
+    const dedupeConfig = this.dedupe || this.defaults.dedupe;
+    if (dedupeConfig && dedupeConfig.enabled) {
+      const dedupMethods = (dedupeConfig.methods || ['GET']).map(m => m.toUpperCase());
+      if (dedupMethods.includes(reqConfig.method.toUpperCase())) {
+        const dedupKey = this._generateDedupKey(reqConfig, dedupeConfig);
+        const inflight = this._inflightRequests.get(dedupKey);
+        if (inflight) {
+          return inflight;
+        }
+        const requestPromise = this._doRequestCore(reqConfig, activeExpect, expectMap, requestStartTime, false)
+          .finally(() => {
+            this._inflightRequests.delete(dedupKey);
+          });
+        this._inflightRequests.set(dedupKey, requestPromise);
+        return requestPromise;
+      }
+    }
+
+    return this._doRequestCore(reqConfig, activeExpect, expectMap, requestStartTime, false);
+  }
+
+  /**
+   * Core request execution with retry loop, caching, token refresh, timing, and hooks.
+   * @private
+   */
+  async _doRequestCore(reqConfig, activeExpect, expectMap, requestStartTime, isBackgroundRevalidation) {
+    // Resolve retryConfig
+    const retryConf = reqConfig.retryConfig || this.retryConfig || this.defaults.retryConfig;
+    const maxRetries = retryConf ? (retryConf.retries !== undefined ? retryConf.retries : (reqConfig.retries || 0)) : (reqConfig.retries || 0);
+
+    // Token refresh config
+    const tokenRefreshConfig = this.tokenRefresh || this.defaults.tokenRefresh;
+    let tokenRefreshAttempts = 0;
+    const maxTokenRefreshRetries = tokenRefreshConfig ? (tokenRefreshConfig.maxRetries !== undefined ? tokenRefreshConfig.maxRetries : 1) : 0;
+
     let lastError;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
+        // v14: Reset timeout per retry if configured
+        if (retryConf && retryConf.shouldResetTimeout && attempt > 0) {
+          reqConfig.signal = undefined;
+        }
+
         const response = await this._executeRequest(reqConfig);
 
         // 8. Transform + align response
@@ -942,6 +1120,19 @@ class APIBridgeClient {
           request: response.request || {},
         };
 
+        // v14: Add timing info
+        const timingEnabled = this.timing || this.defaults.timing;
+        if (timingEnabled) {
+          const endTime = Date.now();
+          const duration = endTime - requestStartTime;
+          result.duration = duration;
+          result.timing = {
+            start: requestStartTime,
+            end: endTime,
+            duration,
+          };
+        }
+
         if (this._debug) {
           result.raw = response.rawData;
         }
@@ -954,10 +1145,31 @@ class APIBridgeClient {
           throw this._wrapError(err, reqConfig);
         }
 
+        // v14: Fire onResponse hooks
+        this._fireHooks('onResponse', result);
+
         this._stats.successes++;
+
+        // v14: Store in response cache if applicable
+        if (!isBackgroundRevalidation) {
+          const cacheConfig = this.cache || this.defaults.cache;
+          if (cacheConfig && cacheConfig.ttl > 0) {
+            const cacheMethods = (cacheConfig.methods || ['GET']).map(m => m.toUpperCase());
+            if (cacheMethods.includes(reqConfig.method.toUpperCase()) &&
+                !this._isExcludedFromCache(reqConfig.url, cacheConfig.exclude)) {
+              const cacheKey = this._generateCacheKey(reqConfig, cacheConfig);
+              this._evictCacheIfNeeded(cacheConfig.maxSize || 100);
+              this._responseCache.set(cacheKey, { response: result, timestamp: Date.now() });
+            }
+          }
+        }
+
         return result;
       } catch (err) {
         lastError = err;
+
+        // v14: Fire onError hooks
+        this._fireHooks('onError', err);
 
         // Don't retry cancelled requests
         if (isCancel(err)) break;
@@ -972,19 +1184,87 @@ class APIBridgeClient {
         if (err instanceof ClientError && err.code === 'ERR_MAX_CONTENT_LENGTH_EXCEEDED') {
           break;
         }
+
+        // v14: Token refresh — handle 401 or configured status codes
+        if (tokenRefreshConfig && tokenRefreshConfig.onRefresh && tokenRefreshAttempts < maxTokenRefreshRetries) {
+          const triggerStatuses = tokenRefreshConfig.statusCodes || [401];
+          if (err.status && triggerStatuses.includes(err.status)) {
+            tokenRefreshAttempts++;
+            try {
+              let newToken;
+              if (this._isRefreshing) {
+                // Wait for the current refresh to complete
+                newToken = await new Promise((resolve, reject) => {
+                  this._refreshQueue.push({ resolve, reject });
+                });
+              } else {
+                this._isRefreshing = true;
+                try {
+                  newToken = await tokenRefreshConfig.onRefresh();
+                  // Resolve all queued requests
+                  for (const queued of this._refreshQueue) {
+                    queued.resolve(newToken);
+                  }
+                  this._refreshQueue = [];
+                } catch (refreshErr) {
+                  for (const queued of this._refreshQueue) {
+                    queued.reject(refreshErr);
+                  }
+                  this._refreshQueue = [];
+                  throw refreshErr;
+                } finally {
+                  this._isRefreshing = false;
+                }
+              }
+              // Update header and retry
+              const headerName = tokenRefreshConfig.headerName || 'Authorization';
+              const tokenPrefix = tokenRefreshConfig.tokenPrefix !== undefined ? tokenRefreshConfig.tokenPrefix : 'Bearer ';
+              reqConfig.headers[headerName] = `${tokenPrefix}${newToken}`;
+              attempt--; // token refresh retry should not count against retry attempts
+              continue; // retry with new token
+            } catch (_refreshErr) {
+              // Token refresh failed — fall through to normal retry logic
+            }
+          }
+        }
+
         if (err.status && err.status >= 400 && err.status < 500 &&
             !this.retryableStatuses.has(err.status)) {
           break;
         }
+
+        // v14: retryConfig.retryCondition check
+        if (retryConf && retryConf.retryCondition && typeof retryConf.retryCondition === 'function') {
+          if (!retryConf.retryCondition(err)) {
+            break;
+          }
+        }
+
         // Don't retry if we've exhausted attempts
         if (attempt >= maxRetries) {
           break;
         }
 
         this._stats.retries++;
-        const delay = this.retryDelay * Math.pow(2, attempt);
-        const jitter = delay * 0.1 * Math.random();
-        await new Promise(resolve => setTimeout(resolve, delay + jitter));
+
+        // v14: Fire onRetry hooks
+        this._fireHooks('onRetry', attempt + 1, err, reqConfig);
+
+        // v14: retryConfig.onRetry callback
+        if (retryConf && retryConf.onRetry && typeof retryConf.onRetry === 'function') {
+          try { retryConf.onRetry(attempt + 1, err, reqConfig); } catch (_) { /* ignore */ }
+        }
+
+        // v14: Custom retry delay from retryConfig, or default exponential backoff
+        let delay;
+        if (retryConf && retryConf.retryDelay && typeof retryConf.retryDelay === 'function') {
+          delay = retryConf.retryDelay(attempt + 1, err);
+        } else {
+          delay = this.retryDelay * Math.pow(2, attempt);
+          const jitter = delay * 0.1 * Math.random();
+          delay = delay + jitter;
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
 

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v13
+ * APIBridge AI v14
  * Complete Axios Drop-in Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -177,6 +177,16 @@
  *  - AxiosHeaders integration throughout entire request/response pipeline
  *  - isAxiosError() now also checks `.isAxiosError` property (duck-typing compatible)
  *  - Version 13.0.0
+ *
+ * v14 features (Enterprise-Grade HTTP Client — Production Power Tools):
+ *  - Auto-Retry Engine (retryConfig): configurable retry strategies with retryCondition, retryDelay function, shouldResetTimeout, onRetry callback
+ *  - Response Caching: built-in TTL-based memory cache with maxSize, method filtering, URL exclusion, staleWhileRevalidate, clearResponseCache()
+ *  - Request Deduplication (dedupe): coalesce identical in-flight requests to avoid redundant network calls
+ *  - Auto Token Refresh (tokenRefresh): automatic 401 handling with onRefresh callback, request queuing during refresh, configurable status codes
+ *  - Request Timing: every response includes duration (ms) and timing { start, end, duration } for performance monitoring
+ *  - Lifecycle Hooks: onRequest, onResponse, onError, onRetry event hooks (fire-and-forget observers)
+ *  - clearResponseCache() method on client instances
+ *  - Version 14.0.0
  *
  * Usage:
  *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');
