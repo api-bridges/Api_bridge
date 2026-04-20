@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v11 — AxiosHeaders-compatible Header Management
+ * APIBridge AI v15 — AxiosHeaders-compatible Header Management
  *
  * A normalized header class that provides case-insensitive header access,
  * similar to Axios's AxiosHeaders class.
@@ -12,11 +12,17 @@
  *   - Serialize to plain object
  *   - fromEntries / from / concat
  *
+ * v15 Enhancements:
+ *   - Raw header string parsing via AxiosHeaders.fromString()
+ *   - toJSON filter support (boolean, array of names, or RegExp)
+ *   - Additional pre-defined accessors (User-Agent, Content-Encoding, Content-Disposition)
+ *
  * Usage:
  *   const headers = new AxiosHeaders({ 'Content-Type': 'application/json' });
  *   headers.set('authorization', 'Bearer token');
  *   headers.get('Authorization'); // 'Bearer token'
  *   headers.has('content-type'); // true
+ *   const h = AxiosHeaders.fromString('Content-Type: text/html\r\nAccept: text/html');
  */
 
 'use strict';
@@ -250,14 +256,36 @@ class AxiosHeaders {
 
   /**
    * Convert to a plain object.
-   * @param {boolean} [normalize=true] — Use normalized names
+   *
+   * @param {boolean|string[]|RegExp} [asStrings=true] — Filter parameter:
+   *   - boolean (legacy): if true, use normalized names; if false, use lowercase names
+   *   - string[]: only include headers whose names are in this array (case-insensitive)
+   *   - RegExp: only include headers whose names match this pattern
    * @returns {object}
    */
-  toJSON(normalize = true) {
+  toJSON(asStrings = true) {
     const result = {};
-    for (const [, entry] of this._headers) {
-      result[normalize ? entry.name : entry.name.toLowerCase()] = entry.value;
+
+    if (Array.isArray(asStrings)) {
+      const allowed = new Set(asStrings.map(n => n.toLowerCase()));
+      for (const [, entry] of this._headers) {
+        if (allowed.has(entry.name.toLowerCase())) {
+          result[entry.name] = entry.value;
+        }
+      }
+    } else if (asStrings instanceof RegExp) {
+      for (const [, entry] of this._headers) {
+        if (asStrings.test(entry.name)) {
+          result[entry.name] = entry.value;
+        }
+      }
+    } else {
+      const normalize = asStrings !== false;
+      for (const [, entry] of this._headers) {
+        result[normalize ? entry.name : entry.name.toLowerCase()] = entry.value;
+      }
     }
+
     return result;
   }
 
@@ -290,6 +318,32 @@ class AxiosHeaders {
       return new AxiosHeaders(entries);
     }
     return new AxiosHeaders(entries);
+  }
+
+  /**
+   * Parse a raw HTTP header string into an AxiosHeaders instance.
+   * Lines are split on "\r\n" or "\n". Each line should be "Name: Value".
+   *
+   * @param {string} headerStr — Raw header string
+   * @returns {AxiosHeaders}
+   */
+  static fromString(headerStr) {
+    const instance = new AxiosHeaders();
+    if (!headerStr || typeof headerStr !== 'string') return instance;
+
+    const lines = headerStr.split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const colonIdx = trimmed.indexOf(':');
+      if (colonIdx === -1) continue;
+      const name = trimmed.slice(0, colonIdx).trim();
+      const value = trimmed.slice(colonIdx + 1).trim();
+      if (name && !DANGEROUS_KEYS.has(name)) {
+        instance.set(name, value);
+      }
+    }
+    return instance;
   }
 
   /**
@@ -345,5 +399,8 @@ AxiosHeaders.accessor('Content-Type');
 AxiosHeaders.accessor('Content-Length');
 AxiosHeaders.accessor('Accept');
 AxiosHeaders.accessor('Authorization');
+AxiosHeaders.accessor('User-Agent');
+AxiosHeaders.accessor('Content-Encoding');
+AxiosHeaders.accessor('Content-Disposition');
 
 module.exports = { AxiosHeaders, normalizeHeaderName };

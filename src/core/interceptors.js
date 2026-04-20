@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v9 — Interceptor Manager
+ * APIBridge AI v15 — Interceptor Manager
  *
  * Axios-compatible interceptor system with improvements:
  *   - Request interceptors
@@ -9,8 +9,15 @@
  *   - Chaining
  *   - Ejection by ID
  *
+ * v15 enhancements:
+ *   - `options.synchronous` (boolean) — run interceptor synchronously (no await)
+ *   - `options.runWhen` (function|null) — predicate `(config) => boolean`;
+ *     if provided and returns false the interceptor is skipped
+ *
  * Usage:
  *   client.interceptors.request.use(onFulfilled, onRejected);
+ *   client.interceptors.request.use(onFulfilled, onRejected, { synchronous: true });
+ *   client.interceptors.request.use(onFulfilled, null, { runWhen: (cfg) => cfg.needsAuth });
  *   client.interceptors.response.use(onFulfilled, onRejected);
  *   client.interceptors.request.eject(id);
  */
@@ -19,7 +26,7 @@
 
 /**
  * An individual interceptor chain (request or response).
- * Each interceptor is { id, fulfilled, rejected }.
+ * Each interceptor is { id, fulfilled, rejected, synchronous, runWhen }.
  */
 class InterceptorChain {
   constructor() {
@@ -31,14 +38,24 @@ class InterceptorChain {
    * Register an interceptor.
    * @param {Function} fulfilled — Called on success
    * @param {Function} [rejected] — Called on error
+   * @param {object}   [options]
+   * @param {boolean}  [options.synchronous=false] — Run synchronously (no await)
+   * @param {Function|null} [options.runWhen] — Predicate; return false to skip
    * @returns {number} Interceptor ID (used to eject)
    */
-  use(fulfilled, rejected) {
+  use(fulfilled, rejected, options) {
     if (typeof fulfilled !== 'function') {
       throw new TypeError('Interceptor fulfilled handler must be a function');
     }
+    const opts = options || {};
     const id = this._nextId++;
-    this._handlers.push({ id, fulfilled, rejected: rejected || null });
+    this._handlers.push({
+      id,
+      fulfilled,
+      rejected: rejected || null,
+      synchronous: opts.synchronous === true,
+      runWhen: typeof opts.runWhen === 'function' ? opts.runWhen : null,
+    });
     return id;
   }
 
@@ -58,7 +75,7 @@ class InterceptorChain {
 
   /**
    * Get all active handlers (internal).
-   * @returns {Array<{id: number, fulfilled: Function, rejected: Function|null}>}
+   * @returns {Array<{id: number, fulfilled: Function, rejected: Function|null, synchronous: boolean, runWhen: Function|null}>}
    */
   handlers() {
     return this._handlers.slice();
@@ -110,11 +127,18 @@ class InterceptorManager {
   async runRequest(config) {
     let result = config;
     for (const handler of this.request.handlers()) {
+      if (handler.runWhen && !handler.runWhen(result)) {
+        continue;
+      }
       try {
-        result = await handler.fulfilled(result);
+        result = handler.synchronous
+          ? handler.fulfilled(result)
+          : await handler.fulfilled(result);
       } catch (err) {
         if (handler.rejected) {
-          result = await handler.rejected(err);
+          result = handler.synchronous
+            ? handler.rejected(err)
+            : await handler.rejected(err);
         } else {
           throw err;
         }
@@ -132,11 +156,18 @@ class InterceptorManager {
   async runResponse(response) {
     let result = response;
     for (const handler of this.response.handlers()) {
+      if (handler.runWhen && !handler.runWhen(result)) {
+        continue;
+      }
       try {
-        result = await handler.fulfilled(result);
+        result = handler.synchronous
+          ? handler.fulfilled(result)
+          : await handler.fulfilled(result);
       } catch (err) {
         if (handler.rejected) {
-          result = await handler.rejected(err);
+          result = handler.synchronous
+            ? handler.rejected(err)
+            : await handler.rejected(err);
         } else {
           throw err;
         }

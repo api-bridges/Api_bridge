@@ -170,6 +170,7 @@ const {
   patchForm: defaultPatchForm,
   getUri: defaultGetUri,
   interceptors: defaultInterceptors,
+  resolveParamsSerializer,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -6127,7 +6128,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '14.0.0');
+  assertEqual(VERSION, '15.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7187,7 +7188,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '14.0.0');
+  assertEqual(apiBridge.VERSION, '15.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7867,7 +7868,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '14.0.0');
+  assertEqual(api.VERSION, '15.0.0');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
@@ -8745,7 +8746,7 @@ test('v14: full API surface check', () => {
   const api = require('./src/index');
 
   // Version
-  assertEqual(api.VERSION, '14.0.0');
+  assertEqual(api.VERSION, '15.0.0');
 
   // v14 options available in client defaults
   const client = api.createClient({
@@ -8886,6 +8887,481 @@ test('v14: staleWhileRevalidate returns stale data immediately', async () => {
   // Second request — should return stale data immediately
   const res2 = await client.get('/stale-test');
   assertEqual(res2.data.v, 1); // stale data returned immediately
+});
+
+// ─── v15 Tests ─────────────────────────────────────────────────────────────────
+
+console.log('\n--- v15: Full Axios Replacement Tests ---');
+
+// ─── Interceptor runWhen + synchronous ──────────────────────────────────────
+
+test('v15: interceptor runWhen — skips interceptor when predicate returns false', async () => {
+  const log = [];
+  const customAdapter = async () => ({
+    data: { ok: true }, rawData: { ok: true },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({ adapter: customAdapter, baseURL: 'http://test.local' });
+  client.interceptors.request.use(
+    (config) => { log.push('always'); return config; },
+  );
+  client.interceptors.request.use(
+    (config) => { log.push('conditional'); return config; },
+    null,
+    { runWhen: (config) => config.url === '/only-this' },
+  );
+
+  await client.get('/other');
+  assert(log.includes('always'), 'always interceptor ran');
+  assert(!log.includes('conditional'), 'conditional interceptor was skipped');
+
+  log.length = 0;
+  await client.get('/only-this');
+  assert(log.includes('always'), 'always interceptor ran again');
+  assert(log.includes('conditional'), 'conditional interceptor ran when predicate matched');
+});
+
+test('v15: interceptor runWhen — runs all when runWhen not specified', async () => {
+  const log = [];
+  const customAdapter = async () => ({
+    data: {}, rawData: {},
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({ adapter: customAdapter, baseURL: 'http://test.local' });
+  client.interceptors.request.use((config) => { log.push('a'); return config; });
+  client.interceptors.request.use((config) => { log.push('b'); return config; });
+
+  await client.get('/test');
+  assertEqual(log.length, 2);
+  assertEqual(log[0], 'a');
+  assertEqual(log[1], 'b');
+});
+
+test('v15: interceptor synchronous option stores correctly', () => {
+  const chain = new InterceptorChain();
+  const id = chain.use((x) => x, null, { synchronous: true });
+  const handlers = chain.handlers();
+  assert(handlers.length === 1, 'handler registered');
+  assertEqual(handlers[0].synchronous, true);
+});
+
+test('v15: interceptor use with options preserves fulfilled/rejected', () => {
+  const chain = new InterceptorChain();
+  const fn1 = (x) => x;
+  const fn2 = (e) => { throw e; };
+  const id = chain.use(fn1, fn2, { runWhen: () => true, synchronous: false });
+  const handlers = chain.handlers();
+  assertEqual(handlers[0].fulfilled, fn1);
+  assertEqual(handlers[0].rejected, fn2);
+  assertEqual(typeof handlers[0].runWhen, 'function');
+  assertEqual(handlers[0].synchronous, false);
+});
+
+test('v15: response interceptor runWhen — skips when predicate returns false', async () => {
+  const log = [];
+  const customAdapter = async (config) => ({
+    data: { status: config.fullURL.includes('special') ? 'special' : 'normal' },
+    rawData: { status: 'normal' },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+
+  const client = createClient({ adapter: customAdapter, baseURL: 'http://test.local' });
+  client.interceptors.response.use(
+    (res) => { log.push('always-res'); return res; },
+  );
+  client.interceptors.response.use(
+    (res) => { log.push('conditional-res'); return res; },
+    null,
+    { runWhen: (res) => res.data && res.data.status === 'special' },
+  );
+
+  await client.get('/normal');
+  assert(log.includes('always-res'), 'always response interceptor ran');
+  assert(!log.includes('conditional-res'), 'conditional response interceptor was skipped');
+
+  log.length = 0;
+  await client.get('/special');
+  assert(log.includes('always-res'), 'always response interceptor ran again');
+  assert(log.includes('conditional-res'), 'conditional response interceptor ran when predicate matched');
+});
+
+// ─── AxiosHeaders.fromString ────────────────────────────────────────────────
+
+test('v15: AxiosHeaders.fromString parses raw header string', () => {
+  const raw = 'Content-Type: application/json\r\nAccept: text/html\r\nAuthorization: Bearer token123';
+  const headers = AxiosHeaders.fromString(raw);
+  assertEqual(headers.get('Content-Type'), 'application/json');
+  assertEqual(headers.get('accept'), 'text/html');
+  assertEqual(headers.get('authorization'), 'Bearer token123');
+});
+
+test('v15: AxiosHeaders.fromString handles empty string', () => {
+  const headers = AxiosHeaders.fromString('');
+  assertEqual(headers.size, 0);
+});
+
+test('v15: AxiosHeaders.fromString handles null', () => {
+  const headers = AxiosHeaders.fromString(null);
+  assertEqual(headers.size, 0);
+});
+
+test('v15: AxiosHeaders.fromString handles LF-only line endings', () => {
+  const raw = 'Content-Type: text/plain\nX-Custom: value';
+  const headers = AxiosHeaders.fromString(raw);
+  assertEqual(headers.get('Content-Type'), 'text/plain');
+  assertEqual(headers.get('X-Custom'), 'value');
+});
+
+// ─── AxiosHeaders toJSON filter ─────────────────────────────────────────────
+
+test('v15: AxiosHeaders toJSON with array filter', () => {
+  const headers = new AxiosHeaders({
+    'Content-Type': 'application/json',
+    'Accept': 'text/html',
+    'Authorization': 'Bearer token',
+  });
+  const filtered = headers.toJSON(['Content-Type', 'Accept']);
+  assert('Content-Type' in filtered, 'Content-Type included');
+  assert('Accept' in filtered, 'Accept included');
+  assert(!('Authorization' in filtered), 'Authorization excluded');
+});
+
+test('v15: AxiosHeaders toJSON with RegExp filter', () => {
+  const headers = new AxiosHeaders({
+    'Content-Type': 'application/json',
+    'Content-Length': '100',
+    'Accept': 'text/html',
+  });
+  const filtered = headers.toJSON(/^Content/i);
+  assert('Content-Type' in filtered, 'Content-Type included');
+  assert('Content-Length' in filtered, 'Content-Length included');
+  assert(!('Accept' in filtered), 'Accept excluded');
+});
+
+test('v15: AxiosHeaders toJSON with boolean (legacy behavior)', () => {
+  const headers = new AxiosHeaders({ 'Content-Type': 'application/json' });
+  const result = headers.toJSON(true);
+  assert('Content-Type' in result, 'uses normalized names');
+});
+
+// ─── AxiosHeaders additional accessors ──────────────────────────────────────
+
+test('v15: AxiosHeaders has User-Agent accessor', () => {
+  const headers = new AxiosHeaders();
+  headers.setUserAgent('test-agent/1.0');
+  assertEqual(headers.getUserAgent(), 'test-agent/1.0');
+  assert(headers.hasUserAgent(), 'hasUserAgent returns true');
+});
+
+test('v15: AxiosHeaders has Content-Encoding accessor', () => {
+  const headers = new AxiosHeaders();
+  headers.setContentEncoding('gzip');
+  assertEqual(headers.getContentEncoding(), 'gzip');
+  assert(headers.hasContentEncoding(), 'hasContentEncoding returns true');
+});
+
+test('v15: AxiosHeaders has Content-Disposition accessor', () => {
+  const headers = new AxiosHeaders();
+  headers.setContentDisposition('attachment; filename="file.pdf"');
+  assertEqual(headers.getContentDisposition(), 'attachment; filename="file.pdf"');
+  assert(headers.hasContentDisposition(), 'hasContentDisposition returns true');
+});
+
+// ─── Auto Content-Type serialization ────────────────────────────────────────
+
+test('v15: auto Content-Type serialization — URLSearchParams for application/x-www-form-urlencoded', async () => {
+  let capturedBody = null;
+  const customAdapter = async (config) => {
+    capturedBody = config.body;
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    transformRequest: [], // disable default JSON transform to test auto-serialization
+  });
+
+  await client.post('/data', { name: 'John', age: 30 }, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+
+  // Body should have been auto-converted to URLSearchParams then serialized
+  assert(capturedBody !== null, 'body was sent');
+  // URLSearchParams.toString() or the string form
+  const bodyStr = typeof capturedBody === 'string' ? capturedBody : capturedBody.toString();
+  assert(bodyStr.includes('name=John'), 'contains name=John');
+  assert(bodyStr.includes('age=30'), 'contains age=30');
+});
+
+test('v15: auto Content-Type serialization disabled when autoContentType=false', async () => {
+  let capturedBody = null;
+  const customAdapter = async (config) => {
+    capturedBody = config.body;
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    autoContentType: false,
+    transformRequest: [],
+  });
+
+  await client.post('/data', { name: 'John' }, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+
+  // Body should NOT be auto-converted (it will be serialized as JSON by body handler)
+  assert(capturedBody !== null, 'body was sent');
+  // It should be JSON string, not URLSearchParams
+  const bodyStr = typeof capturedBody === 'string' ? capturedBody : JSON.stringify(capturedBody);
+  assert(bodyStr.includes('name'), 'body contains name');
+});
+
+// ─── Request correlation IDs ────────────────────────────────────────────────
+
+test('v15: requestId adds x-request-id header', async () => {
+  let capturedHeaders = null;
+  const customAdapter = async (config) => {
+    capturedHeaders = config.headers;
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    requestId: true,
+  });
+
+  await client.get('/test');
+  assert(capturedHeaders !== null, 'headers captured');
+  assert(capturedHeaders['x-request-id'] !== undefined, 'x-request-id header present');
+  assertEqual(typeof capturedHeaders['x-request-id'], 'string');
+  assert(capturedHeaders['x-request-id'].length > 0, 'x-request-id is non-empty');
+});
+
+test('v15: requestId with custom header name', async () => {
+  let capturedHeaders = null;
+  const customAdapter = async (config) => {
+    capturedHeaders = config.headers;
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    requestId: 'X-Correlation-ID',
+  });
+
+  await client.get('/test');
+  assert(capturedHeaders['X-Correlation-ID'] !== undefined, 'custom correlation header present');
+  assertEqual(typeof capturedHeaders['X-Correlation-ID'], 'string');
+});
+
+test('v15: requestId=false does not add header', async () => {
+  let capturedHeaders = null;
+  const customAdapter = async (config) => {
+    capturedHeaders = config.headers;
+    return {
+      data: { ok: true }, rawData: { ok: true },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    requestId: false,
+  });
+
+  await client.get('/test');
+  assert(capturedHeaders['x-request-id'] === undefined, 'no x-request-id header');
+});
+
+// ─── Enhanced paramsSerializer ──────────────────────────────────────────────
+
+test('v15: paramsSerializer with { serialize } function', () => {
+  const client = createClient({
+    baseURL: 'http://test.local',
+    paramsSerializer: {
+      serialize: (params) => `custom=${Object.keys(params).join(',')}`,
+    },
+  });
+
+  const uri = client.getUri({ url: '/test', params: { a: 1, b: 2 } });
+  assert(uri.includes('custom=a,b'), 'uses custom serialize function');
+});
+
+test('v15: paramsSerializer with { encode } function', () => {
+  const client = createClient({
+    baseURL: 'http://test.local',
+    paramsSerializer: {
+      encode: (value) => value.toUpperCase(),
+    },
+  });
+
+  const uri = client.getUri({ url: '/test', params: { name: 'hello' } });
+  assert(uri.includes('NAME=HELLO'), 'uses custom encode function');
+});
+
+test('v15: paramsSerializer as function still works (backward compat)', () => {
+  const client = createClient({
+    baseURL: 'http://test.local',
+    paramsSerializer: (params) => `legacy=${JSON.stringify(params)}`,
+  });
+
+  const uri = client.getUri({ url: '/test', params: { a: 1 } });
+  assert(uri.includes('legacy='), 'legacy function serializer works');
+});
+
+test('v15: resolveParamsSerializer returns null for null input', () => {
+  assertEqual(resolveParamsSerializer(null), null);
+});
+
+test('v15: resolveParamsSerializer handles function directly', () => {
+  const fn = (params) => 'test';
+  const result = resolveParamsSerializer(fn);
+  assertEqual(result, fn);
+});
+
+test('v15: resolveParamsSerializer handles object with serialize', () => {
+  const serializer = { serialize: (params) => 'custom' };
+  const fn = resolveParamsSerializer(serializer);
+  assertEqual(typeof fn, 'function');
+  assertEqual(fn({ a: 1 }), 'custom');
+});
+
+test('v15: resolveParamsSerializer handles object with encode only', () => {
+  const serializer = { encode: (v) => v.toUpperCase() };
+  const fn = resolveParamsSerializer(serializer);
+  assertEqual(typeof fn, 'function');
+  const result = fn({ name: 'test' });
+  assert(result.includes('NAME=TEST'), 'encode function applied');
+});
+
+// ─── beforeRedirect ─────────────────────────────────────────────────────────
+
+test('v15: beforeRedirect callback is stored in config', () => {
+  const cb = () => {};
+  const client = createClient({
+    baseURL: 'http://test.local',
+    beforeRedirect: cb,
+  });
+  assertEqual(client.defaults.beforeRedirect, cb);
+});
+
+// ─── Full API surface check ────────────────────────────────────────────────
+
+test('v15: full API surface check', () => {
+  // v15 new exports available
+  const api = { resolveParamsSerializer, VERSION };
+  assertEqual(typeof resolveParamsSerializer, 'function');
+  assertEqual(api.VERSION, '15.0.0');
+
+  // AxiosHeaders v15 enhancements
+  assert(typeof AxiosHeaders.fromString === 'function', 'AxiosHeaders.fromString exists');
+
+  // Interceptor chain supports 3-arg use
+  const chain = new InterceptorChain();
+  const id = chain.use((x) => x, null, { runWhen: () => true, synchronous: true });
+  assert(typeof id === 'number', 'use returns an id');
+  const handlers = chain.handlers();
+  assert(handlers[0].runWhen !== undefined, 'runWhen stored');
+  assert(handlers[0].synchronous !== undefined, 'synchronous stored');
+
+  // apiBridge callable has resolveParamsSerializer
+  assert(typeof apiBridge.resolveParamsSerializer === 'function', 'apiBridge.resolveParamsSerializer exists');
+});
+
+test('v15: all existing APIBridge features preserved', () => {
+  // Verify all core exports still exist
+  assert(typeof bridge === 'function', 'bridge function exists');
+  assert(typeof bridgeFetch === 'function', 'bridgeFetch function exists');
+  assert(typeof transform === 'function', 'transform function exists');
+  assert(typeof createTransformer === 'function', 'createTransformer function exists');
+  assert(typeof createClient === 'function', 'createClient function exists');
+  assert(typeof all === 'function', 'all function exists');
+  assert(typeof spread === 'function', 'spread function exists');
+  assert(typeof isClientError === 'function', 'isClientError function exists');
+  assert(typeof isCancel === 'function', 'isCancel function exists');
+  assert(typeof toFormData === 'function', 'toFormData function exists');
+  assert(typeof mergeConfig === 'function', 'mergeConfig function exists');
+  assert(typeof buildURL === 'function', 'buildURL function exists');
+
+  // v3-v8 classes
+  assert(typeof PluginManager === 'function', 'PluginManager exists');
+  assert(typeof CircuitBreaker === 'function', 'CircuitBreaker exists');
+  assert(typeof GraphQLBridge === 'function', 'GraphQLBridge exists');
+  assert(typeof RetryStrategy === 'function', 'RetryStrategy exists');
+  assert(typeof EventBus === 'function', 'EventBus exists');
+  assert(typeof FuzzyMatcher === 'function', 'FuzzyMatcher exists');
+  assert(typeof FieldAliaser === 'function', 'FieldAliaser exists');
+  assert(typeof SchemaMigrator === 'function', 'SchemaMigrator exists');
+  assert(typeof BatchOrchestrator === 'function', 'BatchOrchestrator exists');
+  assert(typeof DeepMerge === 'function', 'DeepMerge exists');
+
+  // v9-v14 client features
+  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient exists');
+  assert(typeof ClientError === 'function', 'ClientError exists');
+  assert(typeof InterceptorManager === 'function', 'InterceptorManager exists');
+  assert(typeof CancelToken === 'function', 'CancelToken exists');
+  assert(typeof AxiosHeaders === 'function', 'AxiosHeaders exists');
+  assert(typeof Axios === 'function', 'Axios alias exists');
+  assert(typeof AxiosError === 'function', 'AxiosError alias exists');
+  assert(typeof isAxiosError === 'function', 'isAxiosError exists');
+});
+
+test('v15: client with all v14 features still works', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { result: callCount }, rawData: { result: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+    dedupe: { enabled: true, methods: ['GET'] },
+    timing: true,
+    requestId: true, // v15 feature
+    hooks: {
+      onRequest: [(config) => {}],
+      onResponse: [(res) => {}],
+    },
+  });
+
+  const res = await client.get('/combined-v15');
+  assertEqual(res.status, 200);
+  assert(typeof res.duration === 'number', 'timing works');
+  assert(res.config.headers['x-request-id'] !== undefined, 'request ID injected');
 });
 
 // Wait a tick for async tests

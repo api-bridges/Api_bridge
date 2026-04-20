@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "14.0.0",
-  "description": "Production-ready complete Axios replacement with enterprise-grade features: auto-retry engine, response caching, request dedup, token refresh, lifecycle hooks, request timing, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules",
+  "version": "15.0.0",
+  "description": "Production-ready full Axios replacement with all APIBridge features: auto Content-Type serialization, interceptor runWhen/synchronous, beforeRedirect, request correlation IDs, enhanced paramsSerializer, auto-retry, caching, dedup, token refresh, lifecycle hooks, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules",
   "main": "src/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -107,7 +107,12 @@
     "token-refresh",
     "request-timing",
     "lifecycle-hooks",
-    "stale-while-revalidate"
+    "stale-while-revalidate",
+    "run-when",
+    "before-redirect",
+    "request-id",
+    "auto-content-type",
+    "params-serializer"
   ],
   "engines": {
     "node": ">=16.0.0"
