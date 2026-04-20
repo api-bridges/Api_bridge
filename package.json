@@ -1,6 +1,6 @@
 {
   "name": "api-bridge-ai",
-  "version": "15.0.0",
+  "version": "16.0.0",
   "description": "Production-ready full Axios replacement with all APIBridge features: auto Content-Type serialization, interceptor runWhen/synchronous, beforeRedirect, request correlation IDs, enhanced paramsSerializer, auto-retry, caching, dedup, token refresh, lifecycle hooks, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules",
   "main": "src/index.js",
   "types": "types/index.d.ts",

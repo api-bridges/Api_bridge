@@ -94,12 +94,13 @@ const { getAdapter } = require('./adapters');
 const { isAbsoluteURL, combineURLs } = require('./url-utils');
 const { AxiosHeaders } = require('./headers');
 const { generateUID, isPlainObject } = require('./helpers');
+const { SSRFGuard, HeaderValidator, RequestRateLimiter, ResponseSizeGuard, SensitiveDataRedactor, RequestFingerprinter, safeMerge, sanitizeObject } = require('./security');
 
 /**
  * Library version.
  * @type {string}
  */
-const VERSION = '15.0.0';
+const VERSION = '16.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -163,6 +164,12 @@ ClientError.ERR_TIMEOUT = 'ERR_TIMEOUT';
 ClientError.ERR_MAX_BODY_LENGTH_EXCEEDED = 'ERR_MAX_BODY_LENGTH_EXCEEDED';
 ClientError.ERR_MAX_CONTENT_LENGTH_EXCEEDED = 'ERR_MAX_CONTENT_LENGTH_EXCEEDED';
 ClientError.ERR_ABORTED = 'ERR_ABORTED';
+// v16: Security error codes
+ClientError.ERR_SSRF_BLOCKED = 'ERR_SSRF_BLOCKED';
+ClientError.ERR_HEADER_VALIDATION = 'ERR_HEADER_VALIDATION';
+ClientError.ERR_RATE_LIMITED = 'ERR_RATE_LIMITED';
+ClientError.ERR_DUPLICATE_REQUEST = 'ERR_DUPLICATE_REQUEST';
+ClientError.ERR_RESPONSE_TOO_LARGE = 'ERR_RESPONSE_TOO_LARGE';
 
 /**
  * Create a ClientError with full context (like AxiosError.from).
@@ -383,6 +390,13 @@ class APIBridgeClient {
    * @param {boolean|string} [options.requestId=false] — Auto-generate x-request-id headers (v15)
    * @param {Function} [options.beforeRedirect] — Callback before redirect (v15)
    * @param {boolean} [options.autoContentType=true] — Auto Content-Type body serialization (v15)
+   * @param {object} [options.ssrf] — SSRF guard options { enabled, allowlist, blocklist }
+   * @param {object} [options.headerValidation] — Header validation options { maxHeadersCount, maxHeaderSize }
+   * @param {object} [options.rateLimiter] — Rate limiter options { maxRequests, windowMs }
+   * @param {object} [options.responseSizeGuard] — Response size guard options { maxResponseSize }
+   * @param {object} [options.redactor] — Sensitive data redactor options { sensitiveHeaders }
+   * @param {number} [options.replayDetection=0] — Replay detection window in ms (0 = disabled)
+   * @param {boolean} [options.journeyTracking=false] — Enable request journey tracking
    */
   constructor(options = {}) {
     this.baseURL = options.baseURL || '';
@@ -474,6 +488,26 @@ class APIBridgeClient {
     this.beforeRedirect = options.beforeRedirect || null;
     this.autoContentType = options.autoContentType !== false; // default true
 
+    // ─── v16: Security & Power ────────────────────────────────────
+    // SSRF protection
+    this._ssrfGuard = new SSRFGuard(options.ssrf || {});
+    // Header validation
+    this._headerValidator = new HeaderValidator(options.headerValidation || {});
+    // Rate limiter (per-client)
+    this._rateLimiter = options.rateLimiter
+      ? new RequestRateLimiter(options.rateLimiter)
+      : null;
+    // Response size guard
+    this._responseSizeGuard = new ResponseSizeGuard(options.responseSizeGuard || {});
+    // Sensitive data redactor
+    this._redactor = new SensitiveDataRedactor(options.redactor || {});
+    // Request fingerprinter
+    this._fingerprinter = new RequestFingerprinter();
+    // Replay detection window (0 = disabled)
+    this.replayDetection = options.replayDetection || 0;
+    // Request journey tracking
+    this.journeyTracking = options.journeyTracking || false;
+
     // v14: Internal state for caching, dedup, and token refresh
     this._responseCache = new Map();
     this._inflightRequests = new Map();
@@ -533,6 +567,14 @@ class APIBridgeClient {
       requestId: this.requestId,
       beforeRedirect: this.beforeRedirect,
       autoContentType: this.autoContentType,
+      // v16: Security options
+      ssrf: options.ssrf || {},
+      headerValidation: options.headerValidation || {},
+      rateLimiter: options.rateLimiter || null,
+      responseSizeGuard: options.responseSizeGuard || {},
+      redactor: options.redactor || {},
+      replayDetection: this.replayDetection,
+      journeyTracking: this.journeyTracking,
     };
 
     // Core engines
@@ -967,6 +1009,66 @@ class APIBridgeClient {
       throw this._wrapError(err, reqConfig);
     }
 
+    // 3.1 v16: SSRF validation
+    if (this._ssrfGuard.enabled) {
+      const fullCheckURL = buildURL(
+        reqConfig.baseURL || this.baseURL,
+        reqConfig.url,
+      );
+      if (isAbsoluteURL(fullCheckURL)) {
+        try {
+          this._ssrfGuard.validateURL(fullCheckURL);
+        } catch (ssrfErr) {
+          this._stats.failures++;
+          throw new ClientError(ssrfErr.message, {
+            code: 'ERR_SSRF_BLOCKED',
+            details: { url: fullCheckURL },
+            config: reqConfig,
+          });
+        }
+      }
+    }
+
+    // 3.2 v16: Header validation
+    if (reqConfig.headers && typeof reqConfig.headers === 'object') {
+      try {
+        this._headerValidator.validateHeaders(reqConfig.headers);
+      } catch (headerErr) {
+        this._stats.failures++;
+        throw new ClientError(headerErr.message, {
+          code: 'ERR_HEADER_VALIDATION',
+          details: {},
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.3 v16: Rate limiting
+    if (this._rateLimiter) {
+      const endpoint = `${reqConfig.method}:${reqConfig.url}`;
+      if (!this._rateLimiter.acquire(endpoint)) {
+        this._stats.failures++;
+        throw new ClientError('Rate limit exceeded', {
+          code: 'ERR_RATE_LIMITED',
+          details: { endpoint },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.4 v16: Replay detection
+    if (this.replayDetection > 0) {
+      const cfg = { method: reqConfig.method, url: reqConfig.url, data: reqConfig.body, params: reqConfig.params };
+      if (this._fingerprinter.isDuplicate(cfg, this.replayDetection)) {
+        this._stats.failures++;
+        throw new ClientError('Duplicate request detected (replay)', {
+          code: 'ERR_DUPLICATE_REQUEST',
+          details: { method: reqConfig.method, url: reqConfig.url },
+          config: reqConfig,
+        });
+      }
+    }
+
     // 3.5. Form submission: convert plain object to FormData (v11)
     if (reqConfig._formSubmission && reqConfig.body && typeof reqConfig.body === 'object' &&
         !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body)) {
@@ -1141,6 +1243,16 @@ class APIBridgeClient {
 
     let lastError;
 
+    // v16: Request journey tracking
+    const journey = this.journeyTracking ? {
+      attempts: [],
+      cacheHit: false,
+      deduplicated: false,
+      tokenRefreshed: false,
+      redirects: 0,
+      startTime: requestStartTime,
+    } : null;
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         // v14: Reset timeout per retry if configured
@@ -1246,6 +1358,14 @@ class APIBridgeClient {
 
         if (this._debug) {
           result.raw = response.rawData;
+        }
+
+        // v16: Attach journey if tracking enabled
+        if (journey) {
+          journey.endTime = Date.now();
+          journey.totalDuration = journey.endTime - journey.startTime;
+          journey.attempts.push({ attempt: attempt + 1, status: response.status, duration: Date.now() - requestStartTime });
+          result.journey = journey;
         }
 
         // 9. Run response interceptors
@@ -1509,6 +1629,24 @@ class APIBridgeClient {
         }
       }
 
+      // v16: Response size guard
+      if (this._responseSizeGuard) {
+        const responseCL = response.headers instanceof AxiosHeaders
+          ? response.headers.get('content-length')
+          : (response.headers && response.headers['content-length']);
+        if (responseCL) {
+          try {
+            this._responseSizeGuard.checkSize(responseCL);
+          } catch (sizeErr) {
+            throw new ClientError(sizeErr.message, {
+              code: 'ERR_RESPONSE_TOO_LARGE',
+              status: response.status,
+              details: { size: parseInt(responseCL, 10), limit: this._responseSizeGuard.maxResponseSize },
+            });
+          }
+        }
+      }
+
       // Custom validateStatus (Axios-compatible)
       const statusValidator = reqConfig.validateStatus || this.validateStatus;
       if (!statusValidator(response.status)) {
@@ -1750,15 +1888,18 @@ class APIBridgeClient {
   // ─── Error wrapping ─────────────────────────────────────────────────────
 
   _wrapError(err, reqConfig, response) {
+    // v16: Redact sensitive data from error objects
+    const safeConfig = this._redactor ? this._redactor.redactConfig(reqConfig) : reqConfig;
+
     if (err instanceof ClientError) {
-      if (!err.config) err.config = reqConfig;
+      if (!err.config) err.config = safeConfig;
       if (!err.response && response) {
         err.response = {
           data: response.data || response.details,
           status: response.status || err.status,
           statusText: response.statusText || '',
           headers: response.headers || {},
-          config: reqConfig,
+          config: safeConfig,
         };
       }
       err.isApiBridgeError = true;
@@ -1768,16 +1909,16 @@ class APIBridgeClient {
       status: err.status || (response && response.status) || null,
       code: err.code || 'ERR_UNKNOWN',
       details: {
-        method: reqConfig ? reqConfig.method : undefined,
-        url: reqConfig ? reqConfig.url : undefined,
+        method: safeConfig ? safeConfig.method : undefined,
+        url: safeConfig ? safeConfig.url : undefined,
       },
-      config: reqConfig,
+      config: safeConfig,
       response: response ? {
         data: response.data,
         status: response.status,
         statusText: response.statusText || '',
         headers: response.headers || {},
-        config: reqConfig,
+        config: safeConfig,
       } : null,
     });
     wrapped.isApiBridgeError = true;
@@ -1920,4 +2061,13 @@ module.exports = {
   Axios,
   AxiosError,
   isAxiosError,
+  // v16: Security
+  SSRFGuard,
+  HeaderValidator,
+  RequestRateLimiter,
+  ResponseSizeGuard,
+  SensitiveDataRedactor,
+  RequestFingerprinter,
+  safeMerge,
+  sanitizeObject,
 };
