@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v13 — HTTP Client Engine (Complete Axios Drop-in Replacement)
+ * APIBridge AI v15 — HTTP Client Engine (Full Axios Replacement + All APIBridge Features)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -12,12 +12,12 @@
  *   - Timeouts via AbortController
  *   - CancelToken support (Axios-compatible) + AbortController
  *   - Retries with exponential backoff + jitter
- *   - Interceptor system (Axios-compatible)
+ *   - Interceptor system (Axios-compatible) with runWhen + synchronous options
  *   - Per-request transformRequest / transformResponse with defaults
  *   - Basic auth support ({ username, password })
  *   - Custom responseType ('json', 'text', 'blob', 'arraybuffer', 'stream')
  *   - Custom validateStatus function
- *   - Custom paramsSerializer function
+ *   - Custom paramsSerializer function (function or { encode, serialize } object)
  *   - maxContentLength / maxBodyLength enforcement
  *   - onDownloadProgress / onUploadProgress callbacks
  *   - getUri() method
@@ -28,9 +28,12 @@
  *   - socketPath support
  *   - formSerializer options
  *   - env.FormData configuration
- *   - AxiosHeaders integration
+ *   - AxiosHeaders integration (with fromString, toJSON filters, convenience accessors)
  *   - Error response/request properties (full Axios error shape)
  *   - Default transform chains (JSON stringify/parse)
+ *   - Auto Content-Type serialization (auto-convert body based on Content-Type)
+ *   - beforeRedirect callback
+ *   - Request correlation IDs (x-request-id)
  *   - Expectation-aware system
  *   - Auto data alignment (snake_case → camelCase, fuzzy matching, etc.)
  *   - Type coercion
@@ -53,6 +56,20 @@
  *
  *   // Adapter selection:
  *   const api = createClient({ adapter: 'xhr' });
+ *
+ *   // v15: Auto Content-Type serialization:
+ *   api.post('/data', myObj, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+ *   // body is auto-converted to URLSearchParams
+ *
+ *   // v15: Enhanced paramsSerializer:
+ *   const api = createClient({ paramsSerializer: { encode: encodeURIComponent, serialize: (params, opts) => qs.stringify(params) } });
+ *
+ *   // v15: beforeRedirect:
+ *   api.get('/redirect', { beforeRedirect: (options, { headers }) => { options.headers['x-forwarded'] = 'true'; } });
+ *
+ *   // v15: Request correlation:
+ *   const api = createClient({ requestId: true });
+ *   // Every request gets an x-request-id header
  */
 
 'use strict';
@@ -76,12 +93,13 @@ const { isFormData, isURLSearchParams, isStream, isBuffer, isArrayBufferView, to
 const { getAdapter } = require('./adapters');
 const { isAbsoluteURL, combineURLs } = require('./url-utils');
 const { AxiosHeaders } = require('./headers');
+const { generateUID, isPlainObject } = require('./helpers');
 
 /**
  * Library version.
  * @type {string}
  */
-const VERSION = '14.0.0';
+const VERSION = '15.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -177,23 +195,53 @@ ClientError.from = function from(error, code, config, request, response) {
 /**
  * Default params serializer.
  * @param {object} params
+ * @param {object} [options] — Optional encode/serialize options (v15)
  * @returns {string}
  */
-function defaultParamsSerializer(params) {
+function defaultParamsSerializer(params, options) {
   if (!params || typeof params !== 'object') return '';
   if (isURLSearchParams(params)) return params.toString();
+
+  const encode = (options && typeof options.encode === 'function')
+    ? options.encode
+    : encodeURIComponent;
+
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null);
   if (entries.length === 0) return '';
   return entries
     .map(([k, v]) => {
       if (Array.isArray(v)) {
         return v
-          .map(item => `${encodeURIComponent(k)}=${encodeURIComponent(String(item))}`)
+          .map(item => `${encode(k)}=${encode(String(item))}`)
           .join('&');
       }
-      return `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`;
+      return `${encode(k)}=${encode(String(v))}`;
     })
     .join('&');
+}
+
+/**
+ * Resolve a paramsSerializer config into a serializer function.
+ * Supports:
+ *   - Function (legacy Axios): (params) => string
+ *   - Object with { serialize, encode } (newer Axios): { serialize: (params, options) => string, encode: fn }
+ *
+ * @param {Function|object|null} serializer
+ * @returns {Function|null}
+ */
+function resolveParamsSerializer(serializer) {
+  if (!serializer) return null;
+  if (typeof serializer === 'function') return serializer;
+  if (typeof serializer === 'object') {
+    if (typeof serializer.serialize === 'function') {
+      return (params) => serializer.serialize(params, serializer);
+    }
+    // Object with only `encode` — use default serializer with custom encode
+    if (typeof serializer.encode === 'function') {
+      return (params) => defaultParamsSerializer(params, { encode: serializer.encode });
+    }
+  }
+  return null;
 }
 
 /**
@@ -219,7 +267,8 @@ function buildURL(baseURL, path, params, paramsSerializer) {
   }
 
   if (params && typeof params === 'object') {
-    const serializer = paramsSerializer || defaultParamsSerializer;
+    const resolved = resolveParamsSerializer(paramsSerializer);
+    const serializer = resolved || defaultParamsSerializer;
     const queryString = serializer(params);
     if (queryString) {
       url += (url.includes('?') ? '&' : '?') + queryString;
@@ -331,6 +380,9 @@ class APIBridgeClient {
    * @param {object} [options.formSerializer] — Custom form serialization options
    * @param {object} [options.env] — Environment configuration { FormData }
    * @param {string} [options.signal] — AbortSignal
+   * @param {boolean|string} [options.requestId=false] — Auto-generate x-request-id headers (v15)
+   * @param {Function} [options.beforeRedirect] — Callback before redirect (v15)
+   * @param {boolean} [options.autoContentType=true] — Auto Content-Type body serialization (v15)
    */
   constructor(options = {}) {
     this.baseURL = options.baseURL || '';
@@ -417,6 +469,11 @@ class APIBridgeClient {
     this.timing = options.timing !== undefined ? options.timing : false;
     this.hooks = options.hooks || null;
 
+    // ─── v15: Full Axios Replacement — new options ────────────────
+    this.requestId = options.requestId !== undefined ? options.requestId : false;
+    this.beforeRedirect = options.beforeRedirect || null;
+    this.autoContentType = options.autoContentType !== false; // default true
+
     // v14: Internal state for caching, dedup, and token refresh
     this._responseCache = new Map();
     this._inflightRequests = new Map();
@@ -472,6 +529,10 @@ class APIBridgeClient {
       tokenRefresh: this.tokenRefresh,
       timing: this.timing,
       hooks: this.hooks,
+      // v15: New defaults
+      requestId: this.requestId,
+      beforeRedirect: this.beforeRedirect,
+      autoContentType: this.autoContentType,
     };
 
     // Core engines
@@ -868,7 +929,20 @@ class APIBridgeClient {
       _formSubmission: cleanConfig._formSubmission || false,
       // v14: Per-request retryConfig
       retryConfig: cleanConfig.retryConfig || this.defaults.retryConfig || this.retryConfig,
+      // v15: Per-request options
+      beforeRedirect: cleanConfig.beforeRedirect || this.defaults.beforeRedirect || this.beforeRedirect,
     };
+
+    // v15: Inject request correlation ID
+    const requestIdSetting = cleanConfig.requestId !== undefined
+      ? cleanConfig.requestId
+      : (this.defaults.requestId !== undefined ? this.defaults.requestId : this.requestId);
+    if (requestIdSetting) {
+      const headerName = typeof requestIdSetting === 'string' ? requestIdSetting : 'x-request-id';
+      if (!reqConfig.headers[headerName] && !reqConfig.headers[headerName.toLowerCase()]) {
+        reqConfig.headers[headerName] = generateUID(16);
+      }
+    }
 
     // Inject expect header
     if (activeExpect) {
@@ -900,6 +974,43 @@ class APIBridgeClient {
         reqConfig.body = toFormData(reqConfig.body);
       } catch {
         // FormData not available — leave as-is
+      }
+    }
+
+    // 3.6 v15: Auto Content-Type serialization
+    // When body is a plain object, auto-serialize based on Content-Type header
+    const autoContentTypeSetting = this.autoContentType !== false && this.defaults.autoContentType !== false;
+    if (autoContentTypeSetting && reqConfig.body && typeof reqConfig.body === 'object' &&
+        !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body) &&
+        !isBuffer(reqConfig.body) && !isArrayBufferView(reqConfig.body) &&
+        !isStream(reqConfig.body) && !reqConfig._formSubmission) {
+      const ct = (reqConfig.headers && (
+        reqConfig.headers['Content-Type'] || reqConfig.headers['content-type'] || ''
+      )) || '';
+      const ctLower = ct.toLowerCase();
+      if (ctLower.includes('application/x-www-form-urlencoded')) {
+        // Auto-convert plain object to URLSearchParams
+        if (isPlainObject(reqConfig.body)) {
+          const encoded = new URLSearchParams();
+          for (const [key, val] of Object.entries(reqConfig.body)) {
+            if (val !== undefined && val !== null) {
+              encoded.append(key, String(val));
+            }
+          }
+          reqConfig.body = encoded;
+        }
+      } else if (ctLower.includes('multipart/form-data')) {
+        // Auto-convert plain object to FormData
+        if (isPlainObject(reqConfig.body)) {
+          try {
+            reqConfig.body = toFormData(reqConfig.body);
+            // Remove Content-Type header — let the runtime set it with boundary
+            delete reqConfig.headers['Content-Type'];
+            delete reqConfig.headers['content-type'];
+          } catch {
+            // FormData not available — leave as-is
+          }
+        }
       }
     }
 
@@ -1514,7 +1625,29 @@ class APIBridgeClient {
       fetchOptions.redirect = 'manual';
     }
 
-    const res = await fetch(adapterReqConfig.fullURL, fetchOptions);
+    // v15: beforeRedirect callback — use manual redirect to intercept
+    const beforeRedirectCb = reqConfig.beforeRedirect;
+    if (beforeRedirectCb && typeof beforeRedirectCb === 'function' && reqConfig.maxRedirects !== 0) {
+      fetchOptions.redirect = 'manual';
+    }
+
+    let res = await fetch(adapterReqConfig.fullURL, fetchOptions);
+
+    // v15: Handle manual redirect with beforeRedirect callback
+    if (beforeRedirectCb && typeof beforeRedirectCb === 'function' && reqConfig.maxRedirects !== 0) {
+      let redirectCount = 0;
+      const maxRedirects = reqConfig.maxRedirects || 5;
+      while (res.status >= 300 && res.status < 400 && redirectCount < maxRedirects) {
+        const location = res.headers.get('location');
+        if (!location) break;
+        redirectCount++;
+        const redirectOptions = Object.assign({}, fetchOptions);
+        const resHeaders = {};
+        res.headers.forEach((value, key) => { resHeaders[key] = value; });
+        try { beforeRedirectCb(redirectOptions, { headers: resHeaders, status: res.status, location }); } catch (_) { /* ignore */ }
+        res = await fetch(location, redirectOptions);
+      }
+    }
 
     // Parse response based on responseType
     const contentType = res.headers.get('content-type') || '';
@@ -1781,6 +1914,7 @@ module.exports = {
   isApiBridgeError,
   mergeConfig,
   defaultParamsSerializer,
+  resolveParamsSerializer,
   VERSION,
   // v12: Axios aliases
   Axios,

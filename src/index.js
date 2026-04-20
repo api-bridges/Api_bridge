@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v14
- * Complete Axios Drop-in Replacement + Intelligent API mismatch detector, transformer, and learner
+ * APIBridge AI v15
+ * Full Axios Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
  *  - Middleware pipeline (before/after hooks)
@@ -188,6 +188,19 @@
  *  - clearResponseCache() method on client instances
  *  - Version 14.0.0
  *
+ * v15 features (Full Axios Replacement — Complete API Gap Closure):
+ *  - Interceptor runWhen + synchronous options: conditional interceptor execution with runWhen predicate, synchronous mode
+ *  - Auto Content-Type serialization: plain objects auto-converted to URLSearchParams (for application/x-www-form-urlencoded) or FormData (for multipart/form-data)
+ *  - Enhanced paramsSerializer: accept { encode, serialize } object form (Axios 1.x compatible), custom encode function
+ *  - beforeRedirect callback: intercept and modify redirect requests before they are followed
+ *  - Request correlation IDs: automatic x-request-id header generation (requestId: true in client config)
+ *  - AxiosHeaders.fromString(): parse raw HTTP header strings into AxiosHeaders instances
+ *  - AxiosHeaders toJSON filter: filter output by header name array or RegExp pattern
+ *  - Additional header accessors: User-Agent, Content-Encoding, Content-Disposition
+ *  - resolveParamsSerializer() utility: resolve paramsSerializer config into a function
+ *  - All existing APIBridge features preserved: transformers, fuzzy matching, learning engine, smart proxy, etc.
+ *  - Version 15.0.0
+ *
  * Usage:
  *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');
  *
@@ -338,6 +351,7 @@ const {
 const {
   APIBridgeClient, ClientError, createClient, buildURL,
   all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
+  resolveParamsSerializer,
   VERSION,
   // v12: Axios aliases
   Axios, AxiosError, isAxiosError,
@@ -747,6 +761,7 @@ apiBridge.mergeConfig = mergeConfig;
 apiBridge.getAdapter = getAdapter;
 apiBridge.buildURL = buildURL;
 apiBridge.VERSION = VERSION;
+apiBridge.resolveParamsSerializer = resolveParamsSerializer;
 
 module.exports = {
   // v12: Callable default export
@@ -870,6 +885,9 @@ module.exports = {
   // v10: Config utilities
   mergeConfig,
   defaultParamsSerializer,
+
+  // v15: Enhanced params serializer
+  resolveParamsSerializer,
 
   // v11: AxiosHeaders
   AxiosHeaders,
