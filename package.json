@@ -1,6 +1,6 @@
 {
   "name": "api-bridge-ai",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "description": "Production-ready complete Axios replacement with zero-gap API compatibility, AxiosHeaders responses, default transform chains, callable export, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules — a next-generation API client",
   "main": "src/index.js",
   "types": "types/index.d.ts",

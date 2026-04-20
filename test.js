@@ -6127,7 +6127,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '13.0.0');
+  assertEqual(VERSION, '14.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7187,7 +7187,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '13.0.0');
+  assertEqual(apiBridge.VERSION, '14.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7867,7 +7867,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '13.0.0');
+  assertEqual(api.VERSION, '14.0.0');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
