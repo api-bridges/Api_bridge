@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v17
+ * APIBridge AI v18
  * Full Axios Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -412,6 +412,12 @@ const {
   SecurityAuditLogger, PermissionPolicy, PayloadEncryptor, IdempotencyManager,
 } = require('./core/security-advanced');
 
+// ─── v18 Elite Security ───────────────────────────────────────────────────────
+const {
+  ZeroTrustEngine, ThreatIntelligence, SecureSessionManager, RequestIntegrityChain,
+  AdaptiveRateLimiter, SecurityHeadersManager, EncryptedConfigVault, MutualTLSManager,
+} = require('./core/security-elite');
+
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const { ResponseCache } = require('./utils/cache');
 const { RequestDeduplicator } = require('./utils/dedup');
@@ -810,6 +816,16 @@ apiBridge.PermissionPolicy = PermissionPolicy;
 apiBridge.PayloadEncryptor = PayloadEncryptor;
 apiBridge.IdempotencyManager = IdempotencyManager;
 
+// v18: Elite Security
+apiBridge.ZeroTrustEngine = ZeroTrustEngine;
+apiBridge.ThreatIntelligence = ThreatIntelligence;
+apiBridge.SecureSessionManager = SecureSessionManager;
+apiBridge.RequestIntegrityChain = RequestIntegrityChain;
+apiBridge.AdaptiveRateLimiter = AdaptiveRateLimiter;
+apiBridge.SecurityHeadersManager = SecurityHeadersManager;
+apiBridge.EncryptedConfigVault = EncryptedConfigVault;
+apiBridge.MutualTLSManager = MutualTLSManager;
+
 module.exports = {
   // v12: Callable default export
   default: apiBridge,
@@ -1056,4 +1072,14 @@ module.exports = {
   PermissionPolicy,
   PayloadEncryptor,
   IdempotencyManager,
+
+  // v18: Elite Security
+  ZeroTrustEngine,
+  ThreatIntelligence,
+  SecureSessionManager,
+  RequestIntegrityChain,
+  AdaptiveRateLimiter,
+  SecurityHeadersManager,
+  EncryptedConfigVault,
+  MutualTLSManager,
 };

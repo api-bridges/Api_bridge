@@ -5,6 +5,102 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.0.0] - 2026-04-20
+
+### Added — Elite Security Architecture (Zero-Trust + Threat Intelligence + mTLS)
+- **Zero Trust Engine (`ZeroTrustEngine`)** — Continuous verification with dynamic trust scoring
+  - Every request evaluated against accumulated trust score — never implicitly trusted
+  - Dynamic trust factors: known context (+20), consistent IP (+10), consistent user-agent (+10), non-suspicious method (+10)
+  - Time-based trust decay with configurable `decayRate` and `decayIntervalMs`
+  - `evaluate(context)` — assess trust and return `{ allowed, score, factors }`
+  - `updateTrust(contextId, delta, reason)` — manually adjust trust score
+  - `revokeTrust(contextId)` — immediately revoke trust for a context
+  - `getTrustInfo(contextId)` — inspect stored trust data
+  - Configurable: `trustThreshold`, `maxTrustScore`, `decayRate`, `decayIntervalMs`
+  - `zeroTrust: { trustThreshold: 50 }` in client config
+- **Threat Intelligence (`ThreatIntelligence`)** — Real-time threat feed & IP reputation
+  - IP blocklist with automatic blocking after suspicious activity threshold
+  - URL pattern blocking via regex or string patterns
+  - Known attack pattern detection in headers (SQL injection, path traversal)
+  - `assess(request)` — returns `{ threat, level, reasons, blocked }` with severity levels: none/low/medium/high/critical
+  - `reportActivity(ip, event)` — track suspicious activity, auto-block at threshold
+  - `blockIP(ip)` / `unblockIP(ip)` — manual IP management
+  - `addPattern(pattern)` — add URL block patterns
+  - `threatIntel: { blockedIPs: [], suspiciousThreshold: 5, autoBlock: true }` in client config
+- **Secure Session Manager (`SecureSessionManager`)** — Cryptographic session tokens
+  - `crypto.randomBytes` based session tokens (32 bytes, hex-encoded)
+  - Session binding to IP and User-Agent for hijack prevention
+  - Automatic session rotation with configurable `rotationInterval` (default 15 min)
+  - `createSession(context)` — create bound session with metadata
+  - `validateSession(token, context)` — verify binding + expiry + rotation needs
+  - `rotateSession(oldToken)` — generate new token, preserve session data
+  - `revokeSession(token)` / `revokeAllSessions(contextId)` — immediate revocation
+  - `cleanup()` — remove expired sessions
+  - `sessionManager: { tokenLength: 32, maxAge: 3600000, bindToIP: true }` in client config
+- **Request Integrity Chain (`RequestIntegrityChain`)** — Blockchain-inspired request lineage
+  - Every request entry hashed with SHA-256: hash = H(previousHash + method + url + timestamp + bodyHash)
+  - Immutable append-only chain with genesis hash (`0x00...`)
+  - `addRequest(request)` — add request to chain, return entry with hash
+  - `verify()` — walk full chain and detect tampering: `{ valid, brokenAt, chainLength }`
+  - `verifyEntry(index)` — verify a single entry's integrity
+  - `getLatestHash()` — current chain head hash
+  - `integrityChain: { algorithm: 'sha256', maxChainLength: 10000 }` in client config
+- **Adaptive Rate Limiter (`AdaptiveRateLimiter`)** — ML-inspired anomaly detection
+  - Token bucket with dynamically adapted rates based on traffic statistics
+  - Standard deviation-based anomaly detection (`anomalyThreshold` in σ)
+  - Burst allowance with configurable `burstMultiplier`
+  - Rate adaptation: rates increase/decrease based on observed traffic patterns
+  - `acquire(key)` — returns `{ allowed, remaining, anomaly, currentRate }`
+  - `getStats(key)` — traffic statistics: mean rate, stdDev, anomaly status
+  - Configurable: `baseRate`, `windowMs`, `burstMultiplier`, `anomalyThreshold`, `minRate`, `maxRate`
+  - `adaptiveRateLimiter: { baseRate: 100, anomalyThreshold: 2.0 }` in client config
+- **Security Headers Manager (`SecurityHeadersManager`)** — OWASP security headers
+  - Auto-generates all OWASP-recommended security headers
+  - HSTS: `Strict-Transport-Security` with maxAge, includeSubDomains, preload
+  - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy` with camera, microphone, geolocation controls
+  - Cross-Origin headers: COEP (`require-corp`), COOP (`same-origin`), CORP (`same-origin`)
+  - `X-DNS-Prefetch-Control`, `X-Download-Options`, `X-Permitted-Cross-Domain-Policies`
+  - `buildHeaders()` — generate all headers as key-value object
+  - `validate()` — security score (0-100) with warnings
+  - `securityHeaders: { hsts: { maxAge: 31536000 } }` in client config
+- **Encrypted Config Vault (`EncryptedConfigVault`)** — AES-256-GCM secret storage
+  - Secure encrypted storage for API keys, secrets, and sensitive config
+  - AES-256-GCM with random 12-byte IV per encryption (no IV reuse)
+  - 16-byte authentication tag for integrity verification
+  - `store(key, value)` / `retrieve(key)` — encrypt/decrypt config values
+  - `rotateMasterKey(newKey)` — re-encrypt all values with new master key
+  - `getFingerprint()` — SHA-256 fingerprint of master key
+  - `export()` / `import(data)` — backup/restore encrypted blobs
+  - `configVault: { masterKey: 'hex-encoded-32-byte-key' }` in client config
+- **Mutual TLS Manager (`MutualTLSManager`)** — mTLS certificate management
+  - Client certificate validation with trusted CA fingerprint store
+  - Certificate revocation list management
+  - Expiry validation with configurable `maxCertAge` (default 1 year)
+  - `validateClientCert(cert)` — returns `{ valid, reason, trusted }`
+  - `addTrustedCert(fingerprint)` / `removeTrustedCert(fingerprint)`
+  - `revokeCert(fingerprint)` / `isRevoked(fingerprint)`
+  - `generateFingerprint(certData)` — compute SHA-256 fingerprint
+  - `mtls: { trustedCerts: ['sha256hash'], requireClientCert: true }` in client config
+- **8 New Error Codes** on `ClientError`:
+  - `ERR_ZERO_TRUST_DENIED` — Zero trust verification failed (trust score too low)
+  - `ERR_THREAT_DETECTED` — Threat intelligence blocked the request
+  - `ERR_SESSION_INVALID` — Session validation failed (expired, hijacked, or revoked)
+  - `ERR_INTEGRITY_VIOLATION` — Request integrity chain verification failed
+  - `ERR_ADAPTIVE_RATE_LIMITED` — Adaptive rate limiter blocked anomalous traffic
+  - `ERR_MTLS_FAILED` — Mutual TLS certificate validation failed
+  - `ERR_VAULT_ACCESS_DENIED` — Encrypted config vault access denied
+  - `ERR_SECURITY_HEADER_VIOLATION` — Security header validation failed
+- 120+ new tests (1215+ total)
+
+### Changed
+- Security pipeline extended: SSRF → Headers → Rate Limit → Replay → Permissions → Input Sanitize → Sign → Idempotency → **Threat Intel → Zero Trust → Adaptive Rate Limit → Integrity Chain → Security Headers** → Execute
+- Package version bumped to 18.0.0
+- Package description updated to reflect elite security capabilities
+- Added 16 new keywords: zero-trust, threat-intelligence, secure-sessions, request-integrity, adaptive-rate-limiting, owasp-security-headers, encrypted-config-vault, mutual-tls, mtls, session-management, anomaly-detection, hash-chain, trust-scoring, ip-reputation
+- TypeScript definitions updated with all v18 classes, interfaces, and options
+
 ## [17.0.0] - 2026-04-20
 
 ### Added — Next-Level Advanced Security (Military-Grade Protection)

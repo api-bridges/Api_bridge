@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v17
-// Type definitions for api-bridge-ai 17.0.0
+// TypeScript Type Declarations for APIBridge AI v18
+// Type definitions for api-bridge-ai 18.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -301,6 +301,141 @@ declare namespace ApiBridgeAI {
     ttl?: number;
     maxEntries?: number;
     methods?: string[];
+  }
+
+  // ─── v18: Elite Security Option Interfaces ──────────────────────────────
+
+  interface ZeroTrustEngineOptions {
+    defaultTrustScore?: number;
+    trustThreshold?: number;
+    maxTrustScore?: number;
+    decayRate?: number;
+    decayIntervalMs?: number;
+  }
+
+  interface ThreatIntelligenceOptions {
+    blockedIPs?: string[];
+    blockedPatterns?: (string | RegExp)[];
+    suspiciousThreshold?: number;
+    autoBlock?: boolean;
+  }
+
+  interface SecureSessionManagerOptions {
+    tokenLength?: number;
+    maxAge?: number;
+    rotationInterval?: number;
+    maxSessions?: number;
+    bindToIP?: boolean;
+    bindToUserAgent?: boolean;
+  }
+
+  interface RequestIntegrityChainOptions {
+    algorithm?: string;
+    maxChainLength?: number;
+  }
+
+  interface AdaptiveRateLimiterOptions {
+    baseRate?: number;
+    windowMs?: number;
+    burstMultiplier?: number;
+    anomalyThreshold?: number;
+    adaptationRate?: number;
+    minRate?: number;
+    maxRate?: number;
+  }
+
+  interface SecurityHeadersManagerOptions {
+    hsts?: { maxAge?: number; includeSubDomains?: boolean; preload?: boolean };
+    xFrameOptions?: string;
+    xContentTypeOptions?: boolean;
+    referrerPolicy?: string;
+    permissionsPolicy?: Record<string, string[]>;
+    crossOriginEmbedderPolicy?: string;
+    crossOriginOpenerPolicy?: string;
+    crossOriginResourcePolicy?: string;
+    xDNSPrefetchControl?: boolean;
+    xDownloadOptions?: boolean;
+    xPermittedCrossDomainPolicies?: string;
+    customHeaders?: Record<string, string>;
+  }
+
+  interface EncryptedConfigVaultOptions {
+    masterKey?: string;
+    algorithm?: string;
+    ivLength?: number;
+    tagLength?: number;
+  }
+
+  interface MutualTLSManagerOptions {
+    trustedCerts?: string[];
+    requireClientCert?: boolean;
+    allowExpired?: boolean;
+    maxCertAge?: number;
+    revocationList?: string[];
+  }
+
+  interface ZeroTrustEvaluation {
+    allowed: boolean;
+    score: number;
+    factors: string[];
+  }
+
+  interface ThreatAssessment {
+    threat: boolean;
+    level: 'none' | 'low' | 'medium' | 'high' | 'critical';
+    reasons: string[];
+    blocked: boolean;
+  }
+
+  interface SessionInfo {
+    token: string;
+    expiresAt: number;
+  }
+
+  interface SessionValidation {
+    valid: boolean;
+    reason?: string;
+    needsRotation: boolean;
+  }
+
+  interface IntegrityEntry {
+    hash: string;
+    previousHash: string;
+    request: { method: string; url: string; timestamp: number; bodyHash: string };
+    index: number;
+  }
+
+  interface IntegrityVerification {
+    valid: boolean;
+    brokenAt?: number;
+    chainLength: number;
+  }
+
+  interface AdaptiveAcquireResult {
+    allowed: boolean;
+    remaining: number;
+    anomaly: boolean;
+    currentRate: number;
+  }
+
+  interface AdaptiveStats {
+    currentRate: number;
+    meanRate: number;
+    stdDev: number;
+    anomalyDetected: boolean;
+    requestCount: number;
+  }
+
+  interface SecurityValidation {
+    secure: boolean;
+    warnings: string[];
+    score: number;
+  }
+
+  interface CertValidation {
+    valid: boolean;
+    reason?: string;
+    trusted: boolean;
   }
 
   // ─── v11: VERSION ────────────────────────────────────────────────────────
@@ -622,6 +757,23 @@ declare namespace ApiBridgeAI {
     encryption?: PayloadEncryptorOptions | null;
     /** Idempotency options. */
     idempotency?: IdempotencyManagerOptions | null;
+    // v18 options
+    /** Zero Trust Engine options. */
+    zeroTrust?: ZeroTrustEngineOptions | null;
+    /** Threat Intelligence options. */
+    threatIntel?: ThreatIntelligenceOptions | null;
+    /** Secure Session Manager options. */
+    sessionManager?: SecureSessionManagerOptions | null;
+    /** Request Integrity Chain options. */
+    integrityChain?: RequestIntegrityChainOptions | null;
+    /** Adaptive Rate Limiter options. */
+    adaptiveRateLimiter?: AdaptiveRateLimiterOptions | null;
+    /** Security Headers Manager options. */
+    securityHeaders?: SecurityHeadersManagerOptions | null;
+    /** Encrypted Config Vault options. */
+    configVault?: EncryptedConfigVaultOptions | null;
+    /** Mutual TLS Manager options. */
+    mtls?: MutualTLSManagerOptions | null;
   }
 
   // ─── v14 Configuration Interfaces ──────────────────────────────────────
@@ -909,6 +1061,24 @@ declare namespace ApiBridgeAI {
     static readonly ERR_RATE_LIMITED: string;
     static readonly ERR_DUPLICATE_REQUEST: string;
     static readonly ERR_RESPONSE_TOO_LARGE: string;
+    // v17: Advanced security error codes
+    static readonly ERR_CSP_VIOLATION: string;
+    static readonly ERR_CERT_PIN_FAILED: string;
+    static readonly ERR_SIGNATURE_INVALID: string;
+    static readonly ERR_INPUT_REJECTED: string;
+    static readonly ERR_PERMISSION_DENIED: string;
+    static readonly ERR_ENCRYPTION_FAILED: string;
+    static readonly ERR_DECRYPTION_FAILED: string;
+    static readonly ERR_IDEMPOTENCY_CONFLICT: string;
+    // v18: Elite security error codes
+    static readonly ERR_ZERO_TRUST_DENIED: string;
+    static readonly ERR_THREAT_DETECTED: string;
+    static readonly ERR_SESSION_INVALID: string;
+    static readonly ERR_INTEGRITY_VIOLATION: string;
+    static readonly ERR_ADAPTIVE_RATE_LIMITED: string;
+    static readonly ERR_MTLS_FAILED: string;
+    static readonly ERR_VAULT_ACCESS_DENIED: string;
+    static readonly ERR_SECURITY_HEADER_VIOLATION: string;
   }
 
   // ─── v10/v11 Cancel Token ──────────────────────────────────────────────
@@ -1590,6 +1760,127 @@ declare namespace ApiBridgeAI {
     reset(): void;
   }
 
+  // ─── v18: Elite Security Classes ──────────────────────────────────────────
+
+  class ZeroTrustEngine {
+    constructor(options?: ZeroTrustEngineOptions);
+    defaultTrustScore: number;
+    trustThreshold: number;
+    maxTrustScore: number;
+    decayRate: number;
+    decayIntervalMs: number;
+    evaluate(context: { contextId: string; ip?: string; userAgent?: string; method?: string; url?: string }): ZeroTrustEvaluation;
+    updateTrust(contextId: string, delta: number, reason: string): void;
+    revokeTrust(contextId: string): void;
+    getTrustInfo(contextId: string): { score: number; lastActivity: number; factors: string[] } | null;
+    reset(): void;
+  }
+
+  class ThreatIntelligence {
+    constructor(options?: ThreatIntelligenceOptions);
+    suspiciousThreshold: number;
+    autoBlock: boolean;
+    assess(request: { ip?: string; url?: string; method?: string; headers?: Record<string, string> }): ThreatAssessment;
+    reportActivity(ip: string, event: string): void;
+    blockIP(ip: string): void;
+    unblockIP(ip: string): void;
+    isBlocked(ip: string): boolean;
+    getActivityLog(ip: string): { count: number; events: Array<{ event: string; timestamp: number }>; blocked: boolean } | null;
+    addPattern(pattern: string | RegExp): void;
+    reset(): void;
+  }
+
+  class SecureSessionManager {
+    constructor(options?: SecureSessionManagerOptions);
+    tokenLength: number;
+    maxAge: number;
+    rotationInterval: number;
+    maxSessions: number;
+    bindToIP: boolean;
+    bindToUserAgent: boolean;
+    createSession(context: { contextId: string; ip?: string; userAgent?: string; metadata?: any }): SessionInfo;
+    validateSession(token: string, context: { ip?: string; userAgent?: string }): SessionValidation;
+    rotateSession(oldToken: string): string | null;
+    revokeSession(token: string): void;
+    revokeAllSessions(contextId: string): void;
+    getSession(token: string): { contextId: string; ip?: string; userAgent?: string; createdAt: number; metadata?: any } | null;
+    cleanup(): number;
+    getActiveCount(): number;
+  }
+
+  class RequestIntegrityChain {
+    constructor(options?: RequestIntegrityChainOptions);
+    addRequest(request: { method: string; url: string; timestamp: number; headers?: Record<string, string>; bodyHash?: string }): IntegrityEntry;
+    verify(): IntegrityVerification;
+    verifyEntry(index: number): { valid: boolean };
+    getChain(): IntegrityEntry[];
+    getEntry(index: number): IntegrityEntry | null;
+    getLength(): number;
+    getLatestHash(): string;
+    reset(): void;
+  }
+
+  class AdaptiveRateLimiter {
+    constructor(options?: AdaptiveRateLimiterOptions);
+    baseRate: number;
+    windowMs: number;
+    burstMultiplier: number;
+    anomalyThreshold: number;
+    adaptationRate: number;
+    minRate: number;
+    maxRate: number;
+    acquire(key: string): AdaptiveAcquireResult;
+    getStats(key: string): AdaptiveStats | null;
+    adjustRate(key: string, newRate: number): void;
+    resetKey(key: string): void;
+    reset(): void;
+  }
+
+  class SecurityHeadersManager {
+    constructor(options?: SecurityHeadersManagerOptions);
+    hsts: { maxAge: number; includeSubDomains: boolean; preload: boolean };
+    xFrameOptions: string;
+    xContentTypeOptions: boolean;
+    referrerPolicy: string;
+    buildHeaders(): Record<string, string>;
+    getHeader(name: string): string | undefined;
+    setHeader(name: string, value: string): void;
+    removeHeader(name: string): void;
+    applyToResponse(responseHeaders: Record<string, string>): Record<string, string>;
+    validate(): SecurityValidation;
+    toJSON(): Record<string, any>;
+  }
+
+  class EncryptedConfigVault {
+    constructor(options?: EncryptedConfigVaultOptions);
+    store(key: string, value: any): boolean;
+    retrieve(key: string): any | null;
+    has(key: string): boolean;
+    remove(key: string): boolean;
+    list(): string[];
+    rotateMasterKey(newKey: string): void;
+    getFingerprint(): string;
+    clear(): void;
+    export(): Record<string, string>;
+    import(data: Record<string, string>): void;
+  }
+
+  class MutualTLSManager {
+    constructor(options?: MutualTLSManagerOptions);
+    requireClientCert: boolean;
+    allowExpired: boolean;
+    maxCertAge: number;
+    validateClientCert(cert: { fingerprint: string; issuer?: string; subject?: string; notBefore: number; notAfter: number; serialNumber?: string }): CertValidation;
+    addTrustedCert(fingerprint: string): void;
+    removeTrustedCert(fingerprint: string): void;
+    revokeCert(fingerprint: string): void;
+    isRevoked(fingerprint: string): boolean;
+    getTrustedCerts(): string[];
+    getRevocationList(): string[];
+    generateFingerprint(certData: string): string;
+    reset(): void;
+  }
+
   // ─── Supporting Types ────────────────────────────────────────────────────
 
   interface SchemaField {
@@ -1731,6 +2022,15 @@ declare namespace ApiBridgeAI {
     PermissionPolicy: typeof PermissionPolicy;
     PayloadEncryptor: typeof PayloadEncryptor;
     IdempotencyManager: typeof IdempotencyManager;
+
+    ZeroTrustEngine: typeof ZeroTrustEngine;
+    ThreatIntelligence: typeof ThreatIntelligence;
+    SecureSessionManager: typeof SecureSessionManager;
+    RequestIntegrityChain: typeof RequestIntegrityChain;
+    AdaptiveRateLimiter: typeof AdaptiveRateLimiter;
+    SecurityHeadersManager: typeof SecurityHeadersManager;
+    EncryptedConfigVault: typeof EncryptedConfigVault;
+    MutualTLSManager: typeof MutualTLSManager;
 
     toFormData: typeof toFormData;
     toURLEncodedForm: typeof toURLEncodedForm;
