@@ -672,7 +672,6 @@ function safeMerge(target, source) {
 
   for (const key of Object.keys(source)) {
     if (DANGEROUS_KEYS.has(key)) continue;
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
 
     if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
 
