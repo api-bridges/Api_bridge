@@ -5,6 +5,111 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [17.0.0] - 2026-04-20
+
+### Added — Next-Level Advanced Security (Military-Grade Protection)
+- **Content Security Policy (`ContentSecurityPolicy`)** — CSP header builder & validator
+  - Build standards-compliant CSP header strings from configurable directives
+  - All standard directives: default-src, script-src, style-src, img-src, connect-src, font-src, object-src, frame-src, base-uri, form-action
+  - Nonce generation via `addNonce()` — crypto.randomBytes(16) based nonces for script-src
+  - Report-Only mode — `Content-Security-Policy-Report-Only` header support
+  - Custom directives — arbitrary extra CSP directives via `customDirectives` option
+  - Source validation — `validateSource()` checks for safe CSP source values
+  - `report-uri` directive support
+  - `toJSON()` for serializing all directives
+  - `csp: { scriptSrc: ["'self'"], reportOnly: true }` in client config
+- **Certificate Pinning (`CertificatePinning`)** — SHA-256 certificate verification
+  - Pin SHA-256 certificate hashes per host
+  - `verify(host, certHash)` — verify certificate against stored pins
+  - Enforce vs Report mode — `enforceMode: 'report'` logs without blocking
+  - `addPin()` / `removePin()` — dynamic pin management
+  - `getPins()` — retrieve pins for a host
+  - `buildHPKPHeader()` — generate Public-Key-Pins header string
+  - `includeSubdomains` — apply pins to all subdomains
+  - `certPinning: { pins: [{ host: 'api.example.com', sha256: ['abc123'] }] }` in client config
+- **Request Signing (`RequestSigning`)** — HMAC-SHA256 integrity verification
+  - Signs requests with HMAC-SHA256 using configurable secret
+  - Canonical string construction: METHOD + URL + timestamp + signed headers
+  - `sign(config)` — produces signature + timestamp + signedHeaders
+  - `verify(config, signature, timestamp)` — validates signature with timestamp tolerance (default 5 min)
+  - Custom algorithm, header name, and signed headers list
+  - Auto-injects signature + timestamp headers into request pipeline
+  - `requestSigning: { secret: 'my-secret' }` in client config
+- **Input Sanitizer (`InputSanitizer`)** — XSS & injection prevention
+  - HTML entity escaping (& < > " ' / `)
+  - Script tag removal — strips `<script>...</script>` blocks
+  - Event handler removal — strips `onclick=`, `onload=`, etc.
+  - SQL injection pattern detection (`SELECT`, `INSERT`, `DROP`, `UNION`, etc.)
+  - Path traversal detection (`../`, `..\`)
+  - Three modes: `escape` (default), `strip`, `reject`
+  - Deep object sanitization with configurable `maxDepth` (default 10) and `maxStringLength` (default 10000)
+  - `detectThreats()` — non-destructive threat scanning
+  - `isClean()` — quick boolean check
+  - Custom pattern support via `customPatterns` option
+  - Integrated into request pipeline — sanitizes request body before sending
+  - `inputSanitizer: { mode: 'escape' }` in client config
+- **Security Audit Logger (`SecurityAuditLogger`)** — Tamper-proof event log
+  - Immutable append-only log with SHA-256 hash chain
+  - Each entry's hash = SHA-256(previousHash + timestamp + event + details)
+  - `verify()` — walk the chain and detect any tampered entries
+  - Severity levels: `info`, `warn`, `error`, `critical`
+  - `onAlert` callback for critical/error events
+  - Auto-rotation — configurable `maxEntries` (default 10000)
+  - Filtering: by severity, event name, timestamp, and limit
+  - `getStats()` — total entries and count by severity
+  - Integrated into request pipeline — logs security events automatically
+  - `auditLog: { maxEntries: 5000, onAlert: (entry) => {} }` in client config
+- **Permission Policy (`PermissionPolicy`)** — RBAC access control
+  - Role-based method + endpoint access control
+  - Wildcard endpoint patterns (`/api/*` matches `/api/users`, `/api/users/1`)
+  - `check(role, method, endpoint)` — single role authorization check
+  - `checkMultiple(roles, method, endpoint)` — multi-role check (any match = allowed)
+  - `addPolicy()` / `removePolicy()` — dynamic policy management
+  - `listPolicies()` — enumerate all or per-role policies
+  - `defaultAllow` — allow or deny unmatched requests (default: deny)
+  - Case-insensitive method matching
+  - Integrated into request pipeline — checks role from `config.role` before request
+  - `permissions: { policies: [{ role: 'admin', methods: ['*'], endpoints: ['*'] }] }` in client config
+- **Payload Encryptor (`PayloadEncryptor`)** — AES-256-GCM encryption
+  - Encrypt/decrypt payloads with AES-256-GCM authenticated encryption
+  - Auto-generates 32-byte key if none provided
+  - Random 12-byte IV per encryption (no IV reuse)
+  - 16-byte authentication tag for integrity verification
+  - `encrypt()` / `decrypt()` — string payloads
+  - `encryptObject()` / `decryptObject()` — JSON object payloads
+  - `getKeyFingerprint()` — SHA-256 hash of key (first 16 hex chars) for identification
+  - `rotateKey()` — replace encryption key (with optional new key)
+  - Configurable output encoding (default: base64)
+  - `encryption: { key: 'hex-encoded-32-byte-key' }` in client config
+- **Idempotency Manager (`IdempotencyManager`)** — Safe retry enforcement
+  - UUID v4-format idempotency key generation
+  - Configurable header name (default: `idempotency-key`)
+  - Response storage with TTL (default: 24 hours)
+  - `shouldEnforce(method)` — checks if method requires idempotency (POST, PUT, PATCH by default)
+  - `recordResponse()` / `getStoredResponse()` — store and retrieve cached responses
+  - `cleanup()` — remove expired entries
+  - Auto-injects idempotency key header for POST/PUT/PATCH requests
+  - Returns stored response for duplicate idempotent requests
+  - `idempotency: { ttl: 86400000, methods: ['POST', 'PUT'] }` in client config
+- **8 New Error Codes** on `ClientError`:
+  - `ERR_CSP_VIOLATION` — Content Security Policy violation detected
+  - `ERR_CERT_PIN_FAILED` — Certificate pin verification failed
+  - `ERR_SIGNATURE_INVALID` — Request signature verification failed
+  - `ERR_INPUT_REJECTED` — Input sanitizer rejected dangerous content
+  - `ERR_PERMISSION_DENIED` — RBAC permission check failed
+  - `ERR_ENCRYPTION_FAILED` — Payload encryption failed
+  - `ERR_DECRYPTION_FAILED` — Payload decryption failed
+  - `ERR_IDEMPOTENCY_CONFLICT` — Idempotency key conflict
+- 104 new tests (1095 total)
+
+### Changed
+- Security pipeline extended: SSRF → Headers → Rate Limit → Replay → **Permissions → Input Sanitize → Sign → Idempotency** → Execute
+- Response pipeline extended with idempotency response storage and audit logging
+- Package version bumped to 17.0.0
+- Package description updated to reflect advanced security capabilities
+- Added 16 new keywords: csp-builder, content-security-policy, certificate-pinning, request-signing, hmac-signing, input-sanitization, xss-prevention, audit-logging, rbac, permission-policy, payload-encryption, aes-256-gcm, idempotency, idempotency-key
+- TypeScript definitions updated with all v17 classes, interfaces, and options
+
 ## [16.0.0] - 2026-04-20
 
 ### Added — Maximum Security & Power (Enterprise-Grade Hardening)

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v15
+ * APIBridge AI v17
  * Full Axios Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -406,6 +406,12 @@ const {
   safeMerge, sanitizeObject, isPrivateIP,
 } = require('./core/security');
 
+// ─── v17 Advanced Security ────────────────────────────────────────────────────
+const {
+  ContentSecurityPolicy, CertificatePinning, RequestSigning, InputSanitizer,
+  SecurityAuditLogger, PermissionPolicy, PayloadEncryptor, IdempotencyManager,
+} = require('./core/security-advanced');
+
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const { ResponseCache } = require('./utils/cache');
 const { RequestDeduplicator } = require('./utils/dedup');
@@ -794,6 +800,16 @@ apiBridge.safeMerge = safeMerge;
 apiBridge.sanitizeObject = sanitizeObject;
 apiBridge.isPrivateIP = isPrivateIP;
 
+// v17: Advanced Security
+apiBridge.ContentSecurityPolicy = ContentSecurityPolicy;
+apiBridge.CertificatePinning = CertificatePinning;
+apiBridge.RequestSigning = RequestSigning;
+apiBridge.InputSanitizer = InputSanitizer;
+apiBridge.SecurityAuditLogger = SecurityAuditLogger;
+apiBridge.PermissionPolicy = PermissionPolicy;
+apiBridge.PayloadEncryptor = PayloadEncryptor;
+apiBridge.IdempotencyManager = IdempotencyManager;
+
 module.exports = {
   // v12: Callable default export
   default: apiBridge,
@@ -1030,4 +1046,14 @@ module.exports = {
   safeMerge,
   sanitizeObject,
   isPrivateIP,
+
+  // v17: Advanced Security
+  ContentSecurityPolicy,
+  CertificatePinning,
+  RequestSigning,
+  InputSanitizer,
+  SecurityAuditLogger,
+  PermissionPolicy,
+  PayloadEncryptor,
+  IdempotencyManager,
 };

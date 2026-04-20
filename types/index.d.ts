@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v16
-// Type definitions for api-bridge-ai 16.0.0
+// TypeScript Type Declarations for APIBridge AI v17
+// Type definitions for api-bridge-ai 17.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -170,6 +170,137 @@ declare namespace ApiBridgeAI {
   interface SizeTracker {
     total: number;
     add(bytes: number): void;
+  }
+
+  // ─── v17 Advanced Security Interfaces ───────────────────────────────────
+
+  interface ContentSecurityPolicyOptions {
+    defaultSrc?: string[];
+    scriptSrc?: string[];
+    styleSrc?: string[];
+    imgSrc?: string[];
+    connectSrc?: string[];
+    fontSrc?: string[];
+    objectSrc?: string[];
+    frameSrc?: string[];
+    baseUri?: string[];
+    formAction?: string[];
+    reportUri?: string | null;
+    reportOnly?: boolean;
+    customDirectives?: Record<string, string[]>;
+  }
+
+  interface CertificatePinningOptions {
+    pins?: Array<{ host: string; sha256: string[] }>;
+    enforceMode?: 'enforce' | 'report';
+    maxAge?: number;
+    includeSubdomains?: boolean;
+  }
+
+  interface CertPinVerifyResult {
+    valid: boolean;
+    host: string;
+    enforced: boolean;
+  }
+
+  interface RequestSigningOptions {
+    secret?: string;
+    algorithm?: string;
+    headerName?: string;
+    signedHeaders?: string[];
+    timestampTolerance?: number;
+  }
+
+  interface SignResult {
+    signature: string;
+    timestamp: number;
+    signedHeaders: string[];
+  }
+
+  interface VerifyResult {
+    valid: boolean;
+    reason?: string;
+  }
+
+  interface InputSanitizerOptions {
+    mode?: 'escape' | 'strip' | 'reject';
+    maxDepth?: number;
+    maxStringLength?: number;
+    allowHTML?: boolean;
+    customPatterns?: RegExp[];
+  }
+
+  interface ThreatDetection {
+    type: string;
+    value: string;
+    path: string;
+  }
+
+  interface SecurityAuditLoggerOptions {
+    maxEntries?: number;
+    onAlert?: (entry: AuditLogEntry) => void;
+    hashAlgorithm?: string;
+  }
+
+  interface AuditLogEntry {
+    id: number;
+    timestamp: number;
+    event: string;
+    severity: 'info' | 'warn' | 'error' | 'critical';
+    details: Record<string, any>;
+    hash: string;
+  }
+
+  interface AuditLogStats {
+    total: number;
+    bySeverity: Record<string, number>;
+    lastEntry: AuditLogEntry | null;
+  }
+
+  interface AuditVerifyResult {
+    valid: boolean;
+    entries: number;
+    brokenAt?: number;
+  }
+
+  interface PermissionPolicyOptions {
+    policies?: Array<{ role: string; methods: string[]; endpoints: string[] }>;
+    defaultAllow?: boolean;
+    caseSensitive?: boolean;
+  }
+
+  interface PermissionCheckResult {
+    allowed: boolean;
+    role: string;
+    method: string;
+    endpoint: string;
+    matchedPolicy?: object;
+  }
+
+  interface PermissionCheckMultipleResult {
+    allowed: boolean;
+    matchedRole?: string;
+  }
+
+  interface PayloadEncryptorOptions {
+    key?: Buffer | string | null;
+    algorithm?: string;
+    ivLength?: number;
+    tagLength?: number;
+    encoding?: BufferEncoding;
+  }
+
+  interface EncryptResult {
+    encrypted: string;
+    iv: string;
+    tag: string;
+  }
+
+  interface IdempotencyManagerOptions {
+    headerName?: string;
+    ttl?: number;
+    maxEntries?: number;
+    methods?: string[];
   }
 
   // ─── v11: VERSION ────────────────────────────────────────────────────────
@@ -474,6 +605,23 @@ declare namespace ApiBridgeAI {
     replayDetection?: number;
     /** Enable request journey tracking. */
     journeyTracking?: boolean;
+    // v17 options
+    /** Content Security Policy options. */
+    csp?: ContentSecurityPolicyOptions | null;
+    /** Certificate pinning options. */
+    certPinning?: CertificatePinningOptions | null;
+    /** Request signing options (HMAC). */
+    requestSigning?: RequestSigningOptions | null;
+    /** Input sanitizer options (XSS/injection prevention). */
+    inputSanitizer?: InputSanitizerOptions | null;
+    /** Security audit log options. */
+    auditLog?: SecurityAuditLoggerOptions | null;
+    /** Permission policy (RBAC) options. */
+    permissions?: PermissionPolicyOptions | null;
+    /** Payload encryption options (AES-256-GCM). */
+    encryption?: PayloadEncryptorOptions | null;
+    /** Idempotency options. */
+    idempotency?: IdempotencyManagerOptions | null;
   }
 
   // ─── v14 Configuration Interfaces ──────────────────────────────────────
@@ -1338,6 +1486,110 @@ declare namespace ApiBridgeAI {
   function sanitizeObject(obj: any): any;
   function isPrivateIP(ip: string): boolean;
 
+  // ─── v17 Advanced Security Classes ──────────────────────────────────────
+
+  class ContentSecurityPolicy {
+    constructor(options?: ContentSecurityPolicyOptions);
+    defaultSrc: string[];
+    scriptSrc: string[];
+    styleSrc: string[];
+    imgSrc: string[];
+    connectSrc: string[];
+    fontSrc: string[];
+    objectSrc: string[];
+    frameSrc: string[];
+    baseUri: string[];
+    formAction: string[];
+    reportUri: string | null;
+    reportOnly: boolean;
+    customDirectives: Record<string, string[]>;
+    buildHeader(): string;
+    getHeaderName(): string;
+    validateSource(source: string): boolean;
+    addNonce(): string;
+    toJSON(): Record<string, string[]>;
+  }
+
+  class CertificatePinning {
+    constructor(options?: CertificatePinningOptions);
+    enforceMode: 'enforce' | 'report';
+    maxAge: number;
+    includeSubdomains: boolean;
+    addPin(host: string, sha256Hash: string): void;
+    removePin(host: string): void;
+    verify(host: string, certHash: string): CertPinVerifyResult;
+    getPins(host: string): string[];
+    buildHPKPHeader(host: string): string;
+    toJSON(): Record<string, any>;
+  }
+
+  class RequestSigning {
+    constructor(options?: RequestSigningOptions);
+    headerName: string;
+    signedHeaders: string[];
+    timestampTolerance: number;
+    sign(config: { method?: string; url?: string; headers?: Record<string, string>; data?: any }): SignResult;
+    verify(config: { method?: string; url?: string; headers?: Record<string, string>; data?: any }, signature: string, timestamp: number): VerifyResult;
+    createCanonicalString(method: string, url: string, timestamp: number, headers: Record<string, string>, signedHeaderNames: string[]): string;
+  }
+
+  class InputSanitizer {
+    constructor(options?: InputSanitizerOptions);
+    mode: 'escape' | 'strip' | 'reject';
+    maxDepth: number;
+    maxStringLength: number;
+    allowHTML: boolean;
+    sanitizeString(str: string): string;
+    sanitize(input: any, depth?: number): any;
+    detectThreats(input: any): ThreatDetection[];
+    isClean(input: any): boolean;
+  }
+
+  class SecurityAuditLogger {
+    constructor(options?: SecurityAuditLoggerOptions);
+    log(event: { event: string; severity: 'info' | 'warn' | 'error' | 'critical'; details?: Record<string, any> }): AuditLogEntry;
+    verify(): AuditVerifyResult;
+    getEntries(filter?: { severity?: string; event?: string; since?: number; limit?: number }): AuditLogEntry[];
+    getStats(): AuditLogStats;
+    clear(): void;
+  }
+
+  class PermissionPolicy {
+    constructor(options?: PermissionPolicyOptions);
+    defaultAllow: boolean;
+    caseSensitive: boolean;
+    addPolicy(role: string, methods: string[], endpoints: string[]): void;
+    removePolicy(role: string): void;
+    check(role: string, method: string, endpoint: string): PermissionCheckResult;
+    checkMultiple(roles: string[], method: string, endpoint: string): PermissionCheckMultipleResult;
+    listPolicies(role?: string): Array<{ role: string; methods: string[]; endpoints: string[] }>;
+  }
+
+  class PayloadEncryptor {
+    constructor(options?: PayloadEncryptorOptions);
+    encrypt(plaintext: string | object): EncryptResult;
+    decrypt(encrypted: string, iv: string, tag: string): string;
+    encryptObject(obj: object): EncryptResult;
+    decryptObject(encrypted: string, iv: string, tag: string): object;
+    getKeyFingerprint(): string;
+    rotateKey(newKey?: Buffer | string): void;
+  }
+
+  class IdempotencyManager {
+    constructor(options?: IdempotencyManagerOptions);
+    headerName: string;
+    ttl: number;
+    maxEntries: number;
+    methods: string[];
+    generateKey(config?: object): string;
+    shouldEnforce(method: string): boolean;
+    recordResponse(key: string, response: any): void;
+    getStoredResponse(key: string): any | null;
+    cleanup(): number;
+    hasKey(key: string): boolean;
+    reset(): void;
+  }
+
   // ─── Supporting Types ────────────────────────────────────────────────────
 
   interface SchemaField {
@@ -1470,6 +1722,15 @@ declare namespace ApiBridgeAI {
     safeMerge: typeof safeMerge;
     sanitizeObject: typeof sanitizeObject;
     isPrivateIP: typeof isPrivateIP;
+
+    ContentSecurityPolicy: typeof ContentSecurityPolicy;
+    CertificatePinning: typeof CertificatePinning;
+    RequestSigning: typeof RequestSigning;
+    InputSanitizer: typeof InputSanitizer;
+    SecurityAuditLogger: typeof SecurityAuditLogger;
+    PermissionPolicy: typeof PermissionPolicy;
+    PayloadEncryptor: typeof PayloadEncryptor;
+    IdempotencyManager: typeof IdempotencyManager;
 
     toFormData: typeof toFormData;
     toURLEncodedForm: typeof toURLEncodedForm;
