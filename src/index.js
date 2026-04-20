@@ -201,6 +201,19 @@
  *  - All existing APIBridge features preserved: transformers, fuzzy matching, learning engine, smart proxy, etc.
  *  - Version 15.0.0
  *
+ * v16 features (Maximum Security & Power):
+ *  - SSRF Protection (SSRFGuard): block private IPs, cloud metadata endpoints (169.254.169.254), dangerous protocols (file://, data://)
+ *  - Header Validation (HeaderValidator): CRLF injection prevention, header count/size limits, RFC 7230 compliant
+ *  - Client-Side Rate Limiting (RequestRateLimiter): token-bucket algorithm with per-endpoint support
+ *  - Response Size Guard (ResponseSizeGuard): enforce maximum response body size, streaming byte tracker
+ *  - Sensitive Data Redaction (SensitiveDataRedactor): auto-strip auth/cookie/token headers from error objects and logs
+ *  - Request Fingerprinting (RequestFingerprinter): SHA-256 based replay detection with configurable time windows
+ *  - Prototype Pollution Hardening: safeMerge() and sanitizeObject() utilities
+ *  - Journey Tracking: per-request tracing of attempts, redirects, cache hits, timing
+ *  - New error codes: ERR_SSRF_BLOCKED, ERR_HEADER_VALIDATION, ERR_RATE_LIMITED, ERR_DUPLICATE_REQUEST, ERR_RESPONSE_TOO_LARGE
+ *  - Security-first defaults: SSRF guard enabled by default, header validation on all requests
+ *  - Version 16.0.0
+ *
  * Usage:
  *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');
  *
@@ -385,6 +398,13 @@ const {
   forEach: forEachUtil, merge: mergeUtil, extend, stripBOM, findKey, isBrowser, isNode,
   freezeDeep, generateUID,
 } = require('./core/helpers');
+
+// ─── v16 Security ─────────────────────────────────────────────────────────────
+const {
+  SSRFGuard, HeaderValidator, RequestRateLimiter, ResponseSizeGuard,
+  SensitiveDataRedactor, RequestFingerprinter,
+  safeMerge, sanitizeObject, isPrivateIP,
+} = require('./core/security');
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const { ResponseCache } = require('./utils/cache');
@@ -763,6 +783,17 @@ apiBridge.buildURL = buildURL;
 apiBridge.VERSION = VERSION;
 apiBridge.resolveParamsSerializer = resolveParamsSerializer;
 
+// v16: Security
+apiBridge.SSRFGuard = SSRFGuard;
+apiBridge.HeaderValidator = HeaderValidator;
+apiBridge.RequestRateLimiter = RequestRateLimiter;
+apiBridge.ResponseSizeGuard = ResponseSizeGuard;
+apiBridge.SensitiveDataRedactor = SensitiveDataRedactor;
+apiBridge.RequestFingerprinter = RequestFingerprinter;
+apiBridge.safeMerge = safeMerge;
+apiBridge.sanitizeObject = sanitizeObject;
+apiBridge.isPrivateIP = isPrivateIP;
+
 module.exports = {
   // v12: Callable default export
   default: apiBridge,
@@ -988,4 +1019,15 @@ module.exports = {
   Axios,
   AxiosError,
   isAxiosError,
+
+  // v16: Security
+  SSRFGuard,
+  HeaderValidator,
+  RequestRateLimiter,
+  ResponseSizeGuard,
+  SensitiveDataRedactor,
+  RequestFingerprinter,
+  safeMerge,
+  sanitizeObject,
+  isPrivateIP,
 };
