@@ -672,9 +672,12 @@ function safeMerge(target, source) {
 
   for (const key of Object.keys(source)) {
     if (DANGEROUS_KEYS.has(key)) continue;
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
 
     const srcVal = source[key];
-    const tgtVal = target[key];
+    const tgtVal = Object.prototype.hasOwnProperty.call(target, key) ? target[key] : undefined;
 
     if (
       srcVal !== null &&
@@ -686,7 +689,13 @@ function safeMerge(target, source) {
     ) {
       safeMerge(tgtVal, srcVal);
     } else {
-      target[key] = srcVal;
+      // Use defineProperty to avoid triggering setters on Object.prototype
+      Object.defineProperty(target, key, {
+        value: srcVal,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
   }
 
