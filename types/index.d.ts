@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v14
-// Type definitions for api-bridge-ai 14.0.0
+// TypeScript Type Declarations for APIBridge AI v15
+// Type definitions for api-bridge-ai 15.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -104,7 +104,7 @@ declare namespace ApiBridgeAI {
   /**
    * Build a full URL from base + path + params.
    */
-  function buildURL(baseURL: string, path: string, params?: Record<string, any>, paramsSerializer?: (params: any) => string): string;
+  function buildURL(baseURL: string, path: string, params?: Record<string, any>, paramsSerializer?: ParamsSerializerConfig | ((params: any) => string)): string;
 
   /**
    * Deep merge two config objects.
@@ -114,7 +114,21 @@ declare namespace ApiBridgeAI {
   /**
    * Default params serializer.
    */
-  function defaultParamsSerializer(params: Record<string, any>): string;
+  function defaultParamsSerializer(params: Record<string, any>, options?: { encode?: (value: string) => string }): string;
+
+  /**
+   * Resolve a paramsSerializer config into a serializer function (v15).
+   * Supports function, { serialize, encode } object, or null.
+   */
+  function resolveParamsSerializer(serializer: ParamsSerializerConfig | ((params: any) => string) | null): ((params: any) => string) | null;
+
+  /**
+   * Params serializer configuration object (v15).
+   */
+  interface ParamsSerializerConfig {
+    serialize?: (params: any, options?: any) => string;
+    encode?: (value: string) => string;
+  }
 
   // ─── v11: VERSION ────────────────────────────────────────────────────────
 
@@ -148,7 +162,7 @@ declare namespace ApiBridgeAI {
     readonly size: number;
     normalize(asFormat?: boolean): AxiosHeaders;
     merge(other: Record<string, string> | AxiosHeaders, rewrite?: boolean): AxiosHeaders;
-    toJSON(normalize?: boolean): Record<string, string>;
+    toJSON(filter?: boolean | string[] | RegExp): Record<string, string>;
     toString(): string;
     [Symbol.iterator](): Iterator<[string, string]>;
 
@@ -166,9 +180,22 @@ declare namespace ApiBridgeAI {
     setAuthorization(value: string, rewrite?: boolean): AxiosHeaders;
     hasAuthorization(): boolean;
 
+    // v15: Additional header accessors
+    getUserAgent(): string | null;
+    setUserAgent(value: string, rewrite?: boolean): AxiosHeaders;
+    hasUserAgent(): boolean;
+    getContentEncoding(): string | null;
+    setContentEncoding(value: string, rewrite?: boolean): AxiosHeaders;
+    hasContentEncoding(): boolean;
+    getContentDisposition(): string | null;
+    setContentDisposition(value: string, rewrite?: boolean): AxiosHeaders;
+    hasContentDisposition(): boolean;
+
     static from(entries: any): AxiosHeaders;
     static concat(...sources: Array<Record<string, string> | AxiosHeaders>): AxiosHeaders;
     static accessor(name: string): typeof AxiosHeaders;
+    /** Parse raw HTTP header string into AxiosHeaders (v15). */
+    static fromString(headerStr: string | null): AxiosHeaders;
   }
 
   // ─── v11: HttpStatusCode ───────────────────────────────────────────────
@@ -381,6 +408,15 @@ declare namespace ApiBridgeAI {
     tokenRefresh?: TokenRefreshConfig | null;
     timing?: boolean;
     hooks?: LifecycleHooks | null;
+    // v15 options
+    /** Auto-generate request correlation ID header. `true` for 'x-request-id', or a custom header name string. */
+    requestId?: boolean | string;
+    /** Callback before redirect requests are followed. */
+    beforeRedirect?: (options: any, responseDetails: { headers: Record<string, string>; status: number; location: string }) => void;
+    /** Auto Content-Type serialization. When true (default), auto-converts body based on Content-Type. */
+    autoContentType?: boolean;
+    /** Params serializer — function or { encode, serialize } object (v15). */
+    paramsSerializer?: ParamsSerializerConfig | ((params: any) => string);
   }
 
   // ─── v14 Configuration Interfaces ──────────────────────────────────────
@@ -463,6 +499,11 @@ declare namespace ApiBridgeAI {
     env?: { FormData?: any };
     // v14 options
     retryConfig?: RetryConfig | null;
+    // v15 options
+    /** Per-request beforeRedirect callback. */
+    beforeRedirect?: (options: any, responseDetails: { headers: Record<string, string>; status: number; location: string }) => void;
+    /** Per-request requestId override. */
+    requestId?: boolean | string;
   }
 
   interface ClientResponse<T = any> {
@@ -683,10 +724,18 @@ declare namespace ApiBridgeAI {
 
   // ─── v10/v11 Interceptors ──────────────────────────────────────────────
 
+  /** Options for interceptor registration (v15). */
+  interface InterceptorOptions {
+    /** When provided, interceptor is only executed if this function returns true. */
+    runWhen?: (configOrResponse: any) => boolean;
+    /** When true, interceptor runs synchronously (no await). Default false. */
+    synchronous?: boolean;
+  }
+
   class InterceptorChain {
-    use(fulfilled: Function, rejected?: Function): number;
+    use(fulfilled: Function, rejected?: Function | null, options?: InterceptorOptions): number;
     eject(id: number): boolean;
-    handlers(): Array<{ id: number; fulfilled: Function; rejected: Function | null }>;
+    handlers(): Array<{ id: number; fulfilled: Function; rejected: Function | null; runWhen?: Function | null; synchronous?: boolean }>;
     clear(): void;
     forEach(fn: (handler: { fulfilled: Function; rejected: Function | null }) => void): void;
     readonly size: number;

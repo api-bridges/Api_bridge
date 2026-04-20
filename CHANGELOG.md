@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [15.0.0] - 2026-04-20
+
+### Added — Full Axios Replacement (Complete API Gap Closure + All Features Preserved)
+- **Interceptor `runWhen` option** — Conditional interceptor execution with predicate function
+  - `interceptors.request.use(fn, null, { runWhen: (config) => boolean })` — Skip interceptor when predicate returns false
+  - `interceptors.response.use(fn, null, { runWhen: (response) => boolean })` — Skip response interceptor conditionally
+  - Fully backward compatible — existing interceptors without options work as before
+- **Interceptor `synchronous` option** — Synchronous interceptor execution mode
+  - `interceptors.request.use(fn, null, { synchronous: true })` — Skip `await` for synchronous handlers
+  - Reduces overhead for simple synchronous interceptors
+- **Auto Content-Type serialization** — Automatic body conversion based on Content-Type header
+  - `Content-Type: application/x-www-form-urlencoded` + plain object body → auto-converts to `URLSearchParams`
+  - `Content-Type: multipart/form-data` + plain object body → auto-converts to `FormData` (removes Content-Type to let runtime set boundary)
+  - Configurable via `autoContentType: false` to disable
+  - Only applies to plain objects — FormData, URLSearchParams, Buffer, Stream, etc. are left as-is
+- **Enhanced `paramsSerializer`** — Accepts Axios 1.x object form `{ encode, serialize }`
+  - `paramsSerializer: { serialize: (params, options) => string }` — Custom serialization function
+  - `paramsSerializer: { encode: (value) => string }` — Custom encoding function (defaults to `encodeURIComponent`)
+  - `paramsSerializer: (params) => string` — Legacy function form still works
+  - `resolveParamsSerializer(serializer)` — Utility to resolve any serializer config into a function
+- **`beforeRedirect` callback** — Intercept and modify redirect requests before they are followed
+  - `beforeRedirect: (options, { headers, status, location }) => void`
+  - Per-client or per-request configuration
+  - Follows redirects up to `maxRedirects` limit
+- **Request correlation IDs** — Automatic `x-request-id` header generation
+  - `requestId: true` — Auto-generate 16-character unique ID on every request
+  - `requestId: 'X-Correlation-ID'` — Use custom header name
+  - `requestId: false` — Disabled (default)
+  - Existing manually-set IDs are preserved (not overwritten)
+- **`AxiosHeaders.fromString(headerStr)`** — Parse raw HTTP header strings into AxiosHeaders instances
+  - Handles `\r\n` and `\n` line endings
+  - Safe handling of empty/null input
+- **`AxiosHeaders.toJSON()` filter support** — Filter output by header name array or RegExp pattern
+  - `headers.toJSON(['Content-Type', 'Accept'])` — Only include specified headers
+  - `headers.toJSON(/^Content/i)` — Only include headers matching pattern
+  - `headers.toJSON(true)` — Legacy boolean behavior preserved
+- **Additional AxiosHeaders accessors** — `getUserAgent()`, `setUserAgent()`, `hasUserAgent()`, `getContentEncoding()`, `setContentEncoding()`, `hasContentEncoding()`, `getContentDisposition()`, `setContentDisposition()`, `hasContentDisposition()`
+- **`resolveParamsSerializer(serializer)`** — Exported utility to resolve any paramsSerializer config into a callable function
+- 31 new tests (918 total)
+
+### Changed
+- Interceptor handlers now store `runWhen` and `synchronous` properties
+- `buildURL()` now uses `resolveParamsSerializer()` to handle all paramsSerializer forms
+- `defaultParamsSerializer()` accepts optional `options` parameter with `encode` function
+- Updated package description for full Axios replacement positioning
+- Added new keywords: `run-when`, `before-redirect`, `request-id`, `auto-content-type`, `params-serializer`
+
 ## [14.0.0] - 2026-04-20
 
 ### Added — Enterprise-Grade HTTP Client (Production Power Tools)
