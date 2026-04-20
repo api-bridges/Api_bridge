@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Schema Inference Engine
+ * nopes v3 — Schema Inference Engine
  *
  * Automatically generates schemas from API response data.
  * Analyzes one or more sample payloads and infers:

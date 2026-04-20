@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v4 — JSON Patch Generator
+ * nopes v4 — JSON Patch Generator
  *
  * Generates and applies RFC 6902 JSON Patch operations:
  *  - Generate diffs between two objects as patch arrays

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v9 — Smart Proxy
+ * nopes v9 — Smart Proxy
  *
  * Returns response data wrapped in a Proxy that dynamically resolves
  * field names using multiple strategies:

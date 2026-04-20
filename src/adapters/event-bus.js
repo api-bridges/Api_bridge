@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v5 — Event Bus
+ * nopes v5 — Event Bus
  *
  * Typed, cross-module pub/sub event bus:
  *  - Subscribe/unsubscribe to named events

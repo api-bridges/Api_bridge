@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v8 — Output Formatter
+ * nopes v8 — Output Formatter
  *
  * Format transformed API data into various output formats.
  * Converts JavaScript objects to XML, CSV, key-value pairs, or custom template formats.

@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v18
-// Type definitions for api-bridge-ai 18.0.0
+// TypeScript Type Declarations for nopes v18
+// Type definitions for nopes 18.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -8,12 +8,12 @@ declare namespace ApiBridgeAI {
   // ─── Main API ────────────────────────────────────────────────────────────
 
   /**
-   * Wrap an Axios instance with APIBridge transformation.
+   * Wrap an Axios instance with nopes transformation.
    */
   function bridge(axiosInstance: any, options?: BridgeOptions): any;
 
   /**
-   * Wrap native fetch with APIBridge transformation, retry, caching, and middleware.
+   * Wrap native fetch with nopes transformation, retry, caching, and middleware.
    */
   function bridgeFetch(options?: BridgeFetchOptions): BridgeFetchInstance;
 
@@ -25,17 +25,17 @@ declare namespace ApiBridgeAI {
   /**
    * Create a reusable transformer instance.
    */
-  function createTransformer(options?: TransformOptions): APIBridgeTransformer;
+  function createTransformer(options?: TransformOptions): nopesTransformer;
 
   /**
    * Create a new API client instance (v9+).
    */
-  function createClient(options?: ClientOptions): APIBridgeClient;
+  function createClient(options?: ClientOptions): nopesClient;
 
   /**
    * Alias for createClient (Axios-compatible).
    */
-  function create(options?: ClientOptions): APIBridgeClient;
+  function create(options?: ClientOptions): nopesClient;
 
   /**
    * Execute multiple requests concurrently (like axios.all).
@@ -940,7 +940,7 @@ declare namespace ApiBridgeAI {
 
   // ─── v11 Client Class ──────────────────────────────────────────────────
 
-  class APIBridgeClient {
+  class nopesClient {
     constructor(options?: ClientOptions);
     baseURL: string;
     defaultHeaders: Record<string, string>;
@@ -962,7 +962,7 @@ declare namespace ApiBridgeAI {
     xsrfCookieName: string;
     xsrfHeaderName: string;
     defaults: ClientDefaults;
-    transformer: APIBridgeTransformer;
+    transformer: nopesTransformer;
     learning: LearningEngine;
     fuzzyMatcher: FuzzyMatcher;
     typeCoercer: TypeCoercer;
@@ -1214,7 +1214,7 @@ declare namespace ApiBridgeAI {
 
   // ─── Core Classes ────────────────────────────────────────────────────────
 
-  class APIBridgeTransformer {
+  class nopesTransformer {
     constructor(options?: TransformOptions);
     transform(data: Record<string, any>, schema: Record<string, string> | null, direction: string): Record<string, any>;
     approve(source: string, target: string): void;
@@ -1941,9 +1941,9 @@ declare namespace ApiBridgeAI {
   // ─── v12: Axios Class Aliases ─────────────────────────────────────────
 
   /**
-   * Axios class alias (same as APIBridgeClient).
+   * Axios class alias (same as nopesClient).
    */
-  const Axios: typeof APIBridgeClient;
+  const Axios: typeof nopesClient;
 
   /**
    * AxiosError alias (same as ClientError, with error code constants).
@@ -1982,8 +1982,8 @@ declare namespace ApiBridgeAI {
 
     defaults: ClientDefaults;
     interceptors: InterceptorManager;
-    create(options?: ClientOptions): APIBridgeClient;
-    createClient(options?: ClientOptions): APIBridgeClient;
+    create(options?: ClientOptions): nopesClient;
+    createClient(options?: ClientOptions): nopesClient;
 
     all<T>(promises: Promise<T>[]): Promise<T[]>;
     spread<T, R>(callback: (...args: T[]) => R): (arr: T[]) => R;
@@ -1994,9 +1994,9 @@ declare namespace ApiBridgeAI {
     isCancel(value: any): boolean;
     isCancelToken(value: any): boolean;
 
-    Axios: typeof APIBridgeClient;
+    Axios: typeof nopesClient;
     AxiosError: typeof ClientError;
-    APIBridgeClient: typeof APIBridgeClient;
+    nopesClient: typeof nopesClient;
     ClientError: typeof ClientError;
     CancelToken: typeof CancelToken;
     Cancel: typeof Cancel;

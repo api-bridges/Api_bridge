@@ -1,5 +1,5 @@
 /**
- * APIBridge AI — Utils Module
+ * nopes — Utils Module
  *
  * Caching, deduplication, diffing, export, masking, metrics, and more.
  */

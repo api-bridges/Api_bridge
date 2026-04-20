@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v11 — URL Utilities
+ * nopes v11 — URL Utilities
  *
  * Helper functions for URL manipulation, matching Axios internals.
  *

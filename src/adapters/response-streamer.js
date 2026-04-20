@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v5 — Response Streamer
+ * nopes v5 — Response Streamer
  *
  * Streaming/chunked JSON response transformer:
  *  - Process large JSON responses in chunks

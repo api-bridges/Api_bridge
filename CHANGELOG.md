@@ -402,7 +402,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apiBridge.get('/api/users')`, `apiBridge.post()`, etc. — shorthand methods
 - **Shorthand methods on default export** — `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `request`, `postForm`, `putForm`, `patchForm`, `getUri`
 - **Default export properties** — `defaults`, `interceptors`, `create`, `all`, `spread`
-- **`Axios` class alias** — `apiBridge.Axios === APIBridgeClient` for migration compatibility
+- **`Axios` class alias** — `apiBridge.Axios === nopesClient` for migration compatibility
 - **`AxiosError` class alias** — `apiBridge.AxiosError === ClientError` for migration compatibility
 - **`isAxiosError()` function** — Alias for `isClientError()`, enables `apiBridge.isAxiosError(err)`
 - **Error code constants on ClientError/AxiosError**:
@@ -417,7 +417,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`transitional` config option** — `{ silentJSONParsing, forcedJSONParsing, clarifyTimeoutError }`
 - **`signal` in defaults** — Default AbortSignal propagation
 - **Callable export has all Axios statics** — `CancelToken`, `Cancel`, `AxiosHeaders`, `HttpStatusCode`, `toFormData`, `formToJSON`, `mergeConfig`, `getAdapter`, `buildURL`, `VERSION`
-- **Module-level shorthand methods** — `require('api-bridge-ai').get()`, `.post()`, etc.
+- **Module-level shorthand methods** — `require('nopes').get()`, `.post()`, etc.
 - **Module-level `interceptors`** — Shared default instance interceptors
 - **42 new tests** (808 total, up from 766)
 - **Updated TypeScript declarations** with all v12 types, interfaces, and callable export
@@ -461,7 +461,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`all()` + `spread()`** — Concurrent request helpers (like `axios.all`, `axios.spread`)
   - `all([api.get('/a'), api.get('/b')]).then(spread((a, b) => ...))`
 - **`isClientError()` / `isApiBridgeError()`** — Error type checking (like `axios.isAxiosError`)
-  - Available as standalone function and static method `APIBridgeClient.isClientError(err)`
+  - Available as standalone function and static method `nopesClient.isClientError(err)`
 - **`create()` Factory** — Alias for `createClient()` (Axios `axios.create()` pattern)
 - **`defaultParamsSerializer()`** — Exported default params serializer with array support
 - **Response Shape Enhancement** — `statusText` and `config` now included in response objects

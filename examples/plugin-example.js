@@ -1,7 +1,7 @@
 /**
- * APIBridge AI — Plugin Extension Example
+ * nopes — Plugin Extension Example
  *
- * Shows how to create custom plugins to extend APIBridge AI.
+ * Shows how to create custom plugins to extend nopes.
  *
  * Run: node examples/plugin-example.js
  */

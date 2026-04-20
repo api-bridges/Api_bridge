@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v18
+ * nopes v18
  * Full Axios Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -149,7 +149,7 @@
  * v12 features (True Axios Drop-in — Callable Export + Full API Surface):
  *  - Callable default export: apiBridge(config), apiBridge(url, config)
  *  - Shorthand methods on default export: apiBridge.get(), .post(), .put(), etc.
- *  - Axios class alias: apiBridge.Axios === APIBridgeClient
+ *  - Axios class alias: apiBridge.Axios === nopesClient
  *  - AxiosError alias: apiBridge.AxiosError === ClientError with error code constants
  *  - Error code constants: ERR_NETWORK, ERR_CANCELED, ECONNABORTED, ETIMEDOUT, etc.
  *  - isAxiosError() alias for isClientError()
@@ -198,7 +198,7 @@
  *  - AxiosHeaders toJSON filter: filter output by header name array or RegExp pattern
  *  - Additional header accessors: User-Agent, Content-Encoding, Content-Disposition
  *  - resolveParamsSerializer() utility: resolve paramsSerializer config into a function
- *  - All existing APIBridge features preserved: transformers, fuzzy matching, learning engine, smart proxy, etc.
+ *  - All existing nopes features preserved: transformers, fuzzy matching, learning engine, smart proxy, etc.
  *  - Version 15.0.0
  *
  * v16 features (Maximum Security & Power):
@@ -215,7 +215,7 @@
  *  - Version 16.0.0
  *
  * Usage:
- *   const { createClient, bridge, bridgeFetch, transform } = require('api-bridge-ai');
+ *   const { createClient, bridge, bridgeFetch, transform } = require('nopes');
  *
  *   // v9: Next-gen client
  *   const api = createClient({ baseURL: '/api', timeout: 5000 });
@@ -244,82 +244,82 @@
  *   // → { firstName: 'John' }
  *
  *   // v4: Circuit breaker
- *   const { CircuitBreaker } = require('api-bridge-ai');
+ *   const { CircuitBreaker } = require('nopes');
  *   const breaker = new CircuitBreaker({ failureThreshold: 3 });
  *   const data = await breaker.execute(() => fetch('/api/users'));
  *
  *   // v4: GraphQL bridge
- *   const { GraphQLBridge } = require('api-bridge-ai');
+ *   const { GraphQLBridge } = require('nopes');
  *   const gql = new GraphQLBridge({ convention: 'camelCase' });
  *   const result = gql.transformResponse(graphqlResponse);
  *
  *   // v4: Composable pipeline
- *   const { ComposablePipeline } = require('api-bridge-ai');
+ *   const { ComposablePipeline } = require('nopes');
  *   const pipe = new ComposablePipeline();
  *   pipe.pipe('validate', validateFn).pipe('transform', transformFn);
  *   const result = await pipe.execute(data);
  *
  *   // v5: Retry strategy
- *   const { RetryStrategy } = require('api-bridge-ai');
+ *   const { RetryStrategy } = require('nopes');
  *   const retry = new RetryStrategy({ strategy: 'exponentialJitter', maxRetries: 5 });
  *   const data = await retry.execute(() => fetch('/api/users'));
  *
  *   // v5: Event bus
- *   const { EventBus } = require('api-bridge-ai');
+ *   const { EventBus } = require('nopes');
  *   const bus = new EventBus({ recordHistory: true });
  *   bus.on('api.request', (data) => console.log(data));
  *   await bus.emit('api.request', { url: '/users' });
  *
  *   // v5: Health check
- *   const { HealthCheck } = require('api-bridge-ai');
+ *   const { HealthCheck } = require('nopes');
  *   const health = new HealthCheck({ failureThreshold: 3 });
  *   health.register('api', () => fetch('/health').then(r => r.ok));
  *
  *   // v5: Mock server
- *   const { MockServer } = require('api-bridge-ai');
+ *   const { MockServer } = require('nopes');
  *   const mock = new MockServer();
  *   mock.register('GET', '/api/users', { body: [{ id: 1 }] });
  *
  *   // v6: Fuzzy matcher
- *   const { FuzzyMatcher } = require('api-bridge-ai');
+ *   const { FuzzyMatcher } = require('nopes');
  *   const fuzzy = new FuzzyMatcher();
  *   const result = fuzzy.findBestMatch('usr_email', ['user_email', 'user_name']);
  *
  *   // v6: Cryptic resolver
- *   const { CrypticResolver } = require('api-bridge-ai');
+ *   const { CrypticResolver } = require('nopes');
  *   const resolver = new CrypticResolver();
  *   const resolved = resolver.resolve('z9_ref_id', ['reference_id', 'user_id']);
  *
  *   // v6: Type coercer
- *   const { TypeCoercer } = require('api-bridge-ai');
+ *   const { TypeCoercer } = require('nopes');
  *   const coercer = new TypeCoercer();
  *   const coerced = coercer.coerceValue('true', 'boolean', 'isActive');
  *
  *   // v8: Field aliaser
- *   const { FieldAliaser } = require('api-bridge-ai');
+ *   const { FieldAliaser } = require('nopes');
  *   const aliaser = new FieldAliaser();
  *   aliaser.register('userId', ['user_id', 'uid', 'member_id']);
  *   const resolved = aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
  *
  *   // v8: Schema migrator
- *   const { SchemaMigrator } = require('api-bridge-ai');
+ *   const { SchemaMigrator } = require('nopes');
  *   const migrator = new SchemaMigrator();
  *   migrator.define('1.0', '2.0', { rename: { user_name: 'username' } });
  *   const migrated = migrator.migrate(data, '1.0', '2.0');
  *
  *   // v8: Deep merge
- *   const { DeepMerge } = require('api-bridge-ai');
+ *   const { DeepMerge } = require('nopes');
  *   const merger = new DeepMerge({ arrayStrategy: 'union' });
  *   const merged = merger.merge(apiResponse1, apiResponse2);
  *
  *   // v8: Conditional transform
- *   const { ConditionalTransform } = require('api-bridge-ai');
+ *   const { ConditionalTransform } = require('nopes');
  *   const ct = new ConditionalTransform();
  *   ct.when('nullToDefault', (v) => v === null, () => 'N/A');
  */
 
 // ─── Core ─────────────────────────────────────────────────────────────────────
-const { APIBridgeTransformer } = require('./core/transformer');
+const { nopesTransformer } = require('./core/transformer');
 const { LearningEngine } = require('./core/learning');
 const { ResponseNormalizer } = require('./core/normalizer');
 const { SchemaValidator } = require('./core/validator');
@@ -362,7 +362,7 @@ const {
 
 // ─── v10 Core ─────────────────────────────────────────────────────────────────
 const {
-  APIBridgeClient, ClientError, createClient, buildURL,
+  nopesClient, ClientError, createClient, buildURL,
   all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
   resolveParamsSerializer,
   VERSION,
@@ -456,7 +456,7 @@ const { SchemaRegistry } = require('./adapters/schema-registry');
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap an axios instance with APIBridge v8.
+ * Wrap an axios instance with nopes v8.
  *
  * @param {object} axiosInstance
  * @param {object} options
@@ -468,7 +468,7 @@ const { SchemaRegistry } = require('./adapters/schema-registry');
  * @returns {object} The enhanced axios instance
  */
 function bridge(axiosInstance, options = {}) {
-  const transformer = new APIBridgeTransformer(options);
+  const transformer = new nopesTransformer(options);
   const cache = new ResponseCache(options.cache || {});
   const middleware = new MiddlewarePipeline();
   const validator = new SchemaValidator(options.validator || {});
@@ -547,7 +547,7 @@ function bridge(axiosInstance, options = {}) {
 // ─── FETCH BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap native fetch with APIBridge v8.
+ * Wrap native fetch with nopes v8.
  * Supports all HTTP methods, retry logic, caching, middleware, and normalization.
  *
  * @param {object} options
@@ -559,7 +559,7 @@ function bridge(axiosInstance, options = {}) {
  * @param {object}  options.validator     Validator options
  */
 function bridgeFetch(options = {}) {
-  const transformer = new APIBridgeTransformer(options);
+  const transformer = new nopesTransformer(options);
   const cache = new ResponseCache(options.cache || {});
   const middleware = new MiddlewarePipeline();
   const validator = new SchemaValidator(options.validator || {});
@@ -704,7 +704,7 @@ function bridgeFetch(options = {}) {
  * Transform any object directly, without an HTTP client.
  */
 function transform(data, options = {}) {
-  const transformer = new APIBridgeTransformer(options);
+  const transformer = new nopesTransformer(options);
   return transformer.transform(data, options.schema || null, options.direction || 'toFrontend');
 }
 
@@ -712,7 +712,7 @@ function transform(data, options = {}) {
  * Create a reusable transformer instance.
  */
 function createTransformer(options = {}) {
-  return new APIBridgeTransformer(options);
+  return new nopesTransformer(options);
 }
 
 // ─── EXPORTS ──────────────────────────────────────────────────────────────────
@@ -721,13 +721,13 @@ function createTransformer(options = {}) {
 const defaultInstance = createClient();
 
 // ─── v12: Callable default export (like axios) ──────────────────────────────
-// Makes the module callable: const apiBridge = require('api-bridge-ai');
+// Makes the module callable: const apiBridge = require('nopes');
 //   apiBridge('/api/users')           — GET by default
 //   apiBridge({ method: 'post', url: '/api/users', data: { name: 'John' } })
 //   apiBridge.get('/api/users')       — shorthand
 //   apiBridge.create({ baseURL: '/api' })
 //
-// This is the key feature that makes api-bridge-ai a true drop-in Axios replacement.
+// This is the key feature that makes nopes a true drop-in Axios replacement.
 
 function apiBridge(configOrUrl, config) {
   if (typeof configOrUrl === 'string') {
@@ -777,7 +777,7 @@ apiBridge.isCancelToken = isCancelToken;
 // Classes & constructors
 apiBridge.Axios = Axios;
 apiBridge.AxiosError = AxiosError;
-apiBridge.APIBridgeClient = APIBridgeClient;
+apiBridge.nopesClient = nopesClient;
 apiBridge.ClientError = ClientError;
 apiBridge.CancelToken = CancelToken;
 apiBridge.Cancel = Cancel;
@@ -859,7 +859,7 @@ module.exports = {
   getUri: apiBridge.getUri,
 
   // Core classes
-  APIBridgeTransformer,
+  nopesTransformer,
   LearningEngine,
   ResponseCache,
   MiddlewarePipeline,
@@ -912,7 +912,7 @@ module.exports = {
   RequestInterceptor,
 
   // v9/v10 classes
-  APIBridgeClient,
+  nopesClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,

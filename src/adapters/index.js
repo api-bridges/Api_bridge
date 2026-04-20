@@ -1,5 +1,5 @@
 /**
- * APIBridge AI — Adapters Module
+ * nopes — Adapters Module
  *
  * Protocol bridges, middleware, resilience patterns, and orchestration.
  */

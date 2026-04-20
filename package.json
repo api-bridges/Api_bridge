@@ -1,5 +1,5 @@
 {
-  "name": "api-bridge-ai",
+  "name": "nopes",
   "version": "18.0.0",
   "description": "Most powerful and most secure Axios replacement: Zero-trust engine, threat intelligence, secure sessions, request integrity chain, adaptive rate limiting, OWASP security headers, encrypted config vault, mutual TLS + CSP builder, certificate pinning, HMAC request signing, input sanitization, audit logging, RBAC permissions, AES-256-GCM encryption, idempotency, SSRF protection, CRLF prevention, rate limiting, replay detection, response size guard, sensitive data redaction, prototype pollution hardening, request journey tracking + auto Content-Type, interceptor runWhen, auto-retry, caching, dedup, token refresh, lifecycle hooks, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 80+ modules",
   "main": "src/index.js",
@@ -159,13 +159,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/biswaranjantudu064-netizen/Api_bridge.git"
+    "url": "git+https://github.com/api-bridges/Api_bridge.git"
   },
   "bugs": {
-    "url": "https://github.com/biswaranjantudu064-netizen/Api_bridge/issues"
+    "url": "https://github.com/api-bridges/Api_bridge/issues"
   },
-  "homepage": "https://github.com/biswaranjantudu064-netizen/Api_bridge#readme",
-  "author": "Api_Bridges Group",
+  "homepage": "https://github.com/api-bridges/Api_bridge#readme",
+  "author": "awsibnj",
   "license": "SEE LICENSE IN LICENSE",
   "dependencies": {
     "fastest-levenshtein": "^1.0.16"

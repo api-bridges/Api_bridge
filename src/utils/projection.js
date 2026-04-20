@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Field Projection Engine
+ * nopes v3 — Field Projection Engine
  *
  * Select, omit, rename, and reshape fields from API responses.
  * Like SQL SELECT or MongoDB projection — pick only what you need.

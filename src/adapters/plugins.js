@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Plugin System
+ * nopes v3 — Plugin System
  *
  * Extensible architecture for registering, managing, and executing plugins.
  * Plugins can hook into transform, validate, normalize, and export pipelines.

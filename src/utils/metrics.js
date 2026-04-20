@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Metrics Collector
+ * nopes v3 — Metrics Collector
  *
  * Tracks performance and usage metrics for:
  *  - Transform operations (duration, field count)

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v7 — Enhanced Cryptic Name Resolver
+ * nopes v7 — Enhanced Cryptic Name Resolver
  *
  * Best-effort resolution of cryptic/arbitrary field names:
  *  - Prefix/suffix pattern extraction (e.g., z9_ref_id → ref_id)

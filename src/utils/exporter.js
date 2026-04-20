@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Exporter
+ * nopes v3 — Exporter
  *
  * Export mismatch reports in CSV, JSON, and HTML formats.
  * Generate schema suggestions from learned data.
@@ -37,7 +37,7 @@ function exportMismatchCSV(mismatches, outputPath = null) {
   });
 
   const csv = [
-    '# APIBridge AI v3 — Mismatch Report',
+    '# nopes v3 — Mismatch Report',
     `# Generated: ${new Date().toISOString()}`,
     `# Total mismatches: ${mismatches.length}`,
     `# Needs review: ${mismatches.filter(m => m.confidence < 0.85).length}`,

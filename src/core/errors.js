@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v8 — Custom Error Classes
+ * nopes v8 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
  *  - ValidationError        — schema or type mismatch
