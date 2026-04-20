@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v15 — HTTP Client Engine (Full Axios Replacement + All APIBridge Features)
+ * APIBridge AI v17 — HTTP Client Engine (Full Axios Replacement + All APIBridge Features)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -95,12 +95,13 @@ const { isAbsoluteURL, combineURLs } = require('./url-utils');
 const { AxiosHeaders } = require('./headers');
 const { generateUID, isPlainObject } = require('./helpers');
 const { SSRFGuard, HeaderValidator, RequestRateLimiter, ResponseSizeGuard, SensitiveDataRedactor, RequestFingerprinter, safeMerge, sanitizeObject } = require('./security');
+const { ContentSecurityPolicy, CertificatePinning, RequestSigning, InputSanitizer, SecurityAuditLogger, PermissionPolicy, PayloadEncryptor, IdempotencyManager } = require('./security-advanced');
 
 /**
  * Library version.
  * @type {string}
  */
-const VERSION = '16.0.0';
+const VERSION = '17.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -170,6 +171,15 @@ ClientError.ERR_HEADER_VALIDATION = 'ERR_HEADER_VALIDATION';
 ClientError.ERR_RATE_LIMITED = 'ERR_RATE_LIMITED';
 ClientError.ERR_DUPLICATE_REQUEST = 'ERR_DUPLICATE_REQUEST';
 ClientError.ERR_RESPONSE_TOO_LARGE = 'ERR_RESPONSE_TOO_LARGE';
+// v17: Advanced security error codes
+ClientError.ERR_CSP_VIOLATION = 'ERR_CSP_VIOLATION';
+ClientError.ERR_CERT_PIN_FAILED = 'ERR_CERT_PIN_FAILED';
+ClientError.ERR_SIGNATURE_INVALID = 'ERR_SIGNATURE_INVALID';
+ClientError.ERR_INPUT_REJECTED = 'ERR_INPUT_REJECTED';
+ClientError.ERR_PERMISSION_DENIED = 'ERR_PERMISSION_DENIED';
+ClientError.ERR_ENCRYPTION_FAILED = 'ERR_ENCRYPTION_FAILED';
+ClientError.ERR_DECRYPTION_FAILED = 'ERR_DECRYPTION_FAILED';
+ClientError.ERR_IDEMPOTENCY_CONFLICT = 'ERR_IDEMPOTENCY_CONFLICT';
 
 /**
  * Create a ClientError with full context (like AxiosError.from).
@@ -397,6 +407,14 @@ class APIBridgeClient {
    * @param {object} [options.redactor] — Sensitive data redactor options { sensitiveHeaders }
    * @param {number} [options.replayDetection=0] — Replay detection window in ms (0 = disabled)
    * @param {boolean} [options.journeyTracking=false] — Enable request journey tracking
+   * @param {object} [options.csp] — Content Security Policy options (v17)
+   * @param {object} [options.certPinning] — Certificate pinning options { pins, enforceMode } (v17)
+   * @param {object} [options.requestSigning] — Request signing options { secret, algorithm, headerName } (v17)
+   * @param {object} [options.inputSanitizer] — Input sanitizer options { mode, maxDepth, maxStringLength } (v17)
+   * @param {object} [options.auditLog] — Security audit log options { maxEntries, onAlert } (v17)
+   * @param {object} [options.permissions] — Permission policy options { policies, defaultAllow } (v17)
+   * @param {object} [options.encryption] — Payload encryption options { key, algorithm } (v17)
+   * @param {object} [options.idempotency] — Idempotency options { headerName, ttl, methods } (v17)
    */
   constructor(options = {}) {
     this.baseURL = options.baseURL || '';
@@ -508,6 +526,24 @@ class APIBridgeClient {
     // Request journey tracking
     this.journeyTracking = options.journeyTracking || false;
 
+    // ─── v17: Advanced Security & Power ───────────────────────────
+    // Content Security Policy
+    this._csp = options.csp ? new ContentSecurityPolicy(options.csp) : null;
+    // Certificate pinning
+    this._certPinning = options.certPinning ? new CertificatePinning(options.certPinning) : null;
+    // Request signing
+    this._requestSigning = options.requestSigning ? new RequestSigning(options.requestSigning) : null;
+    // Input sanitizer
+    this._inputSanitizer = options.inputSanitizer ? new InputSanitizer(options.inputSanitizer) : null;
+    // Security audit logger
+    this._auditLog = options.auditLog ? new SecurityAuditLogger(options.auditLog) : null;
+    // Permission policy (RBAC)
+    this._permissions = options.permissions ? new PermissionPolicy(options.permissions) : null;
+    // Payload encryption
+    this._encryptor = options.encryption ? new PayloadEncryptor(options.encryption) : null;
+    // Idempotency manager
+    this._idempotency = options.idempotency ? new IdempotencyManager(options.idempotency) : null;
+
     // v14: Internal state for caching, dedup, and token refresh
     this._responseCache = new Map();
     this._inflightRequests = new Map();
@@ -575,6 +611,15 @@ class APIBridgeClient {
       redactor: options.redactor || {},
       replayDetection: this.replayDetection,
       journeyTracking: this.journeyTracking,
+      // v17: Advanced security options
+      csp: options.csp || null,
+      certPinning: options.certPinning || null,
+      requestSigning: options.requestSigning || null,
+      inputSanitizer: options.inputSanitizer || null,
+      auditLog: options.auditLog || null,
+      permissions: options.permissions || null,
+      encryption: options.encryption || null,
+      idempotency: options.idempotency || null,
     };
 
     // Core engines
@@ -1069,7 +1114,87 @@ class APIBridgeClient {
       }
     }
 
-    // 3.5. Form submission: convert plain object to FormData (v11)
+    // 3.5 v17: Permission policy check (RBAC)
+    if (this._permissions) {
+      const role = reqConfig._role || reqConfig.role || null;
+      if (role) {
+        const roles = Array.isArray(role) ? role : [role];
+        const permCheck = this._permissions.checkMultiple(roles, reqConfig.method, reqConfig.url);
+        if (!permCheck.allowed) {
+          this._stats.failures++;
+          if (this._auditLog) {
+            this._auditLog.log({ event: 'permission_denied', severity: 'warn', details: { roles, method: reqConfig.method, url: reqConfig.url } });
+          }
+          throw new ClientError('Permission denied', {
+            code: 'ERR_PERMISSION_DENIED',
+            details: { roles, method: reqConfig.method, url: reqConfig.url },
+            config: reqConfig,
+          });
+        }
+      }
+    }
+
+    // 3.6 v17: Input sanitization
+    if (this._inputSanitizer && reqConfig.body != null) {
+      try {
+        reqConfig.body = this._inputSanitizer.sanitize(reqConfig.body);
+      } catch (sanitizeErr) {
+        this._stats.failures++;
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'input_rejected', severity: 'error', details: { error: sanitizeErr.message } });
+        }
+        throw new ClientError(sanitizeErr.message, {
+          code: 'ERR_INPUT_REJECTED',
+          details: { originalError: sanitizeErr.message },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.7 v17: Request signing (HMAC)
+    if (this._requestSigning) {
+      const sigResult = this._requestSigning.sign({
+        method: reqConfig.method,
+        url: reqConfig.url,
+        headers: reqConfig.headers,
+        data: reqConfig.body,
+      });
+      reqConfig.headers[this._requestSigning.headerName] = sigResult.signature;
+      reqConfig.headers['x-timestamp'] = String(sigResult.timestamp);
+    }
+
+    // 3.8 v17: Idempotency key injection
+    if (this._idempotency && this._idempotency.shouldEnforce(reqConfig.method)) {
+      const idempotencyHeader = this._idempotency.headerName;
+      if (!reqConfig.headers[idempotencyHeader]) {
+        const idempotencyKey = this._idempotency.generateKey(reqConfig);
+        reqConfig.headers[idempotencyHeader] = idempotencyKey;
+        // Check for stored response
+        const storedResponse = this._idempotency.getStoredResponse(idempotencyKey);
+        if (storedResponse) {
+          this._stats.successes++;
+          if (this._auditLog) {
+            this._auditLog.log({ event: 'idempotency_hit', severity: 'info', details: { key: idempotencyKey } });
+          }
+          return storedResponse;
+        }
+      } else {
+        // User provided their own idempotency key — check for stored response
+        const userKey = reqConfig.headers[idempotencyHeader];
+        const storedResponse = this._idempotency.getStoredResponse(userKey);
+        if (storedResponse) {
+          this._stats.successes++;
+          return storedResponse;
+        }
+      }
+    }
+
+    // 3.9 v17: Audit log — log request start
+    if (this._auditLog) {
+      this._auditLog.log({ event: 'request_start', severity: 'info', details: { method: reqConfig.method, url: reqConfig.url } });
+    }
+
+    // 3.10. Form submission: convert plain object to FormData (v11)
     if (reqConfig._formSubmission && reqConfig.body && typeof reqConfig.body === 'object' &&
         !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body)) {
       try {
@@ -1079,7 +1204,7 @@ class APIBridgeClient {
       }
     }
 
-    // 3.6 v15: Auto Content-Type serialization
+    // 3.11 v15: Auto Content-Type serialization
     // When body is a plain object, auto-serialize based on Content-Type header
     const autoContentTypeSetting = this.autoContentType !== false && this.defaults.autoContentType !== false;
     if (autoContentTypeSetting && reqConfig.body && typeof reqConfig.body === 'object' &&
@@ -1393,6 +1518,20 @@ class APIBridgeClient {
               this._responseCache.set(cacheKey, { response: result, timestamp: Date.now() });
             }
           }
+        }
+
+        // v17: Store idempotency response
+        if (this._idempotency && reqConfig.headers) {
+          const idempotencyHeader = this._idempotency.headerName;
+          const idempotencyKey = reqConfig.headers[idempotencyHeader];
+          if (idempotencyKey) {
+            this._idempotency.recordResponse(idempotencyKey, result);
+          }
+        }
+
+        // v17: Audit log — log successful request
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'request_success', severity: 'info', details: { method: reqConfig.method, url: reqConfig.url, status: result.status } });
         }
 
         return result;
@@ -2076,4 +2215,13 @@ module.exports = {
   RequestFingerprinter,
   safeMerge,
   sanitizeObject,
+  // v17: Advanced Security
+  ContentSecurityPolicy,
+  CertificatePinning,
+  RequestSigning,
+  InputSanitizer,
+  SecurityAuditLogger,
+  PermissionPolicy,
+  PayloadEncryptor,
+  IdempotencyManager,
 };

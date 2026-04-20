@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "16.0.0",
-  "description": "Most powerful and secure Axios replacement: SSRF protection, CRLF prevention, rate limiting, replay detection, response size guard, sensitive data redaction, prototype pollution hardening, request journey tracking + auto Content-Type, interceptor runWhen, auto-retry, caching, dedup, token refresh, lifecycle hooks, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 65+ modules",
+  "version": "17.0.0",
+  "description": "Most powerful and most secure Axios replacement: CSP builder, certificate pinning, HMAC request signing, input sanitization, audit logging, RBAC permissions, AES-256-GCM encryption, idempotency, SSRF protection, CRLF prevention, rate limiting, replay detection, response size guard, sensitive data redaction, prototype pollution hardening, request journey tracking + auto Content-Type, interceptor runWhen, auto-retry, caching, dedup, token refresh, lifecycle hooks, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 70+ modules",
   "main": "src/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -124,7 +124,21 @@
     "request-fingerprinting",
     "security-hardening",
     "journey-tracking",
-    "request-tracing"
+    "request-tracing",
+    "csp-builder",
+    "content-security-policy",
+    "certificate-pinning",
+    "request-signing",
+    "hmac-signing",
+    "input-sanitization",
+    "xss-prevention",
+    "audit-logging",
+    "rbac",
+    "permission-policy",
+    "payload-encryption",
+    "aes-256-gcm",
+    "idempotency",
+    "idempotency-key"
   ],
   "engines": {
     "node": ">=16.0.0"
