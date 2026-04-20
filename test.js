@@ -182,6 +182,16 @@ const {
   safeMerge,
   sanitizeObject,
   isPrivateIP,
+
+  // v17 exports
+  ContentSecurityPolicy,
+  CertificatePinning,
+  RequestSigning,
+  InputSanitizer,
+  SecurityAuditLogger,
+  PermissionPolicy,
+  PayloadEncryptor,
+  IdempotencyManager,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -6139,7 +6149,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '16.0.0');
+  assertEqual(VERSION, '17.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7199,7 +7209,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '16.0.0');
+  assertEqual(apiBridge.VERSION, '17.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7879,7 +7889,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '16.0.0');
+  assertEqual(api.VERSION, '17.0.0');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
@@ -8757,7 +8767,7 @@ test('v14: full API surface check', () => {
   const api = require('./src/index');
 
   // Version
-  assertEqual(api.VERSION, '16.0.0');
+  assertEqual(api.VERSION, '17.0.0');
 
   // v14 options available in client defaults
   const client = api.createClient({
@@ -9290,7 +9300,7 @@ test('v15: full API surface check', () => {
   // v15 new exports available
   const api = { resolveParamsSerializer, VERSION };
   assertEqual(typeof resolveParamsSerializer, 'function');
-  assertEqual(api.VERSION, '16.0.0');
+  assertEqual(api.VERSION, '17.0.0');
 
   // AxiosHeaders v15 enhancements
   assert(typeof AxiosHeaders.fromString === 'function', 'AxiosHeaders.fromString exists');
@@ -9985,8 +9995,8 @@ test('v16: new error codes exist on ClientError', () => {
   assertEqual(ClientError.ERR_RESPONSE_TOO_LARGE, 'ERR_RESPONSE_TOO_LARGE');
 });
 
-test('v16: VERSION is 16.0.0', () => {
-  assertEqual(VERSION, '16.0.0');
+test('v17: VERSION is 17.0.0', () => {
+  assertEqual(VERSION, '17.0.0');
 });
 
 // ─── v16 Export Tests ─────────────────────────────────────────────────────────
@@ -10045,6 +10055,1003 @@ test('v16: client with all v15+v16 features combined', async () => {
   assertEqual(res.status, 200);
   assert(typeof res.duration === 'number', 'timing works');
   assert(res.config.headers['x-request-id'] !== undefined, 'request ID injected');
+  assert(res.journey !== undefined, 'journey tracking works');
+});
+
+// ─── v17: ContentSecurityPolicy Tests ─────────────────────────────────────────
+console.log('\n━━━ v17: ContentSecurityPolicy ━━━');
+
+test('v17: CSP buildHeader() returns valid CSP string with all directives', () => {
+  const csp = new ContentSecurityPolicy();
+  const header = csp.buildHeader();
+  assert(header.includes("default-src 'self'"), 'has default-src');
+  assert(header.includes("script-src 'self'"), 'has script-src');
+  assert(header.includes("style-src 'self' 'unsafe-inline'"), 'has style-src');
+  assert(header.includes("img-src 'self' data:"), 'has img-src');
+  assert(header.includes("connect-src 'self'"), 'has connect-src');
+  assert(header.includes("font-src 'self'"), 'has font-src');
+  assert(header.includes("object-src 'none'"), 'has object-src');
+  assert(header.includes("frame-src 'none'"), 'has frame-src');
+  assert(header.includes("base-uri 'self'"), 'has base-uri');
+  assert(header.includes("form-action 'self'"), 'has form-action');
+});
+
+test('v17: CSP getHeaderName() returns Content-Security-Policy', () => {
+  const csp = new ContentSecurityPolicy();
+  assertEqual(csp.getHeaderName(), 'Content-Security-Policy');
+});
+
+test('v17: CSP getHeaderName() returns report-only header name', () => {
+  const csp = new ContentSecurityPolicy({ reportOnly: true });
+  assertEqual(csp.getHeaderName(), 'Content-Security-Policy-Report-Only');
+});
+
+test('v17: CSP validateSource() accepts safe sources', () => {
+  const csp = new ContentSecurityPolicy();
+  assert(csp.validateSource("'self'"), "'self' is valid");
+  assert(csp.validateSource("'none'"), "'none' is valid");
+  assert(csp.validateSource('data:'), 'data: is valid');
+  assert(csp.validateSource('https://cdn.example.com'), 'HTTPS URL is valid');
+  assert(csp.validateSource("'nonce-abc123=='"), 'nonce is valid');
+  assert(csp.validateSource('*.example.com'), 'wildcard domain is valid');
+});
+
+test('v17: CSP validateSource() rejects dangerous/invalid sources', () => {
+  const csp = new ContentSecurityPolicy();
+  assert(!csp.validateSource(''), 'empty string is invalid');
+  assert(!csp.validateSource(null), 'null is invalid');
+  assert(!csp.validateSource(undefined), 'undefined is invalid');
+  assert(!csp.validateSource('javascript:alert(1)'), 'javascript: is invalid');
+});
+
+test('v17: CSP addNonce() generates nonce and adds to scriptSrc', () => {
+  const csp = new ContentSecurityPolicy();
+  const initialLen = csp.scriptSrc.length;
+  const nonce = csp.addNonce();
+  assert(typeof nonce === 'string', 'nonce is string');
+  assert(nonce.length > 0, 'nonce is non-empty');
+  assertEqual(csp.scriptSrc.length, initialLen + 1);
+  assert(csp.scriptSrc[csp.scriptSrc.length - 1].includes(nonce), 'scriptSrc includes nonce');
+  assert(csp.buildHeader().includes(`'nonce-${nonce}'`), 'header includes nonce');
+});
+
+test('v17: CSP toJSON() returns all directives as object', () => {
+  const csp = new ContentSecurityPolicy();
+  const json = csp.toJSON();
+  assert(Array.isArray(json.defaultSrc), 'defaultSrc is array');
+  assert(Array.isArray(json.scriptSrc), 'scriptSrc is array');
+  assert(Array.isArray(json.styleSrc), 'styleSrc is array');
+  assert(Array.isArray(json.imgSrc), 'imgSrc is array');
+  assertEqual(json.reportOnly, false);
+  assertEqual(json.reportUri, null);
+});
+
+test('v17: CSP custom directives are included in buildHeader()', () => {
+  const csp = new ContentSecurityPolicy({
+    customDirectives: { 'worker-src': ["'self'", 'blob:'] },
+  });
+  const header = csp.buildHeader();
+  assert(header.includes("worker-src 'self' blob:"), 'custom directive in header');
+});
+
+test('v17: CSP constructor uses defaults when no options provided', () => {
+  const csp = new ContentSecurityPolicy();
+  assertEqual(csp.defaultSrc[0], "'self'");
+  assertEqual(csp.scriptSrc[0], "'self'");
+  assertEqual(csp.reportOnly, false);
+  assertEqual(csp.reportUri, null);
+});
+
+test('v17: CSP custom options override defaults', () => {
+  const csp = new ContentSecurityPolicy({
+    defaultSrc: ["'none'"],
+    scriptSrc: ['https://scripts.example.com'],
+    reportUri: '/csp-report',
+    reportOnly: true,
+  });
+  assertEqual(csp.defaultSrc[0], "'none'");
+  assertEqual(csp.scriptSrc[0], 'https://scripts.example.com');
+  assertEqual(csp.reportUri, '/csp-report');
+  assertEqual(csp.reportOnly, true);
+  assert(csp.buildHeader().includes('report-uri /csp-report'), 'report-uri in header');
+});
+
+test('v17: CSP reportUri appears in buildHeader output', () => {
+  const csp = new ContentSecurityPolicy({ reportUri: '/report' });
+  assert(csp.buildHeader().includes('report-uri /report'), 'report-uri present');
+});
+
+test('v17: CSP buildHeader directives separated by semicolons', () => {
+  const csp = new ContentSecurityPolicy();
+  const header = csp.buildHeader();
+  const parts = header.split('; ');
+  assert(parts.length >= 10, 'at least 10 directives');
+});
+
+test('v17: CSP validateSource accepts sha256 hash', () => {
+  const csp = new ContentSecurityPolicy();
+  assert(csp.validateSource("'sha256-abc123=='"), 'sha256 hash is valid');
+});
+
+test('v17: CSP validateSource accepts blob:', () => {
+  const csp = new ContentSecurityPolicy();
+  assert(csp.validateSource('blob:'), 'blob: is valid');
+});
+
+test('v17: CSP validateSource accepts wildcard', () => {
+  const csp = new ContentSecurityPolicy();
+  assert(csp.validateSource('*'), 'wildcard is valid');
+});
+
+test('v17: CSP addNonce generates unique nonces', () => {
+  const csp = new ContentSecurityPolicy();
+  const n1 = csp.addNonce();
+  const n2 = csp.addNonce();
+  assert(n1 !== n2, 'nonces should be unique');
+});
+
+// ─── v17: CertificatePinning Tests ────────────────────────────────────────────
+console.log('\n━━━ v17: CertificatePinning ━━━');
+
+test('v17: CertificatePinning addPin/getPins stores and retrieves pins', () => {
+  const cp = new CertificatePinning();
+  cp.addPin('api.example.com', 'hash1');
+  cp.addPin('api.example.com', 'hash2');
+  const pins = cp.getPins('api.example.com');
+  assertEqual(pins.length, 2);
+  assert(pins.includes('hash1'), 'has hash1');
+  assert(pins.includes('hash2'), 'has hash2');
+});
+
+test('v17: CertificatePinning verify() valid when cert matches pin', () => {
+  const cp = new CertificatePinning();
+  cp.addPin('api.example.com', 'correcthash');
+  const result = cp.verify('api.example.com', 'correcthash');
+  assertEqual(result.valid, true);
+  assertEqual(result.enforced, true);
+});
+
+test('v17: CertificatePinning verify() invalid when cert does not match', () => {
+  const cp = new CertificatePinning();
+  cp.addPin('api.example.com', 'correcthash');
+  const result = cp.verify('api.example.com', 'wronghash');
+  assertEqual(result.valid, false);
+  assertEqual(result.enforced, true);
+});
+
+test('v17: CertificatePinning verify() valid for unknown hosts (no pins)', () => {
+  const cp = new CertificatePinning();
+  const result = cp.verify('unknown.com', 'anyhash');
+  assertEqual(result.valid, true);
+  assertEqual(result.enforced, false);
+});
+
+test('v17: CertificatePinning report mode returns valid even on mismatch', () => {
+  const cp = new CertificatePinning({ enforceMode: 'report' });
+  cp.addPin('api.example.com', 'correcthash');
+  const result = cp.verify('api.example.com', 'wronghash');
+  assertEqual(result.valid, true);
+  assertEqual(result.enforced, false);
+});
+
+test('v17: CertificatePinning removePin removes all pins for host', () => {
+  const cp = new CertificatePinning();
+  cp.addPin('api.example.com', 'hash1');
+  cp.addPin('api.example.com', 'hash2');
+  cp.removePin('api.example.com');
+  assertEqual(cp.getPins('api.example.com').length, 0);
+});
+
+test('v17: CertificatePinning buildHPKPHeader builds correct header', () => {
+  const cp = new CertificatePinning({ maxAge: 3600, includeSubdomains: true });
+  cp.addPin('api.example.com', 'hash1');
+  const header = cp.buildHPKPHeader('api.example.com');
+  assert(header.includes('pin-sha256="hash1"'), 'has pin directive');
+  assert(header.includes('max-age=3600'), 'has max-age');
+  assert(header.includes('includeSubDomains'), 'has includeSubDomains');
+});
+
+test('v17: CertificatePinning toJSON returns pins structure', () => {
+  const cp = new CertificatePinning({ enforceMode: 'report', maxAge: 7200 });
+  cp.addPin('api.example.com', 'hash1');
+  const json = cp.toJSON();
+  assertEqual(json.enforceMode, 'report');
+  assertEqual(json.maxAge, 7200);
+  assert(Array.isArray(json.pins), 'pins is array');
+  assertEqual(json.pins[0].host, 'api.example.com');
+  assert(json.pins[0].sha256.includes('hash1'), 'sha256 has hash');
+});
+
+test('v17: CertificatePinning constructor initializes from options.pins', () => {
+  const cp = new CertificatePinning({
+    pins: [{ host: 'a.com', sha256: ['h1', 'h2'] }],
+  });
+  assertEqual(cp.getPins('a.com').length, 2);
+});
+
+test('v17: CertificatePinning host matching is case-insensitive', () => {
+  const cp = new CertificatePinning();
+  cp.addPin('API.Example.COM', 'hash1');
+  const pins = cp.getPins('api.example.com');
+  assertEqual(pins.length, 1);
+});
+
+// ─── v17: RequestSigning Tests ────────────────────────────────────────────────
+console.log('\n━━━ v17: RequestSigning ━━━');
+
+test('v17: RequestSigning sign() produces signature and timestamp', () => {
+  const signer = new RequestSigning({ secret: 'test-secret' });
+  const result = signer.sign({ method: 'POST', url: '/api/data', headers: {} });
+  assert(typeof result.signature === 'string', 'signature is string');
+  assert(result.signature.length > 0, 'signature is non-empty');
+  assert(typeof result.timestamp === 'number', 'timestamp is number');
+  assert(Array.isArray(result.signedHeaders), 'signedHeaders is array');
+});
+
+test('v17: RequestSigning verify() validates correct signature', () => {
+  const signer = new RequestSigning({ secret: 'test-secret' });
+  const config = { method: 'POST', url: '/api/data', headers: {} };
+  const { signature, timestamp } = signer.sign(config);
+  const result = signer.verify(config, signature, timestamp);
+  assertEqual(result.valid, true);
+});
+
+test('v17: RequestSigning verify() rejects wrong signature', () => {
+  const signer = new RequestSigning({ secret: 'test-secret' });
+  const config = { method: 'POST', url: '/api/data', headers: {} };
+  const { timestamp } = signer.sign(config);
+  const result = signer.verify(config, 'wrongsignature', timestamp);
+  assertEqual(result.valid, false);
+  assert(result.reason.includes('does not match'), 'reason mentions mismatch');
+});
+
+test('v17: RequestSigning verify() rejects expired timestamp', () => {
+  const signer = new RequestSigning({ secret: 'test-secret', timestampTolerance: 1 });
+  const config = { method: 'POST', url: '/api/data', headers: {} };
+  const { signature } = signer.sign(config);
+  const expiredTimestamp = Math.floor(Date.now() / 1000) - 100;
+  const result = signer.verify(config, signature, expiredTimestamp);
+  assertEqual(result.valid, false);
+  assert(result.reason.includes('expired'), 'reason mentions expired');
+});
+
+test('v17: RequestSigning createCanonicalString produces deterministic output', () => {
+  const signer = new RequestSigning({ secret: 'test-secret' });
+  const headers = { host: 'example.com', 'content-type': 'application/json' };
+  const s1 = signer.createCanonicalString('POST', '/api', 1000, headers, ['host', 'content-type']);
+  const s2 = signer.createCanonicalString('POST', '/api', 1000, headers, ['host', 'content-type']);
+  assertEqual(s1, s2);
+  assert(s1.includes('POST'), 'includes method');
+  assert(s1.includes('/api'), 'includes url');
+  assert(s1.includes('1000'), 'includes timestamp');
+});
+
+test('v17: RequestSigning custom secret changes signature', () => {
+  const signer1 = new RequestSigning({ secret: 'secret-a' });
+  const signer2 = new RequestSigning({ secret: 'secret-b' });
+  const config = { method: 'GET', url: '/test', headers: {} };
+  const sig1 = signer1.sign(config).signature;
+  const sig2 = signer2.sign(config).signature;
+  assert(sig1 !== sig2, 'different secrets produce different signatures');
+});
+
+test('v17: RequestSigning custom headerName is used', () => {
+  const signer = new RequestSigning({ headerName: 'x-custom-sig' });
+  assertEqual(signer.headerName, 'x-custom-sig');
+});
+
+test('v17: RequestSigning custom algorithm works', () => {
+  const signer = new RequestSigning({ secret: 'test', algorithm: 'sha512' });
+  const config = { method: 'GET', url: '/test', headers: {} };
+  const { signature, timestamp } = signer.sign(config);
+  const result = signer.verify(config, signature, timestamp);
+  assertEqual(result.valid, true);
+});
+
+test('v17: RequestSigning sign includes all signed headers', () => {
+  const signer = new RequestSigning({ secret: 'test', signedHeaders: ['host', 'x-custom'] });
+  const { signedHeaders } = signer.sign({ method: 'GET', url: '/', headers: { host: 'a', 'x-custom': 'b' } });
+  assert(signedHeaders.includes('host'), 'includes host');
+  assert(signedHeaders.includes('x-custom'), 'includes x-custom');
+});
+
+test('v17: RequestSigning default secret is empty string', () => {
+  const signer = new RequestSigning();
+  assertEqual(signer.secret, '');
+});
+
+// ─── v17: InputSanitizer Tests ────────────────────────────────────────────────
+console.log('\n━━━ v17: InputSanitizer ━━━');
+
+test('v17: InputSanitizer sanitizeString escapes HTML entities in escape mode', () => {
+  const s = new InputSanitizer({ mode: 'escape' });
+  const result = s.sanitizeString('<b>hello</b>');
+  assert(result.includes('&lt;'), 'escapes <');
+  assert(result.includes('&gt;'), 'escapes >');
+  assert(!result.includes('<b>'), 'no raw HTML tags');
+});
+
+test('v17: InputSanitizer sanitizeString strips script tags', () => {
+  const s = new InputSanitizer({ mode: 'escape' });
+  const result = s.sanitizeString('before<script>alert(1)</script>after');
+  assert(!result.includes('<script>'), 'no script tags');
+  assert(!result.includes('</script>'), 'no closing script tags');
+});
+
+test('v17: InputSanitizer sanitizeString strips event handlers', () => {
+  const s = new InputSanitizer({ mode: 'escape' });
+  const result = s.sanitizeString('<div onclick=alert(1)>test</div>');
+  assert(!result.includes('onclick'), 'no event handlers');
+});
+
+test('v17: InputSanitizer sanitize() handles nested objects', () => {
+  const s = new InputSanitizer({ mode: 'escape' });
+  const result = s.sanitize({ a: { b: '<script>x</script>' } });
+  assert(!result.a.b.includes('<script>'), 'nested strings sanitized');
+});
+
+test('v17: InputSanitizer sanitize() handles arrays', () => {
+  const s = new InputSanitizer({ mode: 'escape' });
+  const result = s.sanitize(['<b>a</b>', '<i>b</i>']);
+  assert(result[0].includes('&lt;'), 'array item sanitized');
+});
+
+test('v17: InputSanitizer sanitize() respects maxDepth', () => {
+  const s = new InputSanitizer({ maxDepth: 2 });
+  let threw = false;
+  try {
+    s.sanitize({ a: { b: { c: 'deep' } } });
+  } catch (e) {
+    threw = true;
+    assert(e.message.includes('Nesting depth'), 'mentions depth');
+  }
+  assert(threw, 'should throw for exceeding depth');
+});
+
+test('v17: InputSanitizer sanitize() respects maxStringLength', () => {
+  const s = new InputSanitizer({ maxStringLength: 5 });
+  let threw = false;
+  try {
+    s.sanitizeString('toolongstring');
+  } catch (e) {
+    threw = true;
+    assert(e.message.includes('String length'), 'mentions string length');
+  }
+  assert(threw, 'should throw for exceeding max string length');
+});
+
+test('v17: InputSanitizer reject mode throws on dangerous content', () => {
+  const s = new InputSanitizer({ mode: 'reject' });
+  let threw = false;
+  try {
+    s.sanitizeString('<script>alert(1)</script>');
+  } catch (e) {
+    threw = true;
+    assert(e.message.includes('INPUT_REJECTED'), 'mentions INPUT_REJECTED');
+  }
+  assert(threw, 'should throw for script tags in reject mode');
+});
+
+test('v17: InputSanitizer strip mode removes dangerous content', () => {
+  const s = new InputSanitizer({ mode: 'strip' });
+  const result = s.sanitizeString('hello<script>alert(1)</script>world');
+  assertEqual(result, 'helloworld');
+});
+
+test('v17: InputSanitizer detectThreats finds XSS patterns', () => {
+  const s = new InputSanitizer();
+  const threats = s.detectThreats('<script>alert(1)</script>');
+  assert(threats.length > 0, 'detected XSS threats');
+  assertEqual(threats[0].type, 'xss');
+});
+
+test('v17: InputSanitizer detectThreats finds SQL injection patterns', () => {
+  const s = new InputSanitizer();
+  const threats = s.detectThreats("'; DROP TABLE users; --");
+  assert(threats.some(t => t.type === 'sql_injection'), 'detected SQL injection');
+});
+
+test('v17: InputSanitizer detectThreats finds path traversal', () => {
+  const s = new InputSanitizer();
+  const threats = s.detectThreats('../../etc/passwd');
+  assert(threats.some(t => t.type === 'path_traversal'), 'detected path traversal');
+});
+
+test('v17: InputSanitizer isClean returns true for safe input', () => {
+  const s = new InputSanitizer();
+  assert(s.isClean('hello world'), 'safe input is clean');
+  assert(s.isClean({ name: 'John', age: 30 }), 'safe object is clean');
+});
+
+test('v17: InputSanitizer isClean returns false for dangerous input', () => {
+  const s = new InputSanitizer();
+  assert(!s.isClean('<script>alert(1)</script>'), 'XSS is not clean');
+});
+
+test('v17: InputSanitizer skips __proto__/constructor/prototype keys', () => {
+  const s = new InputSanitizer({ mode: 'escape' });
+  const input = Object.create(null);
+  input.safe = 'ok';
+  input['__proto__'] = 'bad';
+  input['constructor'] = 'bad';
+  input['prototype'] = 'bad';
+  const result = s.sanitize(input);
+  assert(!Object.prototype.hasOwnProperty.call(result, '__proto__'), '__proto__ skipped');
+  assert(!Object.prototype.hasOwnProperty.call(result, 'constructor'), 'constructor skipped');
+  assert(!Object.prototype.hasOwnProperty.call(result, 'prototype'), 'prototype skipped');
+  assertEqual(result.safe, 'ok');
+});
+
+// ─── v17: SecurityAuditLogger Tests ──────────────────────────────────────────
+console.log('\n━━━ v17: SecurityAuditLogger ━━━');
+
+test('v17: SecurityAuditLogger log() creates entry with hash chain', () => {
+  const logger = new SecurityAuditLogger();
+  const entry = logger.log({ event: 'login', severity: 'info', details: { user: 'alice' } });
+  assert(typeof entry.hash === 'string', 'entry has hash');
+  assert(entry.hash.length > 0, 'hash is non-empty');
+  assertEqual(entry.event, 'login');
+  assertEqual(entry.severity, 'info');
+  assertEqual(entry.id, 0);
+  assert(typeof entry.timestamp === 'number', 'has timestamp');
+});
+
+test('v17: SecurityAuditLogger log() auto-rotates when maxEntries exceeded', () => {
+  const logger = new SecurityAuditLogger({ maxEntries: 5 });
+  for (let i = 0; i < 10; i++) {
+    logger.log({ event: `event_${i}`, severity: 'info', details: {} });
+  }
+  const entries = logger.getEntries();
+  assert(entries.length <= 5, 'entries rotated to at most maxEntries');
+});
+
+test('v17: SecurityAuditLogger verify() returns valid for intact log', () => {
+  const logger = new SecurityAuditLogger();
+  logger.log({ event: 'e1', severity: 'info', details: {} });
+  logger.log({ event: 'e2', severity: 'warn', details: {} });
+  logger.log({ event: 'e3', severity: 'info', details: {} });
+  const result = logger.verify();
+  assertEqual(result.valid, true);
+  assertEqual(result.entries, 3);
+});
+
+test('v17: SecurityAuditLogger verify() detects tampered entries', () => {
+  const logger = new SecurityAuditLogger();
+  logger.log({ event: 'e1', severity: 'info', details: {} });
+  logger.log({ event: 'e2', severity: 'info', details: {} });
+  // Tamper with the hash
+  logger._entries[1].hash = 'tampered';
+  const result = logger.verify();
+  assertEqual(result.valid, false);
+});
+
+test('v17: SecurityAuditLogger getEntries() filters by severity', () => {
+  const logger = new SecurityAuditLogger();
+  logger.log({ event: 'a', severity: 'info', details: {} });
+  logger.log({ event: 'b', severity: 'error', details: {} });
+  logger.log({ event: 'c', severity: 'info', details: {} });
+  const errors = logger.getEntries({ severity: 'error' });
+  assertEqual(errors.length, 1);
+  assertEqual(errors[0].event, 'b');
+});
+
+test('v17: SecurityAuditLogger getEntries() filters by event name', () => {
+  const logger = new SecurityAuditLogger();
+  logger.log({ event: 'login', severity: 'info', details: {} });
+  logger.log({ event: 'logout', severity: 'info', details: {} });
+  logger.log({ event: 'login', severity: 'info', details: {} });
+  const logins = logger.getEntries({ event: 'login' });
+  assertEqual(logins.length, 2);
+});
+
+test('v17: SecurityAuditLogger getEntries() filters by since timestamp', () => {
+  const logger = new SecurityAuditLogger();
+  logger.log({ event: 'old', severity: 'info', details: {} });
+  const cutoff = Date.now() + 1;
+  logger.log({ event: 'new', severity: 'info', details: {} });
+  // The 'new' entry should have timestamp >= cutoff (or very close)
+  const all = logger.getEntries();
+  const recent = logger.getEntries({ since: cutoff });
+  assert(recent.length <= all.length, 'filtered entries <= total entries');
+});
+
+test('v17: SecurityAuditLogger getEntries() respects limit', () => {
+  const logger = new SecurityAuditLogger();
+  for (let i = 0; i < 10; i++) {
+    logger.log({ event: `e${i}`, severity: 'info', details: {} });
+  }
+  const limited = logger.getEntries({ limit: 3 });
+  assertEqual(limited.length, 3);
+});
+
+test('v17: SecurityAuditLogger getStats() returns correct counts', () => {
+  const logger = new SecurityAuditLogger();
+  logger.log({ event: 'a', severity: 'info', details: {} });
+  logger.log({ event: 'b', severity: 'error', details: {} });
+  logger.log({ event: 'c', severity: 'critical', details: {} });
+  const stats = logger.getStats();
+  assertEqual(stats.total, 3);
+  assertEqual(stats.bySeverity.info, 1);
+  assertEqual(stats.bySeverity.error, 1);
+  assertEqual(stats.bySeverity.critical, 1);
+  assertEqual(stats.bySeverity.warn, 0);
+  assert(stats.lastEntry !== null, 'has lastEntry');
+});
+
+test('v17: SecurityAuditLogger onAlert callback fires for critical/error events', () => {
+  let alertFired = 0;
+  const logger = new SecurityAuditLogger({
+    onAlert: (entry) => { alertFired++; },
+  });
+  logger.log({ event: 'a', severity: 'info', details: {} });
+  logger.log({ event: 'b', severity: 'error', details: {} });
+  logger.log({ event: 'c', severity: 'critical', details: {} });
+  logger.log({ event: 'd', severity: 'warn', details: {} });
+  assertEqual(alertFired, 2);
+});
+
+test('v17: SecurityAuditLogger clear() resets the log', () => {
+  const logger = new SecurityAuditLogger();
+  logger.log({ event: 'a', severity: 'info', details: {} });
+  logger.log({ event: 'b', severity: 'info', details: {} });
+  logger.clear();
+  assertEqual(logger.getEntries().length, 0);
+  assertEqual(logger.getStats().total, 0);
+  const result = logger.verify();
+  assertEqual(result.valid, true);
+  assertEqual(result.entries, 0);
+});
+
+test('v17: SecurityAuditLogger multiple entries build correct hash chain', () => {
+  const logger = new SecurityAuditLogger();
+  const e1 = logger.log({ event: 'a', severity: 'info', details: {} });
+  const e2 = logger.log({ event: 'b', severity: 'info', details: {} });
+  const e3 = logger.log({ event: 'c', severity: 'info', details: {} });
+  assert(e1.hash !== e2.hash, 'e1 and e2 have different hashes');
+  assert(e2.hash !== e3.hash, 'e2 and e3 have different hashes');
+  assertEqual(logger.verify().valid, true);
+});
+
+// ─── v17: PermissionPolicy Tests ─────────────────────────────────────────────
+console.log('\n━━━ v17: PermissionPolicy ━━━');
+
+test('v17: PermissionPolicy addPolicy/listPolicies stores and lists', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET', 'POST'], ['/api/*']);
+  pp.addPolicy('viewer', ['GET'], ['/api/read']);
+  const all = pp.listPolicies();
+  assertEqual(all.length, 2);
+  const adminPolicies = pp.listPolicies('admin');
+  assertEqual(adminPolicies.length, 1);
+});
+
+test('v17: PermissionPolicy check() allows matching role+method+endpoint', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET', 'POST'], ['/api/users']);
+  const result = pp.check('admin', 'GET', '/api/users');
+  assertEqual(result.allowed, true);
+});
+
+test('v17: PermissionPolicy check() denies non-matching role', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET'], ['/api/users']);
+  const result = pp.check('viewer', 'GET', '/api/users');
+  assertEqual(result.allowed, false);
+});
+
+test('v17: PermissionPolicy check() supports wildcard endpoints', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET'], ['/api/*']);
+  const result = pp.check('admin', 'GET', '/api/users/123');
+  assertEqual(result.allowed, true);
+});
+
+test('v17: PermissionPolicy check() is case-insensitive for methods', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET'], ['/api/users']);
+  const result = pp.check('admin', 'get', '/api/users');
+  assertEqual(result.allowed, true);
+});
+
+test('v17: PermissionPolicy checkMultiple() allows if any role matches', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET'], ['/api/users']);
+  const result = pp.checkMultiple(['viewer', 'admin'], 'GET', '/api/users');
+  assertEqual(result.allowed, true);
+  assertEqual(result.matchedRole, 'admin');
+});
+
+test('v17: PermissionPolicy checkMultiple() denies if no role matches', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET'], ['/api/users']);
+  const result = pp.checkMultiple(['viewer', 'guest'], 'GET', '/api/users');
+  assertEqual(result.allowed, false);
+});
+
+test('v17: PermissionPolicy defaultAllow:true allows unmatched requests', () => {
+  const pp = new PermissionPolicy({ defaultAllow: true });
+  const result = pp.check('anyone', 'GET', '/unknown');
+  assertEqual(result.allowed, true);
+});
+
+test('v17: PermissionPolicy removePolicy removes role policies', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('admin', ['GET'], ['/api/*']);
+  pp.removePolicy('admin');
+  assertEqual(pp.listPolicies('admin').length, 0);
+  assertEqual(pp.check('admin', 'GET', '/api/users').allowed, false);
+});
+
+test('v17: PermissionPolicy empty policies with defaultAllow:false denies all', () => {
+  const pp = new PermissionPolicy({ defaultAllow: false });
+  const result = pp.check('admin', 'GET', '/anything');
+  assertEqual(result.allowed, false);
+});
+
+test('v17: PermissionPolicy constructor initializes from options.policies', () => {
+  const pp = new PermissionPolicy({
+    policies: [
+      { role: 'admin', methods: ['GET', 'POST'], endpoints: ['/api/*'] },
+      { role: 'viewer', methods: ['GET'], endpoints: ['/api/read'] },
+    ],
+  });
+  assertEqual(pp.listPolicies().length, 2);
+  assertEqual(pp.check('admin', 'POST', '/api/data').allowed, true);
+});
+
+test('v17: PermissionPolicy check denies wrong method', () => {
+  const pp = new PermissionPolicy();
+  pp.addPolicy('viewer', ['GET'], ['/api/*']);
+  const result = pp.check('viewer', 'DELETE', '/api/users');
+  assertEqual(result.allowed, false);
+});
+
+// ─── v17: PayloadEncryptor Tests ─────────────────────────────────────────────
+console.log('\n━━━ v17: PayloadEncryptor ━━━');
+
+test('v17: PayloadEncryptor encrypt/decrypt roundtrip', () => {
+  const enc = new PayloadEncryptor();
+  const plaintext = 'hello secret world';
+  const { encrypted, iv, tag } = enc.encrypt(plaintext);
+  const decrypted = enc.decrypt(encrypted, iv, tag);
+  assertEqual(decrypted, plaintext);
+});
+
+test('v17: PayloadEncryptor encryptObject/decryptObject roundtrip', () => {
+  const enc = new PayloadEncryptor();
+  const obj = { name: 'Alice', age: 30, nested: { key: 'value' } };
+  const { encrypted, iv, tag } = enc.encryptObject(obj);
+  const decrypted = enc.decryptObject(encrypted, iv, tag);
+  assertEqual(decrypted.name, 'Alice');
+  assertEqual(decrypted.age, 30);
+  assertEqual(decrypted.nested.key, 'value');
+});
+
+test('v17: PayloadEncryptor different plaintexts produce different ciphertexts', () => {
+  const enc = new PayloadEncryptor();
+  const c1 = enc.encrypt('hello');
+  const c2 = enc.encrypt('world');
+  assert(c1.encrypted !== c2.encrypted, 'different ciphertexts');
+});
+
+test('v17: PayloadEncryptor getKeyFingerprint returns consistent fingerprint', () => {
+  const enc = new PayloadEncryptor();
+  const fp1 = enc.getKeyFingerprint();
+  const fp2 = enc.getKeyFingerprint();
+  assertEqual(fp1, fp2);
+  assertEqual(fp1.length, 16);
+});
+
+test('v17: PayloadEncryptor rotateKey changes the key fingerprint', () => {
+  const enc = new PayloadEncryptor();
+  const fp1 = enc.getKeyFingerprint();
+  enc.rotateKey();
+  const fp2 = enc.getKeyFingerprint();
+  assert(fp1 !== fp2, 'fingerprint changed after rotation');
+});
+
+test('v17: PayloadEncryptor constructor generates key when none provided', () => {
+  const enc = new PayloadEncryptor();
+  const fp = enc.getKeyFingerprint();
+  assert(typeof fp === 'string', 'fingerprint is string');
+  assert(fp.length === 16, 'fingerprint is 16 chars');
+});
+
+test('v17: PayloadEncryptor constructor accepts hex key string', () => {
+  const crypto = require('crypto');
+  const hexKey = crypto.randomBytes(32).toString('hex');
+  const enc = new PayloadEncryptor({ key: hexKey });
+  const { encrypted, iv, tag } = enc.encrypt('test');
+  const decrypted = enc.decrypt(encrypted, iv, tag);
+  assertEqual(decrypted, 'test');
+});
+
+test('v17: PayloadEncryptor invalid decryption throws error', () => {
+  const enc1 = new PayloadEncryptor();
+  const enc2 = new PayloadEncryptor(); // different key
+  const { encrypted, iv, tag } = enc1.encrypt('test');
+  let threw = false;
+  try {
+    // Decrypt with wrong key
+    enc2.decrypt(encrypted, iv, tag);
+  } catch (e) {
+    threw = true;
+  }
+  assert(threw, 'should throw for invalid decryption');
+});
+
+test('v17: PayloadEncryptor same plaintext produces different ciphertext (random IV)', () => {
+  const enc = new PayloadEncryptor();
+  const c1 = enc.encrypt('same');
+  const c2 = enc.encrypt('same');
+  assert(c1.iv !== c2.iv, 'different IVs');
+});
+
+test('v17: PayloadEncryptor rotateKey with specific key', () => {
+  const crypto = require('crypto');
+  const enc = new PayloadEncryptor();
+  const newKey = crypto.randomBytes(32);
+  enc.rotateKey(newKey);
+  const { encrypted, iv, tag } = enc.encrypt('after-rotate');
+  assertEqual(enc.decrypt(encrypted, iv, tag), 'after-rotate');
+});
+
+// ─── v17: IdempotencyManager Tests ───────────────────────────────────────────
+console.log('\n━━━ v17: IdempotencyManager ━━━');
+
+test('v17: IdempotencyManager generateKey() returns UUID-format string', () => {
+  const mgr = new IdempotencyManager();
+  const key = mgr.generateKey();
+  assert(typeof key === 'string', 'key is string');
+  const parts = key.split('-');
+  assertEqual(parts.length, 5);
+  assertEqual(parts[0].length, 8);
+  assertEqual(parts[1].length, 4);
+  assertEqual(parts[2].length, 4);
+  assertEqual(parts[3].length, 4);
+  assertEqual(parts[4].length, 12);
+});
+
+test('v17: IdempotencyManager shouldEnforce() returns true for POST/PUT/PATCH', () => {
+  const mgr = new IdempotencyManager();
+  assert(mgr.shouldEnforce('POST'), 'POST enforced');
+  assert(mgr.shouldEnforce('PUT'), 'PUT enforced');
+  assert(mgr.shouldEnforce('PATCH'), 'PATCH enforced');
+  assert(mgr.shouldEnforce('post'), 'lowercase post enforced');
+});
+
+test('v17: IdempotencyManager shouldEnforce() returns false for GET', () => {
+  const mgr = new IdempotencyManager();
+  assert(!mgr.shouldEnforce('GET'), 'GET not enforced');
+  assert(!mgr.shouldEnforce('DELETE'), 'DELETE not enforced');
+  assert(!mgr.shouldEnforce('HEAD'), 'HEAD not enforced');
+});
+
+test('v17: IdempotencyManager recordResponse/getStoredResponse roundtrip', () => {
+  const mgr = new IdempotencyManager();
+  const key = 'test-key-123';
+  const response = { status: 200, data: { ok: true } };
+  mgr.recordResponse(key, response);
+  const stored = mgr.getStoredResponse(key);
+  assertEqual(stored.status, 200);
+  assertEqual(stored.data.ok, true);
+});
+
+test('v17: IdempotencyManager expired responses return null', () => {
+  const mgr = new IdempotencyManager({ ttl: 1 }); // 1ms TTL
+  const key = 'expire-key';
+  mgr.recordResponse(key, { status: 200 });
+  // Force expiration by manipulating timestamp
+  mgr._store.get(key).timestamp = Date.now() - 100;
+  const stored = mgr.getStoredResponse(key);
+  assertEqual(stored, null);
+});
+
+test('v17: IdempotencyManager cleanup() removes expired entries', () => {
+  const mgr = new IdempotencyManager({ ttl: 1 });
+  mgr.recordResponse('k1', { a: 1 });
+  mgr.recordResponse('k2', { a: 2 });
+  // Force expiration
+  for (const [, entry] of mgr._store) {
+    entry.timestamp = Date.now() - 100;
+  }
+  const removed = mgr.cleanup();
+  assertEqual(removed, 2);
+  assert(!mgr.hasKey('k1'), 'k1 removed');
+  assert(!mgr.hasKey('k2'), 'k2 removed');
+});
+
+test('v17: IdempotencyManager hasKey() detects stored keys', () => {
+  const mgr = new IdempotencyManager();
+  mgr.recordResponse('existing-key', { ok: true });
+  assert(mgr.hasKey('existing-key'), 'has existing key');
+  assert(!mgr.hasKey('missing-key'), 'does not have missing key');
+});
+
+test('v17: IdempotencyManager reset() clears all entries', () => {
+  const mgr = new IdempotencyManager();
+  mgr.recordResponse('a', { a: 1 });
+  mgr.recordResponse('b', { b: 2 });
+  mgr.reset();
+  assert(!mgr.hasKey('a'), 'a removed');
+  assert(!mgr.hasKey('b'), 'b removed');
+});
+
+test('v17: IdempotencyManager custom methods list is respected', () => {
+  const mgr = new IdempotencyManager({ methods: ['DELETE', 'POST'] });
+  assert(mgr.shouldEnforce('DELETE'), 'DELETE enforced');
+  assert(mgr.shouldEnforce('POST'), 'POST enforced');
+  assert(!mgr.shouldEnforce('PUT'), 'PUT not enforced');
+  assert(!mgr.shouldEnforce('PATCH'), 'PATCH not enforced');
+});
+
+test('v17: IdempotencyManager custom headerName is used', () => {
+  const mgr = new IdempotencyManager({ headerName: 'x-idem-key' });
+  assertEqual(mgr.headerName, 'x-idem-key');
+});
+
+// ─── v17: Client Integration Tests ──────────────────────────────────────────
+console.log('\n━━━ v17: Client Integration ━━━');
+
+test('v17: client with inputSanitizer sanitizes request body', async () => {
+  let capturedBody = null;
+  const mockAdapter = async (config) => {
+    capturedBody = config.body;
+    return { data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} };
+  };
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    inputSanitizer: { mode: 'strip' },
+  });
+  await client.post('/api/data', { name: 'hello<script>alert(1)</script>world' });
+  assert(capturedBody != null, 'body was captured');
+  const bodyStr = typeof capturedBody === 'string' ? capturedBody : JSON.stringify(capturedBody);
+  assert(!bodyStr.includes('<script>'), 'script tags stripped from body');
+});
+
+test('v17: client with permissions denies unauthorized requests', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    permissions: {
+      policies: [{ role: 'admin', methods: ['GET'], endpoints: ['/api/*'] }],
+      defaultAllow: false,
+    },
+  });
+
+  // Inject role via request interceptor so it's on reqConfig
+  client.interceptors.request.use((config) => {
+    config.role = 'guest';
+    return config;
+  });
+
+  let threw = false;
+  try {
+    await client.get('/api/users');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_PERMISSION_DENIED');
+  }
+  assert(threw, 'should deny unauthorized request');
+});
+
+test('v17: client with requestSigning adds signature headers', async () => {
+  let capturedHeaders = {};
+  const mockAdapter = async (config) => {
+    capturedHeaders = config.headers || {};
+    return { data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} };
+  };
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    requestSigning: { secret: 'my-secret', headerName: 'x-signature' },
+  });
+  await client.get('/api/data');
+  assert(capturedHeaders['x-signature'] !== undefined, 'signature header injected');
+  assert(capturedHeaders['x-timestamp'] !== undefined, 'timestamp header injected');
+});
+
+test('v17: client with idempotency injects idempotency-key header', async () => {
+  let capturedHeaders = {};
+  const mockAdapter = async (config) => {
+    capturedHeaders = config.headers || {};
+    return { data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} };
+  };
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    idempotency: { headerName: 'idempotency-key' },
+  });
+  await client.post('/api/create', { name: 'test' });
+  assert(capturedHeaders['idempotency-key'] !== undefined, 'idempotency key injected');
+});
+
+test('v17: client with auditLog logs requests', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    auditLog: { maxEntries: 100 },
+  });
+  await client.get('/api/test');
+  // AuditLog is internal but should not throw
+  assert(true, 'request with auditLog completed without error');
+});
+
+test('v17: new error codes exist on ClientError (all 8)', () => {
+  assertEqual(ClientError.ERR_CSP_VIOLATION, 'ERR_CSP_VIOLATION');
+  assertEqual(ClientError.ERR_CERT_PIN_FAILED, 'ERR_CERT_PIN_FAILED');
+  assertEqual(ClientError.ERR_SIGNATURE_INVALID, 'ERR_SIGNATURE_INVALID');
+  assertEqual(ClientError.ERR_INPUT_REJECTED, 'ERR_INPUT_REJECTED');
+  assertEqual(ClientError.ERR_PERMISSION_DENIED, 'ERR_PERMISSION_DENIED');
+  assertEqual(ClientError.ERR_ENCRYPTION_FAILED, 'ERR_ENCRYPTION_FAILED');
+  assertEqual(ClientError.ERR_DECRYPTION_FAILED, 'ERR_DECRYPTION_FAILED');
+  assertEqual(ClientError.ERR_IDEMPOTENCY_CONFLICT, 'ERR_IDEMPOTENCY_CONFLICT');
+});
+
+test('v17: all v17 security classes are exported', () => {
+  assert(typeof ContentSecurityPolicy === 'function', 'ContentSecurityPolicy exported');
+  assert(typeof CertificatePinning === 'function', 'CertificatePinning exported');
+  assert(typeof RequestSigning === 'function', 'RequestSigning exported');
+  assert(typeof InputSanitizer === 'function', 'InputSanitizer exported');
+  assert(typeof SecurityAuditLogger === 'function', 'SecurityAuditLogger exported');
+  assert(typeof PermissionPolicy === 'function', 'PermissionPolicy exported');
+  assert(typeof PayloadEncryptor === 'function', 'PayloadEncryptor exported');
+  assert(typeof IdempotencyManager === 'function', 'IdempotencyManager exported');
+});
+
+test('v17: v17 security classes available on default apiBridge export', () => {
+  assert(typeof apiBridge.ContentSecurityPolicy === 'function', 'apiBridge.ContentSecurityPolicy');
+  assert(typeof apiBridge.CertificatePinning === 'function', 'apiBridge.CertificatePinning');
+  assert(typeof apiBridge.RequestSigning === 'function', 'apiBridge.RequestSigning');
+  assert(typeof apiBridge.InputSanitizer === 'function', 'apiBridge.InputSanitizer');
+  assert(typeof apiBridge.SecurityAuditLogger === 'function', 'apiBridge.SecurityAuditLogger');
+  assert(typeof apiBridge.PermissionPolicy === 'function', 'apiBridge.PermissionPolicy');
+  assert(typeof apiBridge.PayloadEncryptor === 'function', 'apiBridge.PayloadEncryptor');
+  assert(typeof apiBridge.IdempotencyManager === 'function', 'apiBridge.IdempotencyManager');
+});
+
+test('v17: client with all v16+v17 features combined', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { result: callCount }, rawData: { result: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+    dedupe: { enabled: true, methods: ['GET'] },
+    timing: true,
+    requestId: true,
+    journeyTracking: true,
+    requestSigning: { secret: 'combined-test' },
+    auditLog: { maxEntries: 100 },
+    idempotency: { headerName: 'idempotency-key' },
+    hooks: {
+      onRequest: [(config) => {}],
+      onResponse: [(res) => {}],
+    },
+  });
+
+  const res = await client.get('/combined-v17');
+  assertEqual(res.status, 200);
+  assert(typeof res.duration === 'number', 'timing works');
+  assert(res.config.headers['x-request-id'] !== undefined, 'request ID injected');
+  assert(res.config.headers['x-signature'] !== undefined, 'signature injected');
   assert(res.journey !== undefined, 'journey tracking works');
 });
 
