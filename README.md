@@ -1,14 +1,14 @@
-# APIBridge AI v14
+# APIBridge AI v18
 
 [![npm version](https://img.shields.io/npm/v/api-bridge-ai.svg)](https://www.npmjs.com/package/api-bridge-ai)
 [![license](https://img.shields.io/npm/l/api-bridge-ai.svg)](https://github.com/biswaranjantudu064-netizen/Api_bridge/blob/main/LICENSE)
 [![Node.js](https://img.shields.io/node/v/api-bridge-ai.svg)](https://nodejs.org)
 
-**Enterprise-grade Axios replacement with production power tools** — a complete, zero-dependency HTTP client with auto-retry, response caching, request dedup, token refresh, lifecycle hooks, request timing, intelligent API mismatch detection, and 60+ modules.
+**Enterprise-grade Axios replacement with elite security and production power tools** — a complete, zero-dependency HTTP client with zero-trust engine, threat intelligence, mTLS, request integrity chains, adaptive rate limiting, OWASP security headers, encrypted config vault, SSRF protection, input sanitization, RBAC permissions, auto-retry, response caching, request dedup, token refresh, lifecycle hooks, intelligent API mismatch detection, and 80+ modules.
 
 APIBridge AI is a **true drop-in replacement for Axios** that also bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
-> **v14 Highlights:** Auto-retry engine with custom strategies, built-in response caching (TTL + stale-while-revalidate), request deduplication, automatic token refresh on 401, request timing/metrics, lifecycle hooks (onRequest/onResponse/onError/onRetry), 887 tests.
+> **v18 Highlights:** Zero-trust engine, threat intelligence, secure sessions, request integrity chain, adaptive rate limiting, OWASP security headers, encrypted config vault, mutual TLS — plus CSP, certificate pinning, HMAC signing, input sanitization, RBAC, payload encryption, idempotency, SSRF protection, replay detection, journey tracking, auto-retry, caching, dedup, token refresh, 1178 tests.
 
 ---
 
@@ -32,6 +32,38 @@ APIBridge AI is a **true drop-in replacement for Axios** that also bridges the g
   - [Auto Token Refresh](#auto-token-refresh)
   - [Request Timing](#request-timing)
   - [Lifecycle Hooks](#lifecycle-hooks)
+- [V15 Features](#v15-features)
+  - [Interceptor runWhen / synchronous](#interceptor-runwhen--synchronous)
+  - [Auto Content-Type Serialization](#auto-content-type-serialization)
+  - [Enhanced paramsSerializer](#enhanced-paramsserializer)
+  - [beforeRedirect Callback](#beforeredirect-callback)
+  - [Request Correlation IDs](#request-correlation-ids)
+- [V16 Features](#v16-features)
+  - [SSRF Protection](#ssrf-protection)
+  - [Header Injection Prevention](#header-injection-prevention)
+  - [Client-Side Rate Limiting](#client-side-rate-limiting)
+  - [Response Size Guard](#response-size-guard)
+  - [Sensitive Data Redaction](#sensitive-data-redaction)
+  - [Request Fingerprinting](#request-fingerprinting)
+  - [Request Journey Tracking](#request-journey-tracking)
+- [V17 Features](#v17-features)
+  - [Content Security Policy](#content-security-policy)
+  - [Certificate Pinning](#certificate-pinning)
+  - [Request Signing](#request-signing)
+  - [Input Sanitizer](#input-sanitizer)
+  - [Security Audit Logger](#security-audit-logger)
+  - [Permission Policy (RBAC)](#permission-policy-rbac)
+  - [Payload Encryptor](#payload-encryptor)
+  - [Idempotency Manager](#idempotency-manager)
+- [V18 Features](#v18-features)
+  - [Zero Trust Engine](#zero-trust-engine)
+  - [Threat Intelligence](#threat-intelligence)
+  - [Secure Session Manager](#secure-session-manager)
+  - [Request Integrity Chain](#request-integrity-chain)
+  - [Adaptive Rate Limiter](#adaptive-rate-limiter)
+  - [Security Headers Manager](#security-headers-manager)
+  - [Encrypted Config Vault](#encrypted-config-vault)
+  - [Mutual TLS Manager](#mutual-tls-manager)
 - [V8 Features](#v8-features)
   - [Multi-Alias Field Resolution](#multi-alias-field-resolution)
   - [Schema Migration Engine](#schema-migration-engine)
@@ -98,54 +130,78 @@ APIBridge AI is a **true drop-in replacement for Axios** that also bridges the g
 - [Error Handling](#error-handling)
 - [Architecture](#architecture)
 - [Running Tests](#running-tests)
-- [Migration from V5](#migration-from-v5)
+- [Migration from Previous Versions](#migration-from-previous-versions)
 - [License](#license)
 
 ---
 
 ## Features
 
-### Axios Compatibility (v9–v14)
+### Axios Compatibility (v9–v18)
 
-| Axios Feature | v9 | v10 | v11 | v12 | v13 | v14 |
-|---|---|---|---|---|---|---|
-| HTTP methods (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `createClient()` / `create()` factory | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Request/response interceptors | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Base URL, headers, query params | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Timeout + AbortController | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Retries with exponential backoff | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Smart Proxy mode (dynamic field resolution) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Expectation schema (expect) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `auth`, `validateStatus`, `responseType` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| CancelToken, Cancel, isCancel | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `toFormData`, `formToJSON`, `isFormData` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `all()`, `spread()`, `mergeConfig()` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `transformRequest` / `transformResponse` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `maxContentLength` / `maxBodyLength` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| AxiosHeaders class | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| HttpStatusCode enum | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Pluggable adapters (fetch/xhr/custom) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| `postForm()`, `putForm()`, `patchForm()` | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| `isAbsoluteURL`, `combineURLs`, URL utils | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Callable default export: `apiBridge(config)` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| `Axios` / `AxiosError` class aliases | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Error code constants (ERR_NETWORK, etc.) | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| `isAxiosError()` function | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| `transitional` config option | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Delete with data body | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| AxiosHeaders in all responses | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Default transformRequest/Response chains | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `.isAxiosError` property on errors | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `response.request` property | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `maxRate` throttling | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `lookup` DNS option | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| **Auto-retry engine (`retryConfig`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Response caching (TTL, stale-while-revalidate)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Request deduplication (`dedupe`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Auto token refresh (`tokenRefresh`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Request timing (`timing`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Lifecycle hooks (`hooks`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Axios Feature | v9 | v10 | v11 | v12 | v13 | v14 | v15 | v16 | v17 | v18 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| HTTP methods (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `createClient()` / `create()` factory | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Request/response interceptors | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Base URL, headers, query params | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Timeout + AbortController | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Retries with exponential backoff | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Smart Proxy mode (dynamic field resolution) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Expectation schema (expect) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `auth`, `validateStatus`, `responseType` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CancelToken, Cancel, isCancel | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `toFormData`, `formToJSON`, `isFormData` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `all()`, `spread()`, `mergeConfig()` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `transformRequest` / `transformResponse` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `maxContentLength` / `maxBodyLength` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| AxiosHeaders class | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| HttpStatusCode enum | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Pluggable adapters (fetch/xhr/custom) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `postForm()`, `putForm()`, `patchForm()` | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `isAbsoluteURL`, `combineURLs`, URL utils | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Callable default export: `apiBridge(config)` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `Axios` / `AxiosError` class aliases | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Error code constants (ERR_NETWORK, etc.) | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `isAxiosError()` function | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `transitional` config option | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Delete with data body | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| AxiosHeaders in all responses | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Default transformRequest/Response chains | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `.isAxiosError` property on errors | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `response.request` property | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `maxRate` throttling | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `lookup` DNS option | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Auto-retry engine (`retryConfig`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Response caching (TTL, stale-while-revalidate)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Request deduplication (`dedupe`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Auto token refresh (`tokenRefresh`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Request timing (`timing`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Lifecycle hooks (`hooks`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Interceptor `runWhen` + `synchronous`** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **Auto Content-Type serialization** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **`beforeRedirect` callback** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **Request correlation IDs (`requestId`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **SSRF protection (SSRFGuard)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Header injection prevention** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Client-side rate limiting** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Request fingerprinting (replay detection)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Journey tracking** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Content Security Policy (CSP)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Certificate pinning** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **HMAC request signing** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Input sanitization (XSS/SQL injection)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **RBAC permission policy** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **AES-256-GCM payload encryption** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Idempotency manager** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Zero-trust engine** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Threat intelligence (IP reputation)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Secure session manager** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Request integrity chain** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Adaptive rate limiter (anomaly detection)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **OWASP security headers** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Encrypted config vault** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Mutual TLS (mTLS)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ### Core Features (v1–v8)
 
@@ -839,6 +895,489 @@ const api = createClient({
   timing: true,
   retryConfig: { retries: 2, retryDelay: () => 1000 },
 });
+```
+
+---
+
+## V15 Features
+
+### Interceptor runWhen / synchronous
+
+Conditional and synchronous interceptor execution:
+
+```js
+const { createClient } = require('api-bridge-ai');
+
+const api = createClient({ baseURL: 'https://api.example.com' });
+
+// Only run interceptor for POST requests
+api.interceptors.request.use(
+  (config) => { config.headers['X-CSRF'] = 'token'; return config; },
+  null,
+  { runWhen: (config) => config.method === 'POST' }
+);
+
+// Synchronous interceptor (skips await overhead)
+api.interceptors.request.use(
+  (config) => { config.headers['X-Req-Time'] = Date.now(); return config; },
+  null,
+  { synchronous: true }
+);
+```
+
+### Auto Content-Type Serialization
+
+Automatic body conversion based on Content-Type:
+
+```js
+const api = createClient({ baseURL: 'https://api.example.com' });
+
+// Plain object + application/x-www-form-urlencoded → auto-converts to URLSearchParams
+await api.post('/form', { username: 'john', password: 'secret' }, {
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+});
+
+// Plain object + multipart/form-data → auto-converts to FormData
+await api.post('/upload', { file: blob, name: 'avatar' }, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
+```
+
+### Enhanced paramsSerializer
+
+Axios 1.x-compatible object form for parameter serialization:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  paramsSerializer: {
+    encode: (value) => encodeURIComponent(value),
+    serialize: (params) => Object.entries(params).map(([k, v]) => `${k}=${v}`).join('&'),
+  },
+});
+```
+
+### beforeRedirect Callback
+
+Intercept and modify redirect requests:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  beforeRedirect: (options, { headers, status, location }) => {
+    console.log(`Redirecting to ${location} (${status})`);
+    options.headers['X-Forwarded-From'] = 'original-host';
+  },
+});
+```
+
+### Request Correlation IDs
+
+Automatic unique ID generation for every request:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  requestId: true,                     // auto-generate x-request-id
+  // or: requestId: 'X-Correlation-ID' // custom header name
+});
+
+const res = await api.get('/users');
+// Request sent with header: x-request-id: <16-char-unique-id>
+```
+
+## V16 Features
+
+### SSRF Protection
+
+Server-Side Request Forgery prevention — enabled by default:
+
+```js
+const { createClient } = require('api-bridge-ai');
+
+const api = createClient({ baseURL: 'https://api.example.com' });
+
+// These are automatically blocked:
+// await api.get('http://169.254.169.254/metadata')  → ERR_SSRF_BLOCKED
+// await api.get('http://127.0.0.1:8080/admin')      → ERR_SSRF_BLOCKED
+// await api.get('file:///etc/passwd')                → ERR_SSRF_BLOCKED
+
+// Allowlist trusted internal hosts:
+const internalApi = createClient({
+  baseURL: 'https://api.example.com',
+  ssrf: { allowlist: ['internal-service.local'] },
+});
+
+// Disable for testing:
+const testApi = createClient({ ssrf: { enabled: false } });
+```
+
+### Header Injection Prevention
+
+CRLF attack prevention with RFC 7230 validation:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  maxHeadersCount: 50,   // max number of headers (default 100)
+  maxHeaderSize: 4096,    // max header value size (default 8192)
+});
+// Headers with CR/LF characters are automatically rejected → ERR_HEADER_VALIDATION
+```
+
+### Client-Side Rate Limiting
+
+Token bucket rate limiter to prevent overwhelming APIs:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  rateLimiter: {
+    maxRequests: 50,    // max 50 requests
+    windowMs: 10000,    // per 10 seconds
+  },
+});
+// Exceeding the limit → ERR_RATE_LIMITED
+```
+
+### Response Size Guard
+
+Prevent memory exhaustion from oversized responses:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  maxResponseSize: 5 * 1024 * 1024,  // 5MB max response size
+});
+// Responses exceeding limit → ERR_RESPONSE_TOO_LARGE
+```
+
+### Sensitive Data Redaction
+
+Automatic credential stripping from error objects for safe logging:
+
+```js
+const api = createClient({ baseURL: 'https://api.example.com' });
+
+try {
+  await api.get('/endpoint', { headers: { Authorization: 'Bearer secret' } });
+} catch (err) {
+  // err.config.headers.Authorization is '[REDACTED]' — safe to log
+  console.log(JSON.stringify(err));
+}
+```
+
+### Request Fingerprinting
+
+SHA-256 based replay detection:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  replayDetection: 5000,  // block duplicate requests within 5 seconds
+});
+// Duplicate requests within window → ERR_DUPLICATE_REQUEST
+```
+
+### Request Journey Tracking
+
+Per-request observability with attempt history:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  journeyTracking: true,
+  timing: true,
+});
+
+const res = await api.get('/users');
+console.log(res.journey);
+// { attempts: [{ status: 200, duration: 142 }], totalDuration: 142, cacheHit: false }
+```
+
+## V17 Features
+
+### Content Security Policy
+
+Build and validate CSP headers:
+
+```js
+const { createClient } = require('api-bridge-ai');
+
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  csp: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", 'https://cdn.example.com'],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    reportOnly: true,
+    reportUri: '/csp-report',
+  },
+});
+```
+
+### Certificate Pinning
+
+SHA-256 certificate hash verification per host:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  certPinning: {
+    pins: [
+      { host: 'api.example.com', sha256: ['base64hash1', 'base64hash2'] },
+    ],
+    enforceMode: 'enforce',  // or 'report' to log without blocking
+    includeSubdomains: true,
+  },
+});
+// Certificate mismatch → ERR_CERT_PIN_FAILED
+```
+
+### Request Signing
+
+HMAC-SHA256 request integrity verification:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  requestSigning: {
+    secret: 'your-hmac-secret',
+    algorithm: 'sha256',
+    signedHeaders: ['content-type', 'x-request-id'],
+  },
+});
+// Every request includes: x-signature, x-timestamp, x-signed-headers
+```
+
+### Input Sanitizer
+
+XSS, SQL injection, and path traversal prevention:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  inputSanitizer: {
+    mode: 'escape',       // 'escape' | 'strip' | 'reject'
+    maxDepth: 10,
+    maxStringLength: 10000,
+  },
+});
+
+// Request bodies are automatically sanitized before sending
+// Dangerous content in 'reject' mode → ERR_INPUT_REJECTED
+```
+
+### Security Audit Logger
+
+Tamper-proof event logging with SHA-256 hash chain:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  auditLog: {
+    maxEntries: 5000,
+    onAlert: (entry) => {
+      console.error(`Security alert: ${entry.event} — ${entry.severity}`);
+    },
+  },
+});
+// All security events are automatically logged with integrity verification
+```
+
+### Permission Policy (RBAC)
+
+Role-based access control for API endpoints:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  permissions: {
+    policies: [
+      { role: 'admin', methods: ['*'], endpoints: ['*'] },
+      { role: 'user', methods: ['GET'], endpoints: ['/api/users/*'] },
+      { role: 'user', methods: ['GET', 'PUT'], endpoints: ['/api/profile'] },
+    ],
+    defaultAllow: false,
+  },
+});
+
+// Per-request role:
+await api.get('/api/users', { role: 'user' });     // ✅ allowed
+await api.delete('/api/users/1', { role: 'user' }); // ❌ ERR_PERMISSION_DENIED
+```
+
+### Payload Encryptor
+
+AES-256-GCM authenticated encryption for request/response payloads:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  encryption: {
+    key: 'hex-encoded-32-byte-key',  // or auto-generated
+  },
+});
+// Payloads are encrypted before sending and decrypted on receipt
+```
+
+### Idempotency Manager
+
+Automatic idempotency key generation for safe retries:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  idempotency: {
+    ttl: 86400000,                   // 24 hours
+    methods: ['POST', 'PUT', 'PATCH'],
+    headerName: 'idempotency-key',
+  },
+});
+// POST/PUT/PATCH requests automatically include unique idempotency keys
+// Duplicate idempotent requests return cached responses
+```
+
+## V18 Features
+
+### Zero Trust Engine
+
+Continuous verification with dynamic trust scoring — never implicitly trust any request:
+
+```js
+const { createClient } = require('api-bridge-ai');
+
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  zeroTrust: {
+    trustThreshold: 50,     // minimum trust score to allow requests
+    maxTrustScore: 100,
+    decayRate: 5,           // trust decays over time
+    decayIntervalMs: 60000, // decay every 60 seconds
+  },
+});
+// Low trust score → ERR_ZERO_TRUST_DENIED
+```
+
+### Threat Intelligence
+
+Real-time threat feed with IP reputation and attack pattern detection:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  threatIntel: {
+    blockedIPs: ['1.2.3.4'],
+    suspiciousThreshold: 5,    // auto-block after 5 suspicious events
+    autoBlock: true,
+  },
+});
+// Blocked IPs or detected threats → ERR_THREAT_DETECTED
+```
+
+### Secure Session Manager
+
+Cryptographic session tokens with IP/User-Agent binding:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  sessionManager: {
+    tokenLength: 32,
+    maxAge: 3600000,           // 1 hour
+    bindToIP: true,            // prevent session hijacking
+    bindToUserAgent: true,
+    rotationInterval: 900000,  // rotate every 15 minutes
+  },
+});
+// Invalid/expired/hijacked sessions → ERR_SESSION_INVALID
+```
+
+### Request Integrity Chain
+
+Blockchain-inspired immutable request lineage with SHA-256 hashing:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  integrityChain: {
+    algorithm: 'sha256',
+    maxChainLength: 10000,
+  },
+});
+
+// Every request is hashed into a chain: hash = SHA-256(prevHash + method + url + timestamp + bodyHash)
+// Tampered chain → ERR_INTEGRITY_VIOLATION
+```
+
+### Adaptive Rate Limiter
+
+ML-inspired anomaly detection with dynamic rate adaptation:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  adaptiveRateLimiter: {
+    baseRate: 100,
+    windowMs: 60000,
+    burstMultiplier: 1.5,
+    anomalyThreshold: 2.0,    // standard deviations
+    minRate: 10,
+    maxRate: 500,
+  },
+});
+// Anomalous traffic patterns → ERR_ADAPTIVE_RATE_LIMITED
+```
+
+### Security Headers Manager
+
+Automatic OWASP-recommended security headers:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  securityHeaders: {
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    frameOptions: 'DENY',
+    contentTypeOptions: 'nosniff',
+    referrerPolicy: 'strict-origin-when-cross-origin',
+    permissionsPolicy: { camera: 'none', microphone: 'none' },
+  },
+});
+// Generates: Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, etc.
+```
+
+### Encrypted Config Vault
+
+AES-256-GCM encrypted storage for API keys and secrets:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  configVault: {
+    masterKey: 'hex-encoded-32-byte-key',
+  },
+});
+
+// Store and retrieve encrypted config values
+// Supports master key rotation and backup/restore
+// Invalid access → ERR_VAULT_ACCESS_DENIED
+```
+
+### Mutual TLS Manager
+
+mTLS certificate management with revocation and expiry validation:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  mtls: {
+    trustedCerts: ['sha256-fingerprint-1', 'sha256-fingerprint-2'],
+    requireClientCert: true,
+    maxCertAge: 365 * 24 * 60 * 60 * 1000,  // 1 year
+  },
+});
+// Certificate validation failure → ERR_MTLS_FAILED
 ```
 
 ---
@@ -2951,7 +3490,7 @@ exportSchemaSuggestions(api.__bridge.learning, '/path/to/suggestions.json');
 
 ## Error Handling
 
-V6 introduces 3 additional structured error classes on top of V5's 19 (22 total):
+V18 introduces 21 additional error codes on top of V8's 27 structured error classes:
 
 ```js
 const {
@@ -2977,6 +3516,18 @@ const {
   FuzzyMatchError,         // Fuzzy matching failure (v6)
   TypeCoercionError,       // Type coercion failure (v6)
   CrypticResolverError,    // Cryptic name resolution failure (v6)
+  // V9-V14: ClientError with ERR_* codes (via createClient)
+  // V16 error codes on ClientError:
+  //   ERR_SSRF_BLOCKED, ERR_HEADER_VALIDATION, ERR_RATE_LIMITED,
+  //   ERR_DUPLICATE_REQUEST, ERR_RESPONSE_TOO_LARGE
+  // V17 error codes on ClientError:
+  //   ERR_CSP_VIOLATION, ERR_CERT_PIN_FAILED, ERR_SIGNATURE_INVALID,
+  //   ERR_INPUT_REJECTED, ERR_PERMISSION_DENIED, ERR_ENCRYPTION_FAILED,
+  //   ERR_DECRYPTION_FAILED, ERR_IDEMPOTENCY_CONFLICT
+  // V18 error codes on ClientError:
+  //   ERR_ZERO_TRUST_DENIED, ERR_THREAT_DETECTED, ERR_SESSION_INVALID,
+  //   ERR_INTEGRITY_VIOLATION, ERR_ADAPTIVE_RATE_LIMITED, ERR_MTLS_FAILED,
+  //   ERR_VAULT_ACCESS_DENIED, ERR_SECURITY_HEADER_VIOLATION
 } = require('api-bridge-ai');
 
 try {
@@ -3046,6 +3597,27 @@ try {
 | `BatchOrchestratorError` | `BATCH_ORCHESTRATOR_ERROR` | v8 | Batch orchestration failure |
 | `DeepMergeError` | `DEEP_MERGE_ERROR` | v8 | Deep merge conflict or depth failure |
 | `InterceptorError` | `INTERCEPTOR_ERROR` | v8 | Request interceptor chain failure |
+| `ClientError` (ERR_SSRF_BLOCKED) | `ERR_SSRF_BLOCKED` | v16 | SSRF prevention |
+| `ClientError` (ERR_HEADER_VALIDATION) | `ERR_HEADER_VALIDATION` | v16 | Header injection prevention |
+| `ClientError` (ERR_RATE_LIMITED) | `ERR_RATE_LIMITED` | v16 | Client-side rate limiting |
+| `ClientError` (ERR_DUPLICATE_REQUEST) | `ERR_DUPLICATE_REQUEST` | v16 | Replay detection |
+| `ClientError` (ERR_RESPONSE_TOO_LARGE) | `ERR_RESPONSE_TOO_LARGE` | v16 | Response size guard |
+| `ClientError` (ERR_CSP_VIOLATION) | `ERR_CSP_VIOLATION` | v17 | CSP violation |
+| `ClientError` (ERR_CERT_PIN_FAILED) | `ERR_CERT_PIN_FAILED` | v17 | Certificate pinning |
+| `ClientError` (ERR_SIGNATURE_INVALID) | `ERR_SIGNATURE_INVALID` | v17 | Request signing |
+| `ClientError` (ERR_INPUT_REJECTED) | `ERR_INPUT_REJECTED` | v17 | Input sanitization |
+| `ClientError` (ERR_PERMISSION_DENIED) | `ERR_PERMISSION_DENIED` | v17 | RBAC permissions |
+| `ClientError` (ERR_ENCRYPTION_FAILED) | `ERR_ENCRYPTION_FAILED` | v17 | Payload encryption |
+| `ClientError` (ERR_DECRYPTION_FAILED) | `ERR_DECRYPTION_FAILED` | v17 | Payload decryption |
+| `ClientError` (ERR_IDEMPOTENCY_CONFLICT) | `ERR_IDEMPOTENCY_CONFLICT` | v17 | Idempotency |
+| `ClientError` (ERR_ZERO_TRUST_DENIED) | `ERR_ZERO_TRUST_DENIED` | v18 | Zero-trust verification |
+| `ClientError` (ERR_THREAT_DETECTED) | `ERR_THREAT_DETECTED` | v18 | Threat intelligence |
+| `ClientError` (ERR_SESSION_INVALID) | `ERR_SESSION_INVALID` | v18 | Session management |
+| `ClientError` (ERR_INTEGRITY_VIOLATION) | `ERR_INTEGRITY_VIOLATION` | v18 | Request integrity |
+| `ClientError` (ERR_ADAPTIVE_RATE_LIMITED) | `ERR_ADAPTIVE_RATE_LIMITED` | v18 | Adaptive rate limiting |
+| `ClientError` (ERR_MTLS_FAILED) | `ERR_MTLS_FAILED` | v18 | Mutual TLS |
+| `ClientError` (ERR_VAULT_ACCESS_DENIED) | `ERR_VAULT_ACCESS_DENIED` | v18 | Config vault |
+| `ClientError` (ERR_SECURITY_HEADER_VIOLATION) | `ERR_SECURITY_HEADER_VIOLATION` | v18 | Security headers |
 
 ---
 
@@ -3057,7 +3629,7 @@ api-bridge-ai/
 │   ├── index.js                   # Main entry — bridge(), bridgeFetch(), transform()
 │   ├── core/                      # Core transformation engine
 │   │   ├── index.js               # Core barrel export
-│   │   ├── errors.js              # Custom error class hierarchy (27 types)
+│   │   ├── errors.js              # Custom error class hierarchy (27 types + 21 error codes)
 │   │   ├── transformer.js         # 7-level mismatch detection & correction
 │   │   ├── learning.js            # Persistent learning engine
 │   │   ├── normalizer.js          # Response format normalizer
@@ -3069,7 +3641,10 @@ api-bridge-ai/
 │   │   ├── validator.js           # Schema validation engine
 │   │   ├── inference.js           # Auto schema inference
 │   │   ├── conditional-transform.js # Conditional transformation rules
-│   │   └── schema-migrator.js     # Version migration engine
+│   │   ├── schema-migrator.js     # Version migration engine
+│   │   ├── security.js            # SSRF, headers, rate limiting, fingerprinting, redaction (v16)
+│   │   ├── security-advanced.js   # CSP, cert pinning, signing, sanitizer, RBAC, encryption (v17)
+│   │   └── security-elite.js      # Zero trust, threat intel, sessions, integrity, mTLS (v18)
 │   ├── utils/                     # Utility modules
 │   │   ├── index.js               # Utils barrel export
 │   │   ├── cache.js               # LRU response cache with TTL
@@ -3111,7 +3686,7 @@ api-bridge-ai/
 │   ├── basic-usage.js             # Basic usage examples
 │   ├── advanced-usage.js          # Advanced SDK patterns
 │   └── plugin-example.js          # Plugin development guide
-├── test.js                        # 462-test comprehensive suite
+├── test.js                        # 1178-test comprehensive suite
 ├── package.json                   # npm package config with subpath exports
 ├── CHANGELOG.md                   # Version history
 └── README.md
@@ -3125,7 +3700,7 @@ api-bridge-ai/
 npm test
 ```
 
-This runs 462 tests covering:
+This runs 1178 tests covering:
 - Basic transformations (all conventions)
 - Nested objects and arrays
 - Type coercion with schemas
@@ -3188,6 +3763,11 @@ This runs 462 tests covering:
 - **v8: Request interceptor** (request/response chains, priority, short-circuit, groups, enable/disable, error handling, stats)
 - **v8: Error classes** (FieldAliaserError, SchemaMigrationError, BatchOrchestratorError, DeepMergeError, InterceptorError)
 - **v8: Backward compatibility** (all v7 exports available, all v8 exports available, transform still works)
+- **v9–v14: HTTP client** (createClient, interceptors, cancel tokens, AxiosHeaders, retryConfig, caching, dedup, tokenRefresh, timing, hooks)
+- **v15: Interceptor options** (runWhen conditional, synchronous mode, auto Content-Type, paramsSerializer object form, beforeRedirect, requestId correlation)
+- **v16: Security hardening** (SSRF guard, header validation, rate limiter, response size guard, sensitive data redaction, request fingerprinting, journey tracking, prototype pollution)
+- **v17: Advanced security** (CSP builder, certificate pinning, HMAC request signing, input sanitizer, audit logger, RBAC permissions, AES-256-GCM encryption, idempotency manager)
+- **v18: Elite security** (zero-trust engine, threat intelligence, secure sessions, request integrity chain, adaptive rate limiter, security headers manager, encrypted config vault, mutual TLS)
 
 ---
 
@@ -3282,12 +3862,39 @@ When you replace Axios with APIBridge AI, you automatically get:
 - **Fuzzy matching**: `usr_nm` → `userName` with 95%+ confidence
 - **Learning engine**: remembers field mappings across sessions
 - **Smart Proxy mode**: `response.data.userName` resolves from any convention
-- **60+ utility modules**: circuit breakers, GraphQL, schema migration, and more
+- **80+ utility modules**: circuit breakers, GraphQL, schema migration, security, and more
 - **Zero dependencies**: unlike Axios which depends on `follow-redirects`
 
 ---
 
-## Migration from V7
+## Migration from Previous Versions
+
+All versions are backward compatible. Your existing code will work without changes.
+
+### V14 → V18
+
+V15–V18 add security features and interceptor options. No breaking changes.
+
+**New v18 features you can adopt incrementally:**
+
+```js
+// Zero trust
+const api = createClient({ baseURL: '/api', zeroTrust: { trustThreshold: 50 } });
+
+// SSRF protection (enabled by default — no config needed)
+const api2 = createClient({ baseURL: '/api' });
+
+// Input sanitization
+const api3 = createClient({ baseURL: '/api', inputSanitizer: { mode: 'escape' } });
+
+// RBAC permissions
+const api4 = createClient({
+  baseURL: '/api',
+  permissions: { policies: [{ role: 'admin', methods: ['*'], endpoints: ['*'] }] },
+});
+```
+
+### V7 → V8
 
 V8 is backward compatible. Your V7 code will work without changes.
 
@@ -3372,8 +3979,8 @@ interceptor.useRequest('addAuth', (ctx) => ({ ...ctx, headers: { Authorization: 
 - ✅ **Subpath exports** — Tree-shakeable imports for smaller bundles
 - ✅ **TypeScript declarations** — Full type safety out of the box
 - ✅ **Plugin system** — Extensible via 8 hook points
-- ✅ **27 structured error classes** — Precise error handling
-- ✅ **462 tests** — Comprehensive test coverage
+- ✅ **27 structured error classes + 21 security error codes** — Precise error handling
+- ✅ **1178 tests** — Comprehensive test coverage
 - ✅ **Zero config** — Works out of the box with sensible defaults
 - ✅ **Single dependency** — Only `fastest-levenshtein` (no bloat)
 
@@ -3387,7 +3994,7 @@ interceptor.useRequest('addAuth', (ctx) => ({ ...ctx, headers: { Authorization: 
 - 🌐 **Browser bundle** — UMD/ESM build for browser environments
 - 📈 **Benchmarking suite** — Performance regression testing
 - 🔄 **Streaming transforms** — Transform large datasets without buffering
-- 🛡️ **Content Security Policy** — Built-in input sanitization
+- 🛡️ **GraphQL subscriptions** — Real-time data streaming
 
 ---
 
