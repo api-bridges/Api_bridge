@@ -798,7 +798,7 @@ class AdaptiveRateLimiter {
 
     // Token check
     const maxTokens = Math.floor(bucket.adaptedRate * this.burstMultiplier);
-    const allowed = bucket.tokens > 0;
+    const allowed = bucket.tokens >= 1;
     if (allowed) {
       bucket.tokens -= 1;
     }

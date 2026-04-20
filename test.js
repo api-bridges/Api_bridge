@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v16 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2-v16 features.
+ * APIBridge AI v18 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2-v18 features.
  */
 
 const {
@@ -192,6 +192,16 @@ const {
   PermissionPolicy,
   PayloadEncryptor,
   IdempotencyManager,
+
+  // v18 exports
+  ZeroTrustEngine,
+  ThreatIntelligence,
+  SecureSessionManager,
+  RequestIntegrityChain,
+  AdaptiveRateLimiter,
+  SecurityHeadersManager,
+  EncryptedConfigVault,
+  MutualTLSManager,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -11053,6 +11063,810 @@ test('v17: client with all v16+v17 features combined', async () => {
   assert(res.config.headers['x-request-id'] !== undefined, 'request ID injected');
   assert(res.config.headers['x-signature'] !== undefined, 'signature injected');
   assert(res.journey !== undefined, 'journey tracking works');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// v18: Elite Security Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── ZeroTrustEngine Tests ─────────────────────────────────────────────────
+
+test('v18: ZeroTrustEngine constructor defaults', () => {
+  const engine = new ZeroTrustEngine();
+  assertEqual(engine.trustThreshold, 50);
+  assertEqual(engine.maxTrustScore, 100);
+  assertEqual(engine.decayRate, 5);
+  assertEqual(engine.decayIntervalMs, 60000);
+});
+
+test('v18: ZeroTrustEngine evaluate — unknown context denied', () => {
+  const engine = new ZeroTrustEngine({ trustThreshold: 50 });
+  const result = engine.evaluate({ contextId: 'ctx-1', ip: '1.2.3.4' });
+  assertEqual(result.allowed, false);
+  assert(typeof result.score === 'number', 'score is a number');
+  assert(Array.isArray(result.factors), 'factors is array');
+});
+
+test('v18: ZeroTrustEngine evaluate — trusted context allowed', () => {
+  const engine = new ZeroTrustEngine({ trustThreshold: 30 });
+  engine.updateTrust('ctx-1', 60, 'initial setup');
+  const result = engine.evaluate({ contextId: 'ctx-1', ip: '1.2.3.4', userAgent: 'TestAgent', method: 'GET' });
+  assertEqual(result.allowed, true);
+  assert(result.score >= 30, 'score above threshold');
+});
+
+test('v18: ZeroTrustEngine updateTrust and getTrustInfo', () => {
+  const engine = new ZeroTrustEngine();
+  engine.updateTrust('ctx-1', 40, 'manual boost');
+  const info = engine.getTrustInfo('ctx-1');
+  assert(info !== null, 'trust info exists');
+  assertEqual(info.score, 40);
+});
+
+test('v18: ZeroTrustEngine updateTrust clamps to maxTrustScore', () => {
+  const engine = new ZeroTrustEngine({ maxTrustScore: 100 });
+  engine.updateTrust('ctx-1', 200, 'over max');
+  const info = engine.getTrustInfo('ctx-1');
+  assertEqual(info.score, 100);
+});
+
+test('v18: ZeroTrustEngine updateTrust clamps to 0', () => {
+  const engine = new ZeroTrustEngine();
+  engine.updateTrust('ctx-1', -50, 'negative');
+  const info = engine.getTrustInfo('ctx-1');
+  assertEqual(info.score, 0);
+});
+
+test('v18: ZeroTrustEngine revokeTrust removes context', () => {
+  const engine = new ZeroTrustEngine();
+  engine.updateTrust('ctx-1', 50, 'setup');
+  engine.revokeTrust('ctx-1');
+  const info = engine.getTrustInfo('ctx-1');
+  assertEqual(info, null);
+});
+
+test('v18: ZeroTrustEngine reset clears all', () => {
+  const engine = new ZeroTrustEngine();
+  engine.updateTrust('ctx-1', 50, 'setup');
+  engine.updateTrust('ctx-2', 60, 'setup');
+  engine.reset();
+  assertEqual(engine.getTrustInfo('ctx-1'), null);
+  assertEqual(engine.getTrustInfo('ctx-2'), null);
+});
+
+test('v18: ZeroTrustEngine consistent IP/UA boost trust on subsequent evaluations', () => {
+  const engine = new ZeroTrustEngine({ trustThreshold: 20 });
+  // First evaluation sets up context
+  engine.evaluate({ contextId: 'ctx-1', ip: '1.2.3.4', userAgent: 'TestAgent', method: 'GET' });
+  // Boost trust manually
+  engine.updateTrust('ctx-1', 30, 'boost');
+  // Second evaluation with same IP/UA should get boost factors
+  const r2 = engine.evaluate({ contextId: 'ctx-1', ip: '1.2.3.4', userAgent: 'TestAgent', method: 'GET' });
+  assert(r2.score > 0, 'score is positive');
+});
+
+test('v18: ZeroTrustEngine custom options', () => {
+  const engine = new ZeroTrustEngine({ defaultTrustScore: 10, trustThreshold: 20, maxTrustScore: 50, decayRate: 2, decayIntervalMs: 30000 });
+  assertEqual(engine.trustThreshold, 20);
+  assertEqual(engine.maxTrustScore, 50);
+  assertEqual(engine.decayRate, 2);
+  assertEqual(engine.decayIntervalMs, 30000);
+});
+
+// ─── ThreatIntelligence Tests ──────────────────────────────────────────────
+
+test('v18: ThreatIntelligence constructor defaults', () => {
+  const ti = new ThreatIntelligence();
+  assertEqual(ti.suspiciousThreshold, 5);
+  assertEqual(ti.autoBlock, true);
+});
+
+test('v18: ThreatIntelligence assess — clean request', () => {
+  const ti = new ThreatIntelligence();
+  const result = ti.assess({ ip: '1.2.3.4', url: '/api/users', method: 'GET', headers: {} });
+  assertEqual(result.blocked, false);
+  assertEqual(result.level, 'none');
+});
+
+test('v18: ThreatIntelligence assess — blocked IP', () => {
+  const ti = new ThreatIntelligence({ blockedIPs: ['10.0.0.1'] });
+  const result = ti.assess({ ip: '10.0.0.1', url: '/api/users', method: 'GET', headers: {} });
+  assertEqual(result.blocked, true);
+  assert(result.reasons.length > 0, 'has reasons');
+});
+
+test('v18: ThreatIntelligence blockIP and unblockIP', () => {
+  const ti = new ThreatIntelligence();
+  ti.blockIP('5.5.5.5');
+  assertEqual(ti.isBlocked('5.5.5.5'), true);
+  ti.unblockIP('5.5.5.5');
+  assertEqual(ti.isBlocked('5.5.5.5'), false);
+});
+
+test('v18: ThreatIntelligence reportActivity and auto-block', () => {
+  const ti = new ThreatIntelligence({ suspiciousThreshold: 3, autoBlock: true });
+  ti.reportActivity('10.10.10.10', 'scan');
+  ti.reportActivity('10.10.10.10', 'scan');
+  ti.reportActivity('10.10.10.10', 'scan');
+  assertEqual(ti.isBlocked('10.10.10.10'), true);
+});
+
+test('v18: ThreatIntelligence getActivityLog', () => {
+  const ti = new ThreatIntelligence();
+  ti.reportActivity('7.7.7.7', 'probe');
+  const log = ti.getActivityLog('7.7.7.7');
+  assert(log !== null, 'log exists');
+  assert(log.count >= 1, 'count >= 1');
+});
+
+test('v18: ThreatIntelligence addPattern detects matching URLs as threats', () => {
+  const ti = new ThreatIntelligence();
+  ti.addPattern('/admin');
+  const result = ti.assess({ ip: '1.1.1.1', url: '/admin/settings', method: 'GET', headers: {} });
+  assertEqual(result.threat, true);
+  assertEqual(result.level, 'high');
+  assert(result.reasons.length > 0, 'has reasons');
+});
+
+test('v18: ThreatIntelligence reset clears all', () => {
+  const ti = new ThreatIntelligence({ blockedIPs: ['1.1.1.1'] });
+  ti.reportActivity('2.2.2.2', 'scan');
+  ti.reset();
+  assertEqual(ti.isBlocked('1.1.1.1'), false);
+  assertEqual(ti.getActivityLog('2.2.2.2'), null);
+});
+
+test('v18: ThreatIntelligence assess — SQL injection in headers', () => {
+  const ti = new ThreatIntelligence();
+  const result = ti.assess({ ip: '1.1.1.1', url: '/api/data', method: 'GET', headers: { 'x-custom': "'; DROP TABLE users; --" } });
+  assert(result.level !== 'none', 'threat level detected');
+  assert(result.reasons.length > 0, 'has reasons');
+});
+
+// ─── SecureSessionManager Tests ────────────────────────────────────────────
+
+test('v18: SecureSessionManager constructor defaults', () => {
+  const sm = new SecureSessionManager();
+  assertEqual(sm.tokenLength, 32);
+  assertEqual(sm.maxAge, 3600000);
+  assertEqual(sm.bindToIP, true);
+  assertEqual(sm.bindToUserAgent, true);
+});
+
+test('v18: SecureSessionManager createSession returns token', () => {
+  const sm = new SecureSessionManager();
+  const session = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4', userAgent: 'TestAgent' });
+  assert(typeof session.token === 'string', 'token is string');
+  assert(session.token.length > 0, 'token not empty');
+  assert(session.expiresAt > Date.now(), 'expiresAt in future');
+});
+
+test('v18: SecureSessionManager validateSession — valid', () => {
+  const sm = new SecureSessionManager();
+  const session = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4', userAgent: 'TestAgent' });
+  const result = sm.validateSession(session.token, { ip: '1.2.3.4', userAgent: 'TestAgent' });
+  assertEqual(result.valid, true);
+});
+
+test('v18: SecureSessionManager validateSession — IP mismatch', () => {
+  const sm = new SecureSessionManager({ bindToIP: true });
+  const session = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4', userAgent: 'TestAgent' });
+  const result = sm.validateSession(session.token, { ip: '9.9.9.9', userAgent: 'TestAgent' });
+  assertEqual(result.valid, false);
+  assert(result.reason.length > 0, 'has reason');
+});
+
+test('v18: SecureSessionManager validateSession — invalid token', () => {
+  const sm = new SecureSessionManager();
+  const result = sm.validateSession('nonexistent-token', { ip: '1.2.3.4' });
+  assertEqual(result.valid, false);
+});
+
+test('v18: SecureSessionManager rotateSession', () => {
+  const sm = new SecureSessionManager();
+  const session = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4', userAgent: 'TestAgent' });
+  const newToken = sm.rotateSession(session.token);
+  assert(typeof newToken === 'string', 'new token is string');
+  assert(newToken !== session.token, 'new token differs');
+  // Old token should be invalid
+  const oldResult = sm.validateSession(session.token, { ip: '1.2.3.4', userAgent: 'TestAgent' });
+  assertEqual(oldResult.valid, false);
+  // New token should be valid
+  const newResult = sm.validateSession(newToken, { ip: '1.2.3.4', userAgent: 'TestAgent' });
+  assertEqual(newResult.valid, true);
+});
+
+test('v18: SecureSessionManager revokeSession', () => {
+  const sm = new SecureSessionManager();
+  const session = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4' });
+  sm.revokeSession(session.token);
+  const result = sm.validateSession(session.token, { ip: '1.2.3.4' });
+  assertEqual(result.valid, false);
+});
+
+test('v18: SecureSessionManager revokeAllSessions', () => {
+  const sm = new SecureSessionManager();
+  const s1 = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4' });
+  const s2 = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4' });
+  sm.revokeAllSessions('user-1');
+  assertEqual(sm.validateSession(s1.token, { ip: '1.2.3.4' }).valid, false);
+  assertEqual(sm.validateSession(s2.token, { ip: '1.2.3.4' }).valid, false);
+});
+
+test('v18: SecureSessionManager getActiveCount', () => {
+  const sm = new SecureSessionManager();
+  sm.createSession({ contextId: 'user-1', ip: '1.2.3.4' });
+  sm.createSession({ contextId: 'user-2', ip: '5.6.7.8' });
+  assertEqual(sm.getActiveCount(), 2);
+});
+
+test('v18: SecureSessionManager getSession', () => {
+  const sm = new SecureSessionManager();
+  const s = sm.createSession({ contextId: 'user-1', ip: '1.2.3.4', userAgent: 'TestAgent', metadata: { role: 'admin' } });
+  const info = sm.getSession(s.token);
+  assert(info !== null, 'session info exists');
+  assertEqual(info.contextId, 'user-1');
+});
+
+// ─── RequestIntegrityChain Tests ───────────────────────────────────────────
+
+test('v18: RequestIntegrityChain constructor defaults', () => {
+  const chain = new RequestIntegrityChain();
+  assertEqual(chain.getLength(), 0);
+});
+
+test('v18: RequestIntegrityChain addRequest returns entry with hash', () => {
+  const chain = new RequestIntegrityChain();
+  const entry = chain.addRequest({ method: 'GET', url: '/api/users', timestamp: Date.now(), bodyHash: '0'.repeat(64) });
+  assert(typeof entry.hash === 'string', 'hash is string');
+  assert(entry.hash.length === 64, 'hash is 64 chars (sha256 hex)');
+  assertEqual(entry.index, 0);
+  assertEqual(chain.getLength(), 1);
+});
+
+test('v18: RequestIntegrityChain verify — valid chain', () => {
+  const chain = new RequestIntegrityChain();
+  chain.addRequest({ method: 'GET', url: '/api/users', timestamp: 1000, bodyHash: 'abc' });
+  chain.addRequest({ method: 'POST', url: '/api/users', timestamp: 2000, bodyHash: 'def' });
+  chain.addRequest({ method: 'PUT', url: '/api/users/1', timestamp: 3000, bodyHash: 'ghi' });
+  const result = chain.verify();
+  assertEqual(result.valid, true);
+  assertEqual(result.chainLength, 3);
+});
+
+test('v18: RequestIntegrityChain getEntry returns correct entry', () => {
+  const chain = new RequestIntegrityChain();
+  chain.addRequest({ method: 'GET', url: '/api/test', timestamp: 1000, bodyHash: 'x' });
+  const entry = chain.getEntry(0);
+  assert(entry !== null, 'entry exists');
+  assertEqual(entry.request.method, 'GET');
+});
+
+test('v18: RequestIntegrityChain getLatestHash', () => {
+  const chain = new RequestIntegrityChain();
+  const genesis = chain.getLatestHash();
+  assert(genesis.length === 64, 'genesis hash is 64 chars');
+  chain.addRequest({ method: 'GET', url: '/test', timestamp: 1000, bodyHash: 'x' });
+  const newHash = chain.getLatestHash();
+  assert(newHash !== genesis, 'hash changed after add');
+});
+
+test('v18: RequestIntegrityChain reset', () => {
+  const chain = new RequestIntegrityChain();
+  chain.addRequest({ method: 'GET', url: '/test', timestamp: 1000, bodyHash: 'x' });
+  chain.reset();
+  assertEqual(chain.getLength(), 0);
+});
+
+test('v18: RequestIntegrityChain verifyEntry', () => {
+  const chain = new RequestIntegrityChain();
+  chain.addRequest({ method: 'GET', url: '/test', timestamp: 1000, bodyHash: 'x' });
+  const result = chain.verifyEntry(0);
+  assertEqual(result.valid, true);
+});
+
+test('v18: RequestIntegrityChain getChain returns copy', () => {
+  const chain = new RequestIntegrityChain();
+  chain.addRequest({ method: 'GET', url: '/a', timestamp: 1, bodyHash: 'a' });
+  chain.addRequest({ method: 'POST', url: '/b', timestamp: 2, bodyHash: 'b' });
+  const copy = chain.getChain();
+  assert(Array.isArray(copy), 'chain is array');
+  assertEqual(copy.length, 2);
+});
+
+// ─── AdaptiveRateLimiter Tests ─────────────────────────────────────────────
+
+test('v18: AdaptiveRateLimiter constructor defaults', () => {
+  const limiter = new AdaptiveRateLimiter();
+  assertEqual(limiter.baseRate, 100);
+  assertEqual(limiter.windowMs, 60000);
+});
+
+test('v18: AdaptiveRateLimiter acquire — allowed', () => {
+  const limiter = new AdaptiveRateLimiter({ baseRate: 10 });
+  const result = limiter.acquire('test-key');
+  assertEqual(result.allowed, true);
+  assert(typeof result.remaining === 'number', 'remaining is number');
+});
+
+test('v18: AdaptiveRateLimiter acquire — exhausted', () => {
+  const limiter = new AdaptiveRateLimiter({ baseRate: 3, windowMs: 60000, burstMultiplier: 1.0, adaptationRate: 0, minRate: 1 });
+  limiter.acquire('key1');
+  limiter.acquire('key1');
+  limiter.acquire('key1');
+  const result = limiter.acquire('key1');
+  assertEqual(result.allowed, false);
+});
+
+test('v18: AdaptiveRateLimiter getStats returns stats', () => {
+  const limiter = new AdaptiveRateLimiter();
+  limiter.acquire('key1');
+  const stats = limiter.getStats('key1');
+  assert(stats !== null, 'stats exist');
+  assert(typeof stats.currentRate === 'number', 'currentRate is number');
+});
+
+test('v18: AdaptiveRateLimiter resetKey clears specific key', () => {
+  const limiter = new AdaptiveRateLimiter({ baseRate: 2 });
+  limiter.acquire('key1');
+  limiter.acquire('key1');
+  limiter.resetKey('key1');
+  const result = limiter.acquire('key1');
+  assertEqual(result.allowed, true);
+});
+
+test('v18: AdaptiveRateLimiter reset clears all', () => {
+  const limiter = new AdaptiveRateLimiter();
+  limiter.acquire('key1');
+  limiter.acquire('key2');
+  limiter.reset();
+  assertEqual(limiter.getStats('key1'), null);
+  assertEqual(limiter.getStats('key2'), null);
+});
+
+test('v18: AdaptiveRateLimiter adjustRate overrides rate', () => {
+  const limiter = new AdaptiveRateLimiter({ baseRate: 10 });
+  limiter.acquire('key1');
+  limiter.adjustRate('key1', 5);
+  const stats = limiter.getStats('key1');
+  assert(stats !== null, 'stats exist after adjustRate');
+});
+
+test('v18: AdaptiveRateLimiter custom options', () => {
+  const limiter = new AdaptiveRateLimiter({
+    baseRate: 50, windowMs: 30000, burstMultiplier: 2.0, anomalyThreshold: 3.0, minRate: 5, maxRate: 500,
+  });
+  assertEqual(limiter.baseRate, 50);
+  assertEqual(limiter.windowMs, 30000);
+  assertEqual(limiter.burstMultiplier, 2.0);
+});
+
+// ─── SecurityHeadersManager Tests ──────────────────────────────────────────
+
+test('v18: SecurityHeadersManager constructor defaults', () => {
+  const mgr = new SecurityHeadersManager();
+  assert(mgr.hsts !== undefined, 'hsts configured');
+  assertEqual(mgr.xFrameOptions, 'DENY');
+});
+
+test('v18: SecurityHeadersManager buildHeaders returns all OWASP headers', () => {
+  const mgr = new SecurityHeadersManager();
+  const headers = mgr.buildHeaders();
+  assert(typeof headers === 'object', 'headers is object');
+  assert('Strict-Transport-Security' in headers, 'has HSTS');
+  assert('X-Frame-Options' in headers, 'has X-Frame-Options');
+  assert('X-Content-Type-Options' in headers, 'has X-Content-Type-Options');
+  assert('Referrer-Policy' in headers, 'has Referrer-Policy');
+});
+
+test('v18: SecurityHeadersManager getHeader and setHeader', () => {
+  const mgr = new SecurityHeadersManager();
+  mgr.setHeader('X-Custom', 'test-value');
+  assertEqual(mgr.getHeader('X-Custom'), 'test-value');
+});
+
+test('v18: SecurityHeadersManager removeHeader', () => {
+  const mgr = new SecurityHeadersManager();
+  mgr.setHeader('X-Custom', 'test');
+  mgr.removeHeader('X-Custom');
+  assertEqual(mgr.getHeader('X-Custom'), undefined);
+});
+
+test('v18: SecurityHeadersManager validate returns score', () => {
+  const mgr = new SecurityHeadersManager();
+  const result = mgr.validate();
+  assert(typeof result.secure === 'boolean', 'secure is boolean');
+  assert(typeof result.score === 'number', 'score is number');
+  assert(Array.isArray(result.warnings), 'warnings is array');
+  assert(result.score > 0, 'default config has positive score');
+});
+
+test('v18: SecurityHeadersManager applyToResponse merges headers', () => {
+  const mgr = new SecurityHeadersManager();
+  const existing = { 'Content-Type': 'application/json' };
+  const merged = mgr.applyToResponse(existing);
+  assert('Content-Type' in merged, 'preserves existing');
+  assert('Strict-Transport-Security' in merged, 'adds security headers');
+});
+
+test('v18: SecurityHeadersManager toJSON', () => {
+  const mgr = new SecurityHeadersManager();
+  const json = mgr.toJSON();
+  assert(typeof json === 'object', 'toJSON returns object');
+  assert('hsts' in json, 'has hsts config');
+});
+
+test('v18: SecurityHeadersManager custom options', () => {
+  const mgr = new SecurityHeadersManager({
+    xFrameOptions: 'SAMEORIGIN',
+    referrerPolicy: 'no-referrer',
+  });
+  assertEqual(mgr.xFrameOptions, 'SAMEORIGIN');
+  assertEqual(mgr.referrerPolicy, 'no-referrer');
+});
+
+// ─── EncryptedConfigVault Tests ────────────────────────────────────────────
+
+test('v18: EncryptedConfigVault constructor auto-generates key', () => {
+  const vault = new EncryptedConfigVault();
+  assert(typeof vault.getFingerprint() === 'string', 'fingerprint is string');
+  assert(vault.getFingerprint().length === 16, 'fingerprint is 16 hex chars');
+});
+
+test('v18: EncryptedConfigVault store and retrieve string', () => {
+  const vault = new EncryptedConfigVault();
+  vault.store('api-key', 'sk-12345abcdef');
+  const result = vault.retrieve('api-key');
+  assertEqual(result, 'sk-12345abcdef');
+});
+
+test('v18: EncryptedConfigVault store and retrieve object', () => {
+  const vault = new EncryptedConfigVault();
+  const config = { host: 'db.example.com', port: 5432, password: 'secret' };
+  vault.store('db-config', config);
+  const result = vault.retrieve('db-config');
+  assertEqual(result.host, 'db.example.com');
+  assertEqual(result.port, 5432);
+  assertEqual(result.password, 'secret');
+});
+
+test('v18: EncryptedConfigVault has and remove', () => {
+  const vault = new EncryptedConfigVault();
+  vault.store('key1', 'value1');
+  assertEqual(vault.has('key1'), true);
+  vault.remove('key1');
+  assertEqual(vault.has('key1'), false);
+  assertEqual(vault.retrieve('key1'), null);
+});
+
+test('v18: EncryptedConfigVault list returns key names', () => {
+  const vault = new EncryptedConfigVault();
+  vault.store('k1', 'v1');
+  vault.store('k2', 'v2');
+  const keys = vault.list();
+  assert(keys.includes('k1'), 'has k1');
+  assert(keys.includes('k2'), 'has k2');
+});
+
+test('v18: EncryptedConfigVault export and import', () => {
+  const vault = new EncryptedConfigVault();
+  vault.store('secret1', 'value1');
+  vault.store('secret2', { nested: true });
+  const exported = vault.export();
+  assert(typeof exported === 'object', 'export is object');
+  // Import into new vault with same key
+  const vault2 = new EncryptedConfigVault({ masterKey: vault._masterKey ? vault._masterKey.toString('hex') : undefined });
+  // The export contains encrypted blobs so we can test import
+  vault2.import(exported);
+  assert(vault2.has('secret1'), 'imported has secret1');
+});
+
+test('v18: EncryptedConfigVault clear removes all', () => {
+  const vault = new EncryptedConfigVault();
+  vault.store('k1', 'v1');
+  vault.store('k2', 'v2');
+  vault.clear();
+  assertEqual(vault.list().length, 0);
+});
+
+test('v18: EncryptedConfigVault getFingerprint', () => {
+  const vault = new EncryptedConfigVault();
+  const fp = vault.getFingerprint();
+  assert(typeof fp === 'string', 'fingerprint is string');
+  assertEqual(fp.length, 16);
+});
+
+test('v18: EncryptedConfigVault retrieve nonexistent returns null', () => {
+  const vault = new EncryptedConfigVault();
+  assertEqual(vault.retrieve('nope'), null);
+});
+
+// ─── MutualTLSManager Tests ────────────────────────────────────────────────
+
+test('v18: MutualTLSManager constructor defaults', () => {
+  const mtls = new MutualTLSManager();
+  assertEqual(mtls.requireClientCert, true);
+  assertEqual(mtls.allowExpired, false);
+});
+
+test('v18: MutualTLSManager addTrustedCert and getTrustedCerts', () => {
+  const mtls = new MutualTLSManager();
+  mtls.addTrustedCert('abc123');
+  mtls.addTrustedCert('def456');
+  const certs = mtls.getTrustedCerts();
+  assert(certs.includes('abc123'), 'has abc123');
+  assert(certs.includes('def456'), 'has def456');
+});
+
+test('v18: MutualTLSManager removeTrustedCert', () => {
+  const mtls = new MutualTLSManager({ trustedCerts: ['abc123'] });
+  mtls.removeTrustedCert('abc123');
+  assertEqual(mtls.getTrustedCerts().includes('abc123'), false);
+});
+
+test('v18: MutualTLSManager validateClientCert — trusted', () => {
+  const mtls = new MutualTLSManager({ trustedCerts: ['abc123'] });
+  const now = Date.now();
+  const result = mtls.validateClientCert({
+    fingerprint: 'abc123',
+    issuer: 'CA',
+    subject: 'client',
+    notBefore: now - 10000,
+    notAfter: now + 3600000,
+    serialNumber: '001',
+  });
+  assertEqual(result.valid, true);
+  assertEqual(result.trusted, true);
+});
+
+test('v18: MutualTLSManager validateClientCert — untrusted', () => {
+  const mtls = new MutualTLSManager({ trustedCerts: ['abc123'] });
+  const now = Date.now();
+  const result = mtls.validateClientCert({
+    fingerprint: 'unknown',
+    issuer: 'CA',
+    subject: 'client',
+    notBefore: now - 10000,
+    notAfter: now + 3600000,
+    serialNumber: '002',
+  });
+  assertEqual(result.valid, false);
+});
+
+test('v18: MutualTLSManager validateClientCert — revoked', () => {
+  const mtls = new MutualTLSManager({ trustedCerts: ['abc123'], revocationList: ['abc123'] });
+  const now = Date.now();
+  const result = mtls.validateClientCert({
+    fingerprint: 'abc123',
+    issuer: 'CA',
+    subject: 'client',
+    notBefore: now - 10000,
+    notAfter: now + 3600000,
+    serialNumber: '003',
+  });
+  assertEqual(result.valid, false);
+  assert(result.reason.length > 0, 'has reason');
+});
+
+test('v18: MutualTLSManager validateClientCert — expired', () => {
+  const mtls = new MutualTLSManager({ trustedCerts: ['abc123'] });
+  const now = Date.now();
+  const result = mtls.validateClientCert({
+    fingerprint: 'abc123',
+    issuer: 'CA',
+    subject: 'client',
+    notBefore: now - 100000000,
+    notAfter: now - 1000,
+    serialNumber: '004',
+  });
+  assertEqual(result.valid, false);
+});
+
+test('v18: MutualTLSManager revokeCert and isRevoked', () => {
+  const mtls = new MutualTLSManager();
+  mtls.revokeCert('abc123');
+  assertEqual(mtls.isRevoked('abc123'), true);
+  assertEqual(mtls.isRevoked('def456'), false);
+});
+
+test('v18: MutualTLSManager getRevocationList', () => {
+  const mtls = new MutualTLSManager({ revocationList: ['aaa', 'bbb'] });
+  const list = mtls.getRevocationList();
+  assert(list.includes('aaa'), 'has aaa');
+  assert(list.includes('bbb'), 'has bbb');
+});
+
+test('v18: MutualTLSManager generateFingerprint', () => {
+  const mtls = new MutualTLSManager();
+  const fp = mtls.generateFingerprint('test-cert-data');
+  assert(typeof fp === 'string', 'fingerprint is string');
+  assertEqual(fp.length, 64); // SHA-256 hex = 64 chars
+});
+
+test('v18: MutualTLSManager reset clears all', () => {
+  const mtls = new MutualTLSManager({ trustedCerts: ['abc'], revocationList: ['def'] });
+  mtls.reset();
+  assertEqual(mtls.getTrustedCerts().length, 0);
+  assertEqual(mtls.getRevocationList().length, 0);
+});
+
+// ─── Client Integration Tests ──────────────────────────────────────────────
+
+test('v18: client with threatIntel blocks bad IPs', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    threatIntel: { blockedIPs: ['10.0.0.1'] },
+  });
+
+  // Inject client IP
+  client.interceptors.request.use((config) => {
+    config.clientIP = '10.0.0.1';
+    return config;
+  });
+
+  let threw = false;
+  try {
+    await client.get('/api/data');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_THREAT_DETECTED');
+  }
+  assert(threw, 'should block bad IP');
+});
+
+test('v18: client with zeroTrust denies low-trust requests', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    zeroTrust: { trustThreshold: 80 },
+  });
+
+  let threw = false;
+  try {
+    await client.get('/api/data');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_ZERO_TRUST_DENIED');
+  }
+  assert(threw, 'should deny low-trust request');
+});
+
+test('v18: client with adaptiveRateLimiter blocks excess requests', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    adaptiveRateLimiter: { baseRate: 2, windowMs: 60000, burstMultiplier: 1.0, adaptationRate: 0, minRate: 1 },
+  });
+
+  await client.get('/api/data');
+  await client.get('/api/data');
+
+  let threw = false;
+  try {
+    await client.get('/api/data');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_ADAPTIVE_RATE_LIMITED');
+  }
+  assert(threw, 'should block after rate exceeded');
+});
+
+test('v18: client with securityHeaders injects headers', async () => {
+  let capturedHeaders = {};
+  const mockAdapter = async (config) => {
+    capturedHeaders = config.headers || {};
+    return { data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} };
+  };
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    securityHeaders: {},
+  });
+  await client.get('/api/data');
+  assert(capturedHeaders['Strict-Transport-Security'] !== undefined, 'HSTS header injected');
+  assert(capturedHeaders['X-Frame-Options'] !== undefined, 'X-Frame-Options header injected');
+  assert(capturedHeaders['X-Content-Type-Options'] !== undefined, 'X-Content-Type-Options header injected');
+});
+
+test('v18: client with integrityChain records requests', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    integrityChain: {},
+  });
+  await client.get('/api/data');
+  await client.post('/api/data', { name: 'test' });
+  assert(client._integrityChain.getLength() === 2, 'integrity chain has 2 entries');
+  const verification = client._integrityChain.verify();
+  assertEqual(verification.valid, true);
+});
+
+test('v18: new error codes exist on ClientError (all 8)', () => {
+  assertEqual(ClientError.ERR_ZERO_TRUST_DENIED, 'ERR_ZERO_TRUST_DENIED');
+  assertEqual(ClientError.ERR_THREAT_DETECTED, 'ERR_THREAT_DETECTED');
+  assertEqual(ClientError.ERR_SESSION_INVALID, 'ERR_SESSION_INVALID');
+  assertEqual(ClientError.ERR_INTEGRITY_VIOLATION, 'ERR_INTEGRITY_VIOLATION');
+  assertEqual(ClientError.ERR_ADAPTIVE_RATE_LIMITED, 'ERR_ADAPTIVE_RATE_LIMITED');
+  assertEqual(ClientError.ERR_MTLS_FAILED, 'ERR_MTLS_FAILED');
+  assertEqual(ClientError.ERR_VAULT_ACCESS_DENIED, 'ERR_VAULT_ACCESS_DENIED');
+  assertEqual(ClientError.ERR_SECURITY_HEADER_VIOLATION, 'ERR_SECURITY_HEADER_VIOLATION');
+});
+
+test('v18: all v18 elite security classes are exported', () => {
+  assert(typeof ZeroTrustEngine === 'function', 'ZeroTrustEngine exported');
+  assert(typeof ThreatIntelligence === 'function', 'ThreatIntelligence exported');
+  assert(typeof SecureSessionManager === 'function', 'SecureSessionManager exported');
+  assert(typeof RequestIntegrityChain === 'function', 'RequestIntegrityChain exported');
+  assert(typeof AdaptiveRateLimiter === 'function', 'AdaptiveRateLimiter exported');
+  assert(typeof SecurityHeadersManager === 'function', 'SecurityHeadersManager exported');
+  assert(typeof EncryptedConfigVault === 'function', 'EncryptedConfigVault exported');
+  assert(typeof MutualTLSManager === 'function', 'MutualTLSManager exported');
+});
+
+test('v18: v18 elite security classes available on default apiBridge export', () => {
+  assert(typeof apiBridge.ZeroTrustEngine === 'function', 'apiBridge.ZeroTrustEngine');
+  assert(typeof apiBridge.ThreatIntelligence === 'function', 'apiBridge.ThreatIntelligence');
+  assert(typeof apiBridge.SecureSessionManager === 'function', 'apiBridge.SecureSessionManager');
+  assert(typeof apiBridge.RequestIntegrityChain === 'function', 'apiBridge.RequestIntegrityChain');
+  assert(typeof apiBridge.AdaptiveRateLimiter === 'function', 'apiBridge.AdaptiveRateLimiter');
+  assert(typeof apiBridge.SecurityHeadersManager === 'function', 'apiBridge.SecurityHeadersManager');
+  assert(typeof apiBridge.EncryptedConfigVault === 'function', 'apiBridge.EncryptedConfigVault');
+  assert(typeof apiBridge.MutualTLSManager === 'function', 'apiBridge.MutualTLSManager');
+});
+
+test('v18: client with all v16+v17+v18 features combined', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { result: callCount }, rawData: { result: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+    dedupe: { enabled: true, methods: ['GET'] },
+    timing: true,
+    requestId: true,
+    journeyTracking: true,
+    requestSigning: { secret: 'combined-test' },
+    auditLog: { maxEntries: 100 },
+    idempotency: { headerName: 'idempotency-key' },
+    integrityChain: {},
+    securityHeaders: {},
+    hooks: {
+      onRequest: [(config) => {}],
+      onResponse: [(res) => {}],
+    },
+  });
+
+  const res = await client.get('/combined-v18');
+  assertEqual(res.status, 200);
+  assert(typeof res.duration === 'number', 'timing works');
+  assert(res.config.headers['x-request-id'] !== undefined, 'request ID injected');
+  assert(res.config.headers['x-signature'] !== undefined, 'signature injected');
+  assert(res.config.headers['Strict-Transport-Security'] !== undefined, 'HSTS injected');
+  assert(res.journey !== undefined, 'journey tracking works');
+  assert(client._integrityChain.getLength() >= 1, 'integrity chain recorded');
+});
+
+test('v18: VERSION is 18.0.0', () => {
+  assertEqual(VERSION, '18.0.0');
 });
 
 // Wait a tick for async tests
