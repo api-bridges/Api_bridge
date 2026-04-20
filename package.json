@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
   "version": "14.0.0",
-  "description": "Production-ready complete Axios replacement with zero-gap API compatibility, AxiosHeaders responses, default transform chains, callable export, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules — a next-generation API client",
+  "description": "Production-ready complete Axios replacement with enterprise-grade features: auto-retry engine, response caching, request dedup, token refresh, lifecycle hooks, request timing, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules",
   "main": "src/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -100,7 +100,14 @@
     "zero-dependency-http",
     "fetch-wrapper",
     "max-rate",
-    "dns-lookup"
+    "dns-lookup",
+    "auto-retry",
+    "response-cache",
+    "request-dedup",
+    "token-refresh",
+    "request-timing",
+    "lifecycle-hooks",
+    "stale-while-revalidate"
   ],
   "engines": {
     "node": ">=16.0.0"

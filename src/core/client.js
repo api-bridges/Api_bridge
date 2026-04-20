@@ -1220,7 +1220,8 @@ class APIBridgeClient {
               const headerName = tokenRefreshConfig.headerName || 'Authorization';
               const tokenPrefix = tokenRefreshConfig.tokenPrefix !== undefined ? tokenRefreshConfig.tokenPrefix : 'Bearer ';
               reqConfig.headers[headerName] = `${tokenPrefix}${newToken}`;
-              continue; // retry with new token (doesn't count against retry attempts)
+              attempt--; // token refresh retry should not count against retry attempts
+              continue; // retry with new token
             } catch (_refreshErr) {
               // Token refresh failed — fall through to normal retry logic
             }
