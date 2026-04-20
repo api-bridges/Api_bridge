@@ -441,7 +441,7 @@ const HTML_ENTITIES = {
   '`': '&#96;',
 };
 
-const SCRIPT_RE = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+const SCRIPT_RE = /<script\b[^<]*(?:(?!<\/script\s*>)<[^<]*)*<\/script\s*>/gi;
 const EVENT_HANDLER_RE = /\bon\w+\s*=/gi;
 const SQL_INJECTION_RE = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC|EXECUTE)\b\s)/gi;
 const PATH_TRAVERSAL_RE = /\.\.[/\\]/g;
@@ -529,14 +529,18 @@ class InputSanitizer {
     let result = str;
 
     if (this.mode === 'strip') {
-      result = result.replace(SCRIPT_RE, '');
-      SCRIPT_RE.lastIndex = 0;
-      result = result.replace(EVENT_HANDLER_RE, '');
-      EVENT_HANDLER_RE.lastIndex = 0;
-      for (const pattern of this.customPatterns) {
-        result = result.replace(pattern, '');
-        pattern.lastIndex = 0;
-      }
+      let prev;
+      do {
+        prev = result;
+        result = result.replace(SCRIPT_RE, '');
+        SCRIPT_RE.lastIndex = 0;
+        result = result.replace(EVENT_HANDLER_RE, '');
+        EVENT_HANDLER_RE.lastIndex = 0;
+        for (const pattern of this.customPatterns) {
+          result = result.replace(pattern, '');
+          pattern.lastIndex = 0;
+        }
+      } while (result !== prev);
       return result;
     }
 
@@ -544,10 +548,14 @@ class InputSanitizer {
     if (!this.allowHTML) {
       result = result.replace(/[&<>"'`/]/g, ch => HTML_ENTITIES[ch] || ch);
     }
-    result = result.replace(SCRIPT_RE, '');
-    SCRIPT_RE.lastIndex = 0;
-    result = result.replace(EVENT_HANDLER_RE, '');
-    EVENT_HANDLER_RE.lastIndex = 0;
+    let prev;
+    do {
+      prev = result;
+      result = result.replace(SCRIPT_RE, '');
+      SCRIPT_RE.lastIndex = 0;
+      result = result.replace(EVENT_HANDLER_RE, '');
+      EVENT_HANDLER_RE.lastIndex = 0;
+    } while (result !== prev);
 
     return result;
   }
@@ -681,6 +689,9 @@ class SecurityAuditLogger {
     /** @type {Array<object>} */
     this._entries = [];
 
+    /** @type {string} — hash preceding the first entry (genesis or post-rotation) */
+    this._chainBase = '0'.repeat(64);
+
     /** @type {string} */
     this._lastHash = '0'.repeat(64);
   }
@@ -723,6 +734,8 @@ class SecurityAuditLogger {
     // Auto-rotate: remove oldest half when exceeding maxEntries
     if (this._entries.length > this.maxEntries) {
       const half = Math.floor(this._entries.length / 2);
+      // Preserve the hash preceding the new first entry for chain verification
+      this._chainBase = this._entries[half - 1].hash;
       this._entries = this._entries.slice(half);
     }
 
@@ -735,7 +748,7 @@ class SecurityAuditLogger {
    * @returns {{ valid: boolean, entries: number, brokenAt?: number }}
    */
   verify() {
-    let previousHash = '0'.repeat(64);
+    let previousHash = this._chainBase;
 
     for (let i = 0; i < this._entries.length; i++) {
       const entry = this._entries[i];
@@ -810,6 +823,7 @@ class SecurityAuditLogger {
    */
   clear() {
     this._entries = [];
+    this._chainBase = '0'.repeat(64);
     this._lastHash = '0'.repeat(64);
   }
 }
