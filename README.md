@@ -1,14 +1,14 @@
-# APIBridge AI v13
+# APIBridge AI v14
 
 [![npm version](https://img.shields.io/npm/v/api-bridge-ai.svg)](https://www.npmjs.com/package/api-bridge-ai)
 [![license](https://img.shields.io/npm/l/api-bridge-ai.svg)](https://github.com/biswaranjantudu064-netizen/Api_bridge/blob/main/LICENSE)
 [![Node.js](https://img.shields.io/node/v/api-bridge-ai.svg)](https://nodejs.org)
 
-**Complete Axios replacement with zero-gap API compatibility** — a production-ready, zero-dependency HTTP client with intelligent API mismatch detection, transformation, and learning across 60+ modules.
+**Enterprise-grade Axios replacement with production power tools** — a complete, zero-dependency HTTP client with auto-retry, response caching, request dedup, token refresh, lifecycle hooks, request timing, intelligent API mismatch detection, and 60+ modules.
 
 APIBridge AI is a **true drop-in replacement for Axios** that also bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
-> **v13 Highlights:** AxiosHeaders in all responses, default transform chains, `.isAxiosError` property on errors, `response.request` on every response, `maxRate` throttling, `lookup` DNS support, 849 tests.
+> **v14 Highlights:** Auto-retry engine with custom strategies, built-in response caching (TTL + stale-while-revalidate), request deduplication, automatic token refresh on 401, request timing/metrics, lifecycle hooks (onRequest/onResponse/onError/onRetry), 887 tests.
 
 ---
 
@@ -25,6 +25,13 @@ APIBridge AI is a **true drop-in replacement for Axios** that also bridges the g
   - [bridgeFetch() — Native Fetch Integration](#bridgefetch--native-fetch-integration)
   - [transform() — Direct Transform](#transform--direct-transform)
   - [createTransformer() — Reusable Instance](#createtransformer--reusable-instance)
+- [V14 Features](#v14-features)
+  - [Auto-Retry Engine](#auto-retry-engine)
+  - [Response Caching](#response-caching-v14)
+  - [Request Deduplication (Client-Level)](#request-deduplication-client-level)
+  - [Auto Token Refresh](#auto-token-refresh)
+  - [Request Timing](#request-timing)
+  - [Lifecycle Hooks](#lifecycle-hooks)
 - [V8 Features](#v8-features)
   - [Multi-Alias Field Resolution](#multi-alias-field-resolution)
   - [Schema Migration Engine](#schema-migration-engine)
@@ -98,42 +105,47 @@ APIBridge AI is a **true drop-in replacement for Axios** that also bridges the g
 
 ## Features
 
-### Axios Compatibility (v9–v13)
+### Axios Compatibility (v9–v14)
 
-| Axios Feature | v9 | v10 | v11 | v12 | v13 |
-|---|---|---|---|---|---|
-| HTTP methods (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `createClient()` / `create()` factory | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Request/response interceptors | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Base URL, headers, query params | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Timeout + AbortController | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Retries with exponential backoff | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Smart Proxy mode (dynamic field resolution) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Expectation schema (expect) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `auth`, `validateStatus`, `responseType` | ❌ | ✅ | ✅ | ✅ | ✅ |
-| CancelToken, Cancel, isCancel | ❌ | ✅ | ✅ | ✅ | ✅ |
-| `toFormData`, `formToJSON`, `isFormData` | ❌ | ✅ | ✅ | ✅ | ✅ |
-| `all()`, `spread()`, `mergeConfig()` | ❌ | ✅ | ✅ | ✅ | ✅ |
-| `transformRequest` / `transformResponse` | ❌ | ✅ | ✅ | ✅ | ✅ |
-| `maxContentLength` / `maxBodyLength` | ❌ | ✅ | ✅ | ✅ | ✅ |
-| AxiosHeaders class | ❌ | ❌ | ✅ | ✅ | ✅ |
-| HttpStatusCode enum | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Pluggable adapters (fetch/xhr/custom) | ❌ | ❌ | ✅ | ✅ | ✅ |
-| `postForm()`, `putForm()`, `patchForm()` | ❌ | ❌ | ✅ | ✅ | ✅ |
-| `isAbsoluteURL`, `combineURLs`, URL utils | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Callable default export: `apiBridge(config)` | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `Axios` / `AxiosError` class aliases | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Error code constants (ERR_NETWORK, etc.) | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `isAxiosError()` function | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `transitional` config option | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Delete with data body | ❌ | ❌ | ❌ | ✅ | ✅ |
-| **AxiosHeaders in all responses** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Default transformRequest/Response chains** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **`.isAxiosError` property on errors** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **`response.request` property** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **`data` alias in response config** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **`maxRate` throttling** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **`lookup` DNS option** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Axios Feature | v9 | v10 | v11 | v12 | v13 | v14 |
+|---|---|---|---|---|---|---|
+| HTTP methods (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `createClient()` / `create()` factory | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Request/response interceptors | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Base URL, headers, query params | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Timeout + AbortController | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Retries with exponential backoff | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Smart Proxy mode (dynamic field resolution) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Expectation schema (expect) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `auth`, `validateStatus`, `responseType` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CancelToken, Cancel, isCancel | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `toFormData`, `formToJSON`, `isFormData` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `all()`, `spread()`, `mergeConfig()` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `transformRequest` / `transformResponse` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `maxContentLength` / `maxBodyLength` | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| AxiosHeaders class | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| HttpStatusCode enum | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Pluggable adapters (fetch/xhr/custom) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `postForm()`, `putForm()`, `patchForm()` | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `isAbsoluteURL`, `combineURLs`, URL utils | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Callable default export: `apiBridge(config)` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| `Axios` / `AxiosError` class aliases | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Error code constants (ERR_NETWORK, etc.) | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| `isAxiosError()` function | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| `transitional` config option | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Delete with data body | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| AxiosHeaders in all responses | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Default transformRequest/Response chains | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `.isAxiosError` property on errors | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `response.request` property | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `maxRate` throttling | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `lookup` DNS option | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Auto-retry engine (`retryConfig`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Response caching (TTL, stale-while-revalidate)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Request deduplication (`dedupe`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Auto token refresh (`tokenRefresh`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Request timing (`timing`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Lifecycle hooks (`hooks`)** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ### Core Features (v1–v8)
 
@@ -444,7 +456,7 @@ function createMetricsPlugin(options = {}) {
 
 ## Quick Start
 
-### 1. As Axios Replacement (v13 — Recommended)
+### 1. As Axios Replacement (v14 — Recommended)
 
 ```js
 const apiBridge = require('api-bridge-ai');
@@ -685,6 +697,148 @@ const conflicts = coercer.detectConflicts(data, schema);
 // Statistics
 coercer.getStats();
 // { totalConflicts: 3, coerced: 3, failed: 0, byType: { boolean_string_to_boolean: 1, ... } }
+```
+
+---
+
+## V14 Features
+
+### Auto-Retry Engine
+
+Advanced retry configuration with custom strategies, conditions, and callbacks:
+
+```js
+const { createClient } = require('api-bridge-ai');
+
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  retryConfig: {
+    retries: 3,
+    retryCondition: (error) => error.status >= 500,    // only retry server errors
+    retryDelay: (retryCount) => retryCount * 1000,     // linear backoff
+    shouldResetTimeout: false,
+    onRetry: (count, error, config) => {
+      console.log(`Retry #${count} for ${config.url}: ${error.message}`);
+    },
+  },
+});
+
+// Per-request override:
+await api.get('/flaky-endpoint', {
+  retryConfig: { retries: 5, retryDelay: (n) => n * 500 },
+});
+```
+
+### Response Caching (v14)
+
+Built-in TTL-based response cache with stale-while-revalidate support:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  cache: {
+    ttl: 60000,                   // 60 seconds
+    maxSize: 100,                 // max 100 entries
+    methods: ['GET'],             // only cache GET requests
+    exclude: ['/auth', '/live'],  // exclude these URL patterns
+    staleWhileRevalidate: true,   // serve stale data while refreshing
+    keyGenerator: (config) => `${config.method}:${config.url}`,
+  },
+});
+
+const res1 = await api.get('/users');    // network request
+const res2 = await api.get('/users');    // instant cache hit
+
+api.clearResponseCache();                // clear all cached responses
+```
+
+### Request Deduplication (Client-Level)
+
+Coalesce identical in-flight requests to avoid redundant network calls:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  dedupe: {
+    enabled: true,
+    methods: ['GET'],             // only deduplicate GET requests
+    keyGenerator: (config) => `${config.method}:${config.url}`,
+  },
+});
+
+// These fire simultaneously — only 1 network request is made:
+const [res1, res2] = await Promise.all([
+  api.get('/users'),
+  api.get('/users'),
+]);
+// res1 and res2 are the same response
+```
+
+### Auto Token Refresh
+
+Automatically handle 401 responses with token refresh and request queuing:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  headers: { Authorization: 'Bearer initial-token' },
+  tokenRefresh: {
+    onRefresh: async () => {
+      const res = await fetch('/auth/refresh', { method: 'POST' });
+      const { accessToken } = await res.json();
+      return accessToken;         // returned token replaces the header
+    },
+    statusCodes: [401],           // trigger on 401 (default)
+    maxRetries: 1,                // max refresh attempts
+    headerName: 'Authorization',  // header to update
+    tokenPrefix: 'Bearer ',       // prefix for the new token
+  },
+});
+
+// If the request gets a 401, the token is automatically refreshed and retried:
+const data = await api.get('/protected-resource');
+```
+
+### Request Timing
+
+Built-in performance monitoring on every response:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  timing: true,
+});
+
+const res = await api.get('/users');
+console.log(res.duration);       // 142 (milliseconds)
+console.log(res.timing);         // { start: 1713614400000, end: 1713614400142, duration: 142 }
+```
+
+### Lifecycle Hooks
+
+Fire-and-forget event observers for logging, analytics, and monitoring:
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  hooks: {
+    onRequest: [
+      (config) => console.log(`→ ${config.method} ${config.url}`),
+      (config) => analytics.track('api_request', { url: config.url }),
+    ],
+    onResponse: [
+      (res) => console.log(`← ${res.status} (${res.duration}ms)`),
+    ],
+    onError: [
+      (err) => errorTracker.capture(err),
+    ],
+    onRetry: [
+      (count, err, config) => console.warn(`Retry #${count}: ${err.message}`),
+    ],
+  },
+  timing: true,
+  retryConfig: { retries: 2, retryDelay: () => 1000 },
+});
 ```
 
 ---

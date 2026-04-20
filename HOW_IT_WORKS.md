@@ -402,4 +402,31 @@ api.exportCSV('./mismatches.csv');
 | It remembers | Learnings saved to `.apibridge/learned.json` |
 | Review flags | `getPending()` shows low-confidence mappings that need your approval |
 | Accuracy | 99%+ for standard fields, 92%+ for synonyms, 70-95% for fuzzy matches |
-| V13 modules | 60+ source modules, 27 error types, 849 tests |
+| V14 modules | 60+ source modules, 27 error types, 887 tests |
+
+---
+
+## V14: Enterprise-Grade Power Tools
+
+Version 14 adds six production-ready features to the HTTP client:
+
+### Auto-Retry Engine
+Configure advanced retry strategies per-client or per-request. Set custom `retryCondition` functions to decide when to retry, `retryDelay` functions for backoff control, and `onRetry` callbacks for logging/monitoring:
+```
+retryConfig: { retries: 3, retryCondition: (err) => err.status >= 500, retryDelay: (n) => n * 1000 }
+```
+
+### Response Caching
+Built-in memory cache with TTL, maxSize eviction, method-based filtering, URL exclusion patterns, stale-while-revalidate, and custom key generation. Use `client.clearResponseCache()` to invalidate.
+
+### Request Deduplication
+Identical in-flight requests are coalesced into a single network call. When two components simultaneously GET the same URL, only one fetch fires. Configurable per-method with custom key functions.
+
+### Auto Token Refresh
+When a 401 (or configured status code) is received, the client automatically calls your `onRefresh` function, gets a new token, updates the header, and retries the request — all transparently. Concurrent requests are queued during refresh so only one refresh happens at a time.
+
+### Request Timing
+Enable `timing: true` to get `response.duration` (ms) and `response.timing` `{ start, end, duration }` on every response for performance monitoring and SLA tracking.
+
+### Lifecycle Hooks
+Add `onRequest`, `onResponse`, `onError`, and `onRetry` hooks for logging, analytics, error tracking, and observability. Hooks are fire-and-forget observers — they never affect the request pipeline.

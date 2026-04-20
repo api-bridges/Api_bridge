@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.0.0] - 2026-04-20
+
+### Added — Enterprise-Grade HTTP Client (Production Power Tools)
+- **Auto-Retry Engine (`retryConfig`)** — Advanced configurable retry strategies per-client and per-request
+  - `retryConfig.retries` — Max retry attempts
+  - `retryConfig.retryCondition(error)` — Function to decide whether to retry (e.g., only retry 5xx)
+  - `retryConfig.retryDelay(retryCount, error)` — Custom delay function (e.g., linear, exponential, fixed)
+  - `retryConfig.shouldResetTimeout` — Reset timeout for each retry attempt
+  - `retryConfig.onRetry(retryCount, error, config)` — Callback fired on each retry attempt
+  - Per-request `retryConfig` override via request config
+- **Response Caching** — Built-in TTL-based memory cache at the HTTP client level
+  - `cache.ttl` — Cache time-to-live in milliseconds (0 = disabled)
+  - `cache.maxSize` — Maximum number of cached entries (evicts oldest when full)
+  - `cache.methods` — Which HTTP methods to cache (default: `['GET']`)
+  - `cache.exclude` — URL patterns to exclude from caching
+  - `cache.staleWhileRevalidate` — Serve stale cache while refreshing in background
+  - `cache.keyGenerator(config)` — Custom cache key generation function
+  - `client.clearResponseCache()` — Clear all cached responses
+- **Request Deduplication (`dedupe`)** — Coalesce identical in-flight requests
+  - `dedupe.enabled` — Enable/disable deduplication
+  - `dedupe.methods` — Which HTTP methods to deduplicate (default: `['GET']`)
+  - `dedupe.keyGenerator(config)` — Custom dedup key generation function
+  - Prevents redundant network calls when multiple components request the same data simultaneously
+- **Auto Token Refresh (`tokenRefresh`)** — Automatic 401 handling with token refresh
+  - `tokenRefresh.onRefresh()` — Async function that returns a new token
+  - `tokenRefresh.statusCodes` — Which status codes trigger a refresh (default: `[401]`)
+  - `tokenRefresh.maxRetries` — Maximum refresh attempts (default: `1`)
+  - `tokenRefresh.headerName` — Header to update with new token (default: `'Authorization'`)
+  - `tokenRefresh.tokenPrefix` — Prefix for token value (default: `'Bearer '`)
+  - Queues concurrent requests during token refresh (only one refresh at a time)
+  - Token refresh retries do not count against normal retry attempts
+- **Request Timing** — Performance monitoring built into every response
+  - `response.duration` — Total request duration in milliseconds
+  - `response.timing` — `{ start, end, duration }` with timestamps
+  - Enabled via `timing: true` in client config (disabled by default)
+- **Lifecycle Hooks** — Fire-and-forget event observers at the client level
+  - `hooks.onRequest` — Called before each request is sent (receives config)
+  - `hooks.onResponse` — Called after each successful response (receives response)
+  - `hooks.onError` — Called on each error (receives error)
+  - `hooks.onRetry` — Called on each retry attempt (receives retryCount, error, config)
+  - Accepts arrays of functions or single functions
+  - Errors in hooks are silently swallowed (observers only, no side effects on pipeline)
+- 38 new tests (887 total)
+
+### Changed
+- `_doRequest` refactored into `_doRequest` (pre-processing, caching, dedup) + `_doRequestCore` (retry loop, timing, token refresh, hooks)
+- Updated package description for enterprise-grade positioning
+- Added new keywords: `auto-retry`, `response-cache`, `request-dedup`, `token-refresh`, `request-timing`, `lifecycle-hooks`, `stale-while-revalidate`
+
 ## [13.0.0] - 2026-04-17
 
 ### Added — Complete Axios Replacement (Zero-Gap API Compatibility)
