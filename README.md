@@ -3994,7 +3994,7 @@ interceptor.useRequest('addAuth', (ctx) => ({ ...ctx, headers: { Authorization: 
 - 🌐 **Browser bundle** — UMD/ESM build for browser environments
 - 📈 **Benchmarking suite** — Performance regression testing
 - 🔄 **Streaming transforms** — Transform large datasets without buffering
-- 🛡️ **GraphQL subscriptions** — Real-time data streaming
+- 🛡️ **GraphQL subscriptions** — Real-time WebSocket-based data streaming
 
 ---
 
