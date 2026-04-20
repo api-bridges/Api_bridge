@@ -1,7 +1,7 @@
 {
   "name": "api-bridge-ai",
-  "version": "15.0.0",
-  "description": "Production-ready full Axios replacement with all APIBridge features: auto Content-Type serialization, interceptor runWhen/synchronous, beforeRedirect, request correlation IDs, enhanced paramsSerializer, auto-retry, caching, dedup, token refresh, lifecycle hooks, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 60+ modules",
+  "version": "16.0.0",
+  "description": "Most powerful and secure Axios replacement: SSRF protection, CRLF prevention, rate limiting, replay detection, response size guard, sensitive data redaction, prototype pollution hardening, request journey tracking + auto Content-Type, interceptor runWhen, auto-retry, caching, dedup, token refresh, lifecycle hooks, AxiosHeaders, pluggable adapters, intelligent data alignment, schema awareness, smart proxy, CancelToken, FormData, and 65+ modules",
   "main": "src/index.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -112,7 +112,19 @@
     "before-redirect",
     "request-id",
     "auto-content-type",
-    "params-serializer"
+    "params-serializer",
+    "ssrf-protection",
+    "crlf-prevention",
+    "header-validation",
+    "rate-limiter-client",
+    "replay-detection",
+    "response-size-guard",
+    "sensitive-data-redaction",
+    "prototype-pollution",
+    "request-fingerprinting",
+    "security-hardening",
+    "journey-tracking",
+    "request-tracing"
   ],
   "engines": {
     "node": ">=16.0.0"

@@ -47,6 +47,13 @@ const {
 // v11 new modules
 const { AxiosHeaders, normalizeHeaderName } = require('./headers');
 const { HttpStatusCode } = require('./http-status');
+
+// v16: Security module
+const {
+  SSRFGuard, HeaderValidator, RequestRateLimiter, ResponseSizeGuard,
+  SensitiveDataRedactor, RequestFingerprinter,
+  safeMerge, sanitizeObject, isPrivateIP, ipToLong,
+} = require('./security');
 const { fetchAdapter, xhrAdapter, adapters, getAdapter } = require('./adapters');
 const { isAbsoluteURL, combineURLs, isURLSameOrigin, parseURL, encode: uriEncode } = require('./url-utils');
 const {
@@ -186,4 +193,16 @@ module.exports = {
   Axios,
   AxiosError,
   isAxiosError,
+
+  // v16: Security
+  SSRFGuard,
+  HeaderValidator,
+  RequestRateLimiter,
+  ResponseSizeGuard,
+  SensitiveDataRedactor,
+  RequestFingerprinter,
+  safeMerge,
+  sanitizeObject,
+  isPrivateIP,
+  ipToLong,
 };

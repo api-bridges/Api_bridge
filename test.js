@@ -1,6 +1,6 @@
 /**
- * APIBridge AI v14 — Comprehensive Test Suite
- * Tests every scenario a developer actually hits, including all v2-v14 features.
+ * APIBridge AI v16 — Comprehensive Test Suite
+ * Tests every scenario a developer actually hits, including all v2-v16 features.
  */
 
 const {
@@ -171,6 +171,17 @@ const {
   getUri: defaultGetUri,
   interceptors: defaultInterceptors,
   resolveParamsSerializer,
+
+  // v16 exports
+  SSRFGuard,
+  HeaderValidator,
+  RequestRateLimiter,
+  ResponseSizeGuard,
+  SensitiveDataRedactor,
+  RequestFingerprinter,
+  safeMerge,
+  sanitizeObject,
+  isPrivateIP,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -6128,7 +6139,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '15.0.0');
+  assertEqual(VERSION, '16.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7188,7 +7199,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '15.0.0');
+  assertEqual(apiBridge.VERSION, '16.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7868,7 +7879,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '15.0.0');
+  assertEqual(api.VERSION, '16.0.0');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
@@ -8746,7 +8757,7 @@ test('v14: full API surface check', () => {
   const api = require('./src/index');
 
   // Version
-  assertEqual(api.VERSION, '15.0.0');
+  assertEqual(api.VERSION, '16.0.0');
 
   // v14 options available in client defaults
   const client = api.createClient({
@@ -9279,7 +9290,7 @@ test('v15: full API surface check', () => {
   // v15 new exports available
   const api = { resolveParamsSerializer, VERSION };
   assertEqual(typeof resolveParamsSerializer, 'function');
-  assertEqual(api.VERSION, '15.0.0');
+  assertEqual(api.VERSION, '16.0.0');
 
   // AxiosHeaders v15 enhancements
   assert(typeof AxiosHeaders.fromString === 'function', 'AxiosHeaders.fromString exists');
@@ -9362,6 +9373,679 @@ test('v15: client with all v14 features still works', async () => {
   assertEqual(res.status, 200);
   assert(typeof res.duration === 'number', 'timing works');
   assert(res.config.headers['x-request-id'] !== undefined, 'request ID injected');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// v16: Security & Power Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── SSRFGuard Tests ──────────────────────────────────────────────────────────
+
+test('v16: SSRFGuard — blocks private IP 127.0.0.1', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://127.0.0.1/admin'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for 127.0.0.1');
+});
+
+test('v16: SSRFGuard — blocks private IP 10.0.0.1', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://10.0.0.1/internal'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for 10.0.0.1');
+});
+
+test('v16: SSRFGuard — blocks private IP 192.168.1.1', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://192.168.1.1/api'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for 192.168.1.1');
+});
+
+test('v16: SSRFGuard — blocks private IP 172.16.0.1', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://172.16.0.1/api'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for 172.16.0.1');
+});
+
+test('v16: SSRFGuard — blocks cloud metadata 169.254.169.254', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://169.254.169.254/latest/meta-data/'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for metadata endpoint');
+});
+
+test('v16: SSRFGuard — blocks metadata.google.internal', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://metadata.google.internal/computeMetadata/v1/'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for GCP metadata');
+});
+
+test('v16: SSRFGuard — blocks localhost', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://localhost/admin'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for localhost');
+});
+
+test('v16: SSRFGuard — blocks file:// protocol', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('file:///etc/passwd'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for file protocol');
+});
+
+test('v16: SSRFGuard — blocks data: protocol', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('data:text/html,<script>alert(1)</script>'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for data protocol');
+});
+
+test('v16: SSRFGuard — blocks javascript: protocol', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('javascript:alert(1)'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for javascript protocol');
+});
+
+test('v16: SSRFGuard — allows public URLs', () => {
+  const guard = new SSRFGuard();
+  assertEqual(guard.validateURL('https://api.example.com/users'), true);
+});
+
+test('v16: SSRFGuard — allowlist bypasses SSRF check', () => {
+  const guard = new SSRFGuard({ allowlist: ['localhost'] });
+  assertEqual(guard.validateURL('http://localhost/api'), true);
+});
+
+test('v16: SSRFGuard — custom blocklist blocks specified hosts', () => {
+  const guard = new SSRFGuard({ blocklist: ['evil.com'] });
+  let threw = false;
+  try { guard.validateURL('https://evil.com/steal'); } catch (e) { threw = true; }
+  assert(threw, 'Should have blocked evil.com');
+});
+
+test('v16: SSRFGuard — disabled does not block', () => {
+  const guard = new SSRFGuard({ enabled: false });
+  assertEqual(guard.validateURL('http://127.0.0.1/admin'), true);
+});
+
+test('v16: SSRFGuard — throws on empty/null URL', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL(''); } catch (e) { threw = true; }
+  assert(threw, 'Should have thrown for empty URL');
+});
+
+test('v16: SSRFGuard — blocks 0.0.0.0', () => {
+  const guard = new SSRFGuard();
+  let threw = false;
+  try { guard.validateURL('http://0.0.0.0/admin'); } catch (e) { threw = true; assert(e.message.includes('SSRF_BLOCKED'), e.message); }
+  assert(threw, 'Should have thrown for 0.0.0.0');
+});
+
+test('v16: isPrivateIP — identifies private IPs', () => {
+  assert(isPrivateIP('127.0.0.1'), '127.0.0.1 is private');
+  assert(isPrivateIP('10.0.0.1'), '10.0.0.1 is private');
+  assert(isPrivateIP('192.168.0.1'), '192.168.0.1 is private');
+  assert(isPrivateIP('172.16.0.1'), '172.16.0.1 is private');
+  assert(!isPrivateIP('8.8.8.8'), '8.8.8.8 is not private');
+  assert(!isPrivateIP('203.0.113.1'), '203.0.113.1 is not private');
+});
+
+// ─── HeaderValidator Tests ────────────────────────────────────────────────────
+
+test('v16: HeaderValidator — accepts valid header names', () => {
+  const v = new HeaderValidator();
+  assertEqual(v.validateHeaderName('Content-Type'), true);
+  assertEqual(v.validateHeaderName('X-Custom-Header'), true);
+  assertEqual(v.validateHeaderName('Authorization'), true);
+});
+
+test('v16: HeaderValidator — rejects CRLF in header name', () => {
+  const v = new HeaderValidator();
+  let threw = false;
+  try { v.validateHeaderName('Bad\r\nHeader'); } catch (e) { threw = true; assert(e.message.includes('CRLF'), e.message); }
+  assert(threw, 'Should have rejected CRLF in header name');
+});
+
+test('v16: HeaderValidator — rejects CRLF in header value', () => {
+  const v = new HeaderValidator();
+  let threw = false;
+  try { v.validateHeaderValue('value\r\nInjected: evil'); } catch (e) { threw = true; assert(e.message.includes('CRLF'), e.message); }
+  assert(threw, 'Should have rejected CRLF in header value');
+});
+
+test('v16: HeaderValidator — rejects empty header name', () => {
+  const v = new HeaderValidator();
+  let threw = false;
+  try { v.validateHeaderName(''); } catch (e) { threw = true; }
+  assert(threw, 'Should have rejected empty header name');
+});
+
+test('v16: HeaderValidator — rejects invalid characters in header name', () => {
+  const v = new HeaderValidator();
+  let threw = false;
+  try { v.validateHeaderName('Bad Header'); } catch (e) { threw = true; }
+  assert(threw, 'Should have rejected space in header name');
+});
+
+test('v16: HeaderValidator — enforces maxHeadersCount', () => {
+  const v = new HeaderValidator({ maxHeadersCount: 3 });
+  const headers = { 'A': '1', 'B': '2', 'C': '3', 'D': '4' };
+  let threw = false;
+  try { v.validateHeaders(headers); } catch (e) { threw = true; assert(e.message.includes('COUNT_EXCEEDED'), e.message); }
+  assert(threw, 'Should have thrown for too many headers');
+});
+
+test('v16: HeaderValidator — enforces maxHeaderSize', () => {
+  const v = new HeaderValidator({ maxHeaderSize: 10 });
+  let threw = false;
+  try { v.validateHeaderValue('this is way too long for the limit'); } catch (e) { threw = true; assert(e.message.includes('TOO_LARGE'), e.message); }
+  assert(threw, 'Should have thrown for oversized header');
+});
+
+test('v16: HeaderValidator — validates all headers in object', () => {
+  const v = new HeaderValidator();
+  assertEqual(v.validateHeaders({ 'Content-Type': 'application/json', 'Accept': 'text/html' }), true);
+});
+
+test('v16: HeaderValidator — allows null header value', () => {
+  const v = new HeaderValidator();
+  assertEqual(v.validateHeaderValue(null), true);
+});
+
+// ─── RequestRateLimiter Tests ─────────────────────────────────────────────────
+
+test('v16: RequestRateLimiter — allows requests within limit', () => {
+  const limiter = new RequestRateLimiter({ maxRequests: 5, windowMs: 60000 });
+  assert(limiter.acquire(), 'First request should be allowed');
+  assert(limiter.acquire(), 'Second request should be allowed');
+  assert(limiter.acquire(), 'Third request should be allowed');
+});
+
+test('v16: RequestRateLimiter — blocks requests over limit', () => {
+  const limiter = new RequestRateLimiter({ maxRequests: 2, windowMs: 60000 });
+  assert(limiter.acquire(), 'First request allowed');
+  assert(limiter.acquire(), 'Second request allowed');
+  assert(!limiter.acquire(), 'Third request should be blocked');
+});
+
+test('v16: RequestRateLimiter — per-endpoint limiting', () => {
+  const limiter = new RequestRateLimiter({ maxRequests: 1, windowMs: 60000 });
+  assert(limiter.acquire('/users'), 'First /users request allowed');
+  assert(!limiter.acquire('/users'), 'Second /users request blocked');
+  assert(limiter.acquire('/posts'), 'First /posts request still allowed');
+});
+
+test('v16: RequestRateLimiter — reset restores tokens', () => {
+  const limiter = new RequestRateLimiter({ maxRequests: 1, windowMs: 60000 });
+  assert(limiter.acquire(), 'First request allowed');
+  assert(!limiter.acquire(), 'Second request blocked');
+  limiter.reset();
+  assert(limiter.acquire(), 'After reset, request allowed again');
+});
+
+test('v16: RequestRateLimiter — reset specific endpoint', () => {
+  const limiter = new RequestRateLimiter({ maxRequests: 1, windowMs: 60000 });
+  assert(limiter.acquire('/users'), 'First /users request allowed');
+  assert(!limiter.acquire('/users'), 'Second /users request blocked');
+  limiter.reset('/users');
+  assert(limiter.acquire('/users'), 'After reset, /users allowed again');
+});
+
+// ─── ResponseSizeGuard Tests ──────────────────────────────────────────────────
+
+test('v16: ResponseSizeGuard — allows responses within limit', () => {
+  const guard = new ResponseSizeGuard({ maxResponseSize: 1024 });
+  assertEqual(guard.checkSize(512), true);
+});
+
+test('v16: ResponseSizeGuard — blocks oversized responses', () => {
+  const guard = new ResponseSizeGuard({ maxResponseSize: 1024 });
+  let threw = false;
+  try { guard.checkSize(2048); } catch (e) { threw = true; assert(e.message.includes('RESPONSE_TOO_LARGE'), e.message); }
+  assert(threw, 'Should have thrown for oversized response');
+});
+
+test('v16: ResponseSizeGuard — handles string Content-Length', () => {
+  const guard = new ResponseSizeGuard({ maxResponseSize: 100 });
+  let threw = false;
+  try { guard.checkSize('200'); } catch (e) { threw = true; }
+  assert(threw, 'Should have thrown for string content-length above limit');
+});
+
+test('v16: ResponseSizeGuard — allows unknown size', () => {
+  const guard = new ResponseSizeGuard({ maxResponseSize: 100 });
+  assertEqual(guard.checkSize(NaN), true);
+  assertEqual(guard.checkSize(undefined), true);
+});
+
+test('v16: ResponseSizeGuard — streaming tracker works', () => {
+  const guard = new ResponseSizeGuard({ maxResponseSize: 100 });
+  const tracker = guard.createSizeTracker();
+  tracker.add(50);
+  assertEqual(tracker.total, 50);
+  tracker.add(30);
+  assertEqual(tracker.total, 80);
+  let threw = false;
+  try { tracker.add(30); } catch (e) { threw = true; }
+  assert(threw, 'Should have thrown when cumulative exceeds limit');
+});
+
+test('v16: ResponseSizeGuard — default 10MB limit', () => {
+  const guard = new ResponseSizeGuard();
+  assertEqual(guard.maxResponseSize, 10 * 1024 * 1024);
+});
+
+// ─── SensitiveDataRedactor Tests ──────────────────────────────────────────────
+
+test('v16: SensitiveDataRedactor — redacts Authorization header', () => {
+  const redactor = new SensitiveDataRedactor();
+  const result = redactor.redactHeaders({ 'Authorization': 'Bearer secret-token', 'Content-Type': 'application/json' });
+  assertEqual(result['Authorization'], '[REDACTED]');
+  assertEqual(result['Content-Type'], 'application/json');
+});
+
+test('v16: SensitiveDataRedactor — redacts Cookie header', () => {
+  const redactor = new SensitiveDataRedactor();
+  const result = redactor.redactHeaders({ 'cookie': 'session=abc123' });
+  assertEqual(result['cookie'], '[REDACTED]');
+});
+
+test('v16: SensitiveDataRedactor — redacts x-api-key header', () => {
+  const redactor = new SensitiveDataRedactor();
+  const result = redactor.redactHeaders({ 'x-api-key': 'sk-12345' });
+  assertEqual(result['x-api-key'], '[REDACTED]');
+});
+
+test('v16: SensitiveDataRedactor — redactConfig strips auth and headers', () => {
+  const redactor = new SensitiveDataRedactor();
+  const config = {
+    method: 'GET',
+    url: 'https://api.example.com/users?token=secret123',
+    headers: { 'Authorization': 'Bearer token123', 'Accept': 'application/json' },
+    auth: { username: 'admin', password: 'secret' },
+  };
+  const safe = redactor.redactConfig(config);
+  assertEqual(safe.headers['Authorization'], '[REDACTED]');
+  assertEqual(safe.headers['Accept'], 'application/json');
+  assertEqual(safe.auth, '[REDACTED]');
+  assert(safe.url.includes('[REDACTED]'), 'URL token should be redacted');
+  assertEqual(safe.method, 'GET');
+});
+
+test('v16: SensitiveDataRedactor — redactURL strips sensitive params', () => {
+  const redactor = new SensitiveDataRedactor();
+  const url = 'https://api.example.com/users?token=abc123&page=1&api_key=xyz';
+  const safe = redactor.redactURL(url);
+  assert(safe.includes('page=1'), 'Non-sensitive param preserved');
+  assert(safe.includes('[REDACTED]'), 'Sensitive params redacted');
+  assert(!safe.includes('abc123'), 'Token value removed');
+});
+
+test('v16: SensitiveDataRedactor — isSensitiveHeader returns correct results', () => {
+  const redactor = new SensitiveDataRedactor();
+  assert(redactor.isSensitiveHeader('Authorization'), 'Authorization is sensitive');
+  assert(redactor.isSensitiveHeader('COOKIE'), 'Cookie (uppercase) is sensitive');
+  assert(redactor.isSensitiveHeader('x-api-key'), 'x-api-key is sensitive');
+  assert(!redactor.isSensitiveHeader('Content-Type'), 'Content-Type is not sensitive');
+  assert(!redactor.isSensitiveHeader('Accept'), 'Accept is not sensitive');
+});
+
+test('v16: SensitiveDataRedactor — custom sensitive headers', () => {
+  const redactor = new SensitiveDataRedactor({ sensitiveHeaders: ['X-Custom-Secret'] });
+  assert(redactor.isSensitiveHeader('X-Custom-Secret'), 'Custom header is sensitive');
+  assert(redactor.isSensitiveHeader('Authorization'), 'Default headers still sensitive');
+});
+
+test('v16: SensitiveDataRedactor — handles null/undefined gracefully', () => {
+  const redactor = new SensitiveDataRedactor();
+  const result1 = redactor.redactHeaders(null);
+  assert(typeof result1 === 'object', 'Returns object for null');
+  const result2 = redactor.redactConfig(null);
+  assert(typeof result2 === 'object', 'Returns object for null config');
+  assertEqual(redactor.redactURL(''), '');
+  assertEqual(redactor.redactURL(null), '');
+});
+
+// ─── RequestFingerprinter Tests ───────────────────────────────────────────────
+
+test('v16: RequestFingerprinter — generates consistent fingerprints', () => {
+  const fp = new RequestFingerprinter();
+  const config = { method: 'GET', url: '/users', params: { page: 1 } };
+  const hash1 = fp.fingerprint(config);
+  const hash2 = fp.fingerprint(config);
+  assertEqual(hash1, hash2);
+  assert(hash1.length === 64, 'SHA-256 produces 64-char hex');
+});
+
+test('v16: RequestFingerprinter — different configs produce different fingerprints', () => {
+  const fp = new RequestFingerprinter();
+  const hash1 = fp.fingerprint({ method: 'GET', url: '/users' });
+  const hash2 = fp.fingerprint({ method: 'POST', url: '/users' });
+  assert(hash1 !== hash2, 'Different methods should produce different hashes');
+});
+
+test('v16: RequestFingerprinter — isDuplicate detects duplicates', () => {
+  const fp = new RequestFingerprinter();
+  const config = { method: 'GET', url: '/users' };
+  assert(!fp.isDuplicate(config, 5000), 'First time should not be duplicate');
+  assert(fp.isDuplicate(config, 5000), 'Second time should be duplicate');
+});
+
+test('v16: RequestFingerprinter — isDuplicate respects window', () => {
+  const fp = new RequestFingerprinter();
+  const config = { method: 'GET', url: '/test-window' };
+  assert(!fp.isDuplicate(config, 0), 'With 0 window, nothing is duplicate');
+});
+
+test('v16: RequestFingerprinter — reset clears history', () => {
+  const fp = new RequestFingerprinter();
+  fp.isDuplicate({ method: 'GET', url: '/test' }, 5000);
+  fp.reset();
+  assert(!fp.isDuplicate({ method: 'GET', url: '/test' }, 5000), 'After reset, no duplicates');
+});
+
+test('v16: RequestFingerprinter — handles null/undefined config', () => {
+  const fp = new RequestFingerprinter();
+  assertEqual(fp.fingerprint(null), '');
+  assertEqual(fp.fingerprint(undefined), '');
+  assert(!fp.isDuplicate(null, 5000), 'Null config is not duplicate');
+});
+
+// ─── Prototype Pollution Guard Tests ──────────────────────────────────────────
+
+test('v16: safeMerge — merges objects safely', () => {
+  const target = { a: 1, b: { c: 2 } };
+  const source = { b: { d: 3 }, e: 4 };
+  safeMerge(target, source);
+  assertEqual(target.a, 1);
+  assertEqual(target.b.c, 2);
+  assertEqual(target.b.d, 3);
+  assertEqual(target.e, 4);
+});
+
+test('v16: safeMerge — blocks __proto__ pollution', () => {
+  const target = {};
+  const malicious = JSON.parse('{"__proto__": {"polluted": true}}');
+  safeMerge(target, malicious);
+  assertEqual(({}).polluted, undefined);
+  assertEqual(target.polluted, undefined);
+});
+
+test('v16: safeMerge — blocks constructor pollution', () => {
+  const target = {};
+  const malicious = { constructor: { prototype: { polluted: true } } };
+  safeMerge(target, malicious);
+  assertEqual(({}).polluted, undefined);
+});
+
+test('v16: safeMerge — blocks prototype pollution', () => {
+  const target = {};
+  const malicious = { prototype: { polluted: true } };
+  safeMerge(target, malicious);
+  assert(!target.hasOwnProperty('prototype'), 'prototype key should be skipped');
+});
+
+test('v16: safeMerge — handles non-object inputs gracefully', () => {
+  const target = { a: 1 };
+  safeMerge(target, null);
+  assertEqual(target.a, 1);
+  safeMerge(target, 'string');
+  assertEqual(target.a, 1);
+  safeMerge(target, [1, 2, 3]);
+  assertEqual(target.a, 1);
+});
+
+test('v16: sanitizeObject — removes dangerous keys', () => {
+  const obj = { a: 1, __proto__: { evil: true }, b: { constructor: 'bad', c: 3 } };
+  sanitizeObject(obj);
+  assertEqual(obj.a, 1);
+  assert(!obj.hasOwnProperty('__proto__'), '__proto__ removed');
+  assertEqual(obj.b.c, 3);
+  assert(!obj.b.hasOwnProperty('constructor'), 'constructor removed');
+});
+
+test('v16: sanitizeObject — handles arrays', () => {
+  const arr = [{ a: 1 }, { __proto__: { evil: true }, b: 2 }];
+  sanitizeObject(arr);
+  assertEqual(arr[0].a, 1);
+  assertEqual(arr[1].b, 2);
+});
+
+test('v16: sanitizeObject — handles null/undefined', () => {
+  assertEqual(sanitizeObject(null), null);
+  assertEqual(sanitizeObject(undefined), undefined);
+  assertEqual(sanitizeObject('string'), 'string');
+});
+
+// ─── Client Integration Tests ─────────────────────────────────────────────────
+
+test('v16: client SSRF protection blocks internal URLs', async () => {
+  const client = createClient({ baseURL: 'http://127.0.0.1' });
+  let threw = false;
+  try {
+    await client.get('/admin');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_SSRF_BLOCKED');
+    assert(e instanceof ClientError, 'Should be ClientError');
+  }
+  assert(threw, 'Should have thrown for SSRF attempt');
+});
+
+test('v16: client SSRF protection blocks metadata endpoints', async () => {
+  const client = createClient({ baseURL: 'http://169.254.169.254' });
+  let threw = false;
+  try {
+    await client.get('/latest/meta-data/');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_SSRF_BLOCKED');
+  }
+  assert(threw, 'Should have thrown for cloud metadata');
+});
+
+test('v16: client SSRF can be disabled', async () => {
+  let fetchCalled = false;
+  const mockAdapter = async () => {
+    fetchCalled = true;
+    return { data: {}, rawData: {}, status: 200, statusText: 'OK', headers: {}, request: {} };
+  };
+  const client = createClient({ ssrf: { enabled: false }, adapter: mockAdapter, baseURL: 'http://127.0.0.1' });
+  await client.get('/admin');
+  assert(fetchCalled, 'Request should have proceeded');
+});
+
+test('v16: client SSRF allowlist works', async () => {
+  let fetchCalled = false;
+  const mockAdapter = async () => {
+    fetchCalled = true;
+    return { data: {}, rawData: {}, status: 200, statusText: 'OK', headers: {}, request: {} };
+  };
+  const client = createClient({ ssrf: { allowlist: ['127.0.0.1'] }, adapter: mockAdapter, baseURL: 'http://127.0.0.1' });
+  await client.get('/admin');
+  assert(fetchCalled, 'Allowlisted host should work');
+});
+
+test('v16: client header validation catches CRLF injection', async () => {
+  const mockAdapter = async () => ({ data: {}, rawData: {}, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({ adapter: mockAdapter, ssrf: { enabled: false }, baseURL: 'http://example.com' });
+  let threw = false;
+  try {
+    await client.get('/test', { headers: { 'X-Evil\r\nInjection': 'value' } });
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_HEADER_VALIDATION');
+  }
+  assert(threw, 'Should have caught CRLF injection');
+});
+
+test('v16: client rate limiter blocks excessive requests', async () => {
+  const mockAdapter = async () => ({ data: {}, rawData: {}, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    rateLimiter: { maxRequests: 2, windowMs: 60000 },
+  });
+
+  await client.get('/test1');
+  await client.get('/test1');
+  let threw = false;
+  try {
+    await client.get('/test1');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_RATE_LIMITED');
+  }
+  assert(threw, 'Third request should be rate limited');
+});
+
+test('v16: client replay detection blocks duplicate requests', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    replayDetection: 60000,
+  });
+
+  await client.get('/replay-test');
+  let threw = false;
+  try {
+    await client.get('/replay-test');
+  } catch (e) {
+    threw = true;
+    assertEqual(e.code, 'ERR_DUPLICATE_REQUEST');
+  }
+  assert(threw, 'Duplicate request should be detected');
+});
+
+test('v16: client journey tracking records attempts', async () => {
+  const mockAdapter = async () => ({
+    data: { ok: true }, rawData: { ok: true },
+    status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    journeyTracking: true,
+    timing: true,
+  });
+
+  const res = await client.get('/journey-test');
+  assert(res.journey !== undefined, 'Journey should be attached');
+  assert(res.journey.attempts.length > 0, 'Should have at least one attempt');
+  assert(typeof res.journey.totalDuration === 'number', 'Should have totalDuration');
+  assert(typeof res.journey.startTime === 'number', 'Should have startTime');
+  assert(typeof res.journey.endTime === 'number', 'Should have endTime');
+});
+
+test('v16: client error objects have redacted config', async () => {
+  const mockAdapter = async () => ({
+    data: {}, rawData: {},
+    status: 401, statusText: 'Unauthorized',
+    headers: {}, request: {},
+  });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    auth: { username: 'admin', password: 'secret' },
+  });
+
+  let threw = false;
+  try {
+    await client.get('/secure');
+  } catch (e) {
+    threw = true;
+    // Error config should have redacted sensitive data
+    if (e.config && e.config.auth) {
+      assertEqual(e.config.auth, '[REDACTED]');
+    }
+    if (e.config && e.config.headers && e.config.headers['Authorization']) {
+      assertEqual(e.config.headers['Authorization'], '[REDACTED]');
+    }
+  }
+  assert(threw, 'Should have thrown for 401');
+});
+
+test('v16: new error codes exist on ClientError', () => {
+  assertEqual(ClientError.ERR_SSRF_BLOCKED, 'ERR_SSRF_BLOCKED');
+  assertEqual(ClientError.ERR_HEADER_VALIDATION, 'ERR_HEADER_VALIDATION');
+  assertEqual(ClientError.ERR_RATE_LIMITED, 'ERR_RATE_LIMITED');
+  assertEqual(ClientError.ERR_DUPLICATE_REQUEST, 'ERR_DUPLICATE_REQUEST');
+  assertEqual(ClientError.ERR_RESPONSE_TOO_LARGE, 'ERR_RESPONSE_TOO_LARGE');
+});
+
+test('v16: VERSION is 16.0.0', () => {
+  assertEqual(VERSION, '16.0.0');
+});
+
+// ─── v16 Export Tests ─────────────────────────────────────────────────────────
+
+test('v16: all security classes are exported', () => {
+  assert(typeof SSRFGuard === 'function', 'SSRFGuard exported');
+  assert(typeof HeaderValidator === 'function', 'HeaderValidator exported');
+  assert(typeof RequestRateLimiter === 'function', 'RequestRateLimiter exported');
+  assert(typeof ResponseSizeGuard === 'function', 'ResponseSizeGuard exported');
+  assert(typeof SensitiveDataRedactor === 'function', 'SensitiveDataRedactor exported');
+  assert(typeof RequestFingerprinter === 'function', 'RequestFingerprinter exported');
+  assert(typeof safeMerge === 'function', 'safeMerge exported');
+  assert(typeof sanitizeObject === 'function', 'sanitizeObject exported');
+  assert(typeof isPrivateIP === 'function', 'isPrivateIP exported');
+});
+
+test('v16: security classes available on default apiBridge export', () => {
+  assert(typeof apiBridge.SSRFGuard === 'function', 'apiBridge.SSRFGuard');
+  assert(typeof apiBridge.HeaderValidator === 'function', 'apiBridge.HeaderValidator');
+  assert(typeof apiBridge.RequestRateLimiter === 'function', 'apiBridge.RequestRateLimiter');
+  assert(typeof apiBridge.ResponseSizeGuard === 'function', 'apiBridge.ResponseSizeGuard');
+  assert(typeof apiBridge.SensitiveDataRedactor === 'function', 'apiBridge.SensitiveDataRedactor');
+  assert(typeof apiBridge.RequestFingerprinter === 'function', 'apiBridge.RequestFingerprinter');
+  assert(typeof apiBridge.safeMerge === 'function', 'apiBridge.safeMerge');
+  assert(typeof apiBridge.sanitizeObject === 'function', 'apiBridge.sanitizeObject');
+  assert(typeof apiBridge.isPrivateIP === 'function', 'apiBridge.isPrivateIP');
+});
+
+test('v16: client with all v15+v16 features combined', async () => {
+  let callCount = 0;
+  const customAdapter = async () => {
+    callCount++;
+    return {
+      data: { result: callCount }, rawData: { result: callCount },
+      status: 200, statusText: 'OK',
+      headers: {}, request: {},
+    };
+  };
+
+  const client = createClient({
+    adapter: customAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://test.local',
+    cache: { ttl: 10000, methods: ['GET'] },
+    dedupe: { enabled: true, methods: ['GET'] },
+    timing: true,
+    requestId: true,
+    journeyTracking: true,
+    hooks: {
+      onRequest: [(config) => {}],
+      onResponse: [(res) => {}],
+    },
+  });
+
+  const res = await client.get('/combined-v16');
+  assertEqual(res.status, 200);
+  assert(typeof res.duration === 'number', 'timing works');
+  assert(res.config.headers['x-request-id'] !== undefined, 'request ID injected');
+  assert(res.journey !== undefined, 'journey tracking works');
 });
 
 // Wait a tick for async tests
