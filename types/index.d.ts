@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for APIBridge AI v15
-// Type definitions for api-bridge-ai 15.0.0
+// TypeScript Type Declarations for APIBridge AI v16
+// Type definitions for api-bridge-ai 16.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -128,6 +128,48 @@ declare namespace ApiBridgeAI {
   interface ParamsSerializerConfig {
     serialize?: (params: any, options?: any) => string;
     encode?: (value: string) => string;
+  }
+
+  // ─── v16 Security Interfaces ──────────────────────────────────────────
+
+  interface SSRFGuardOptions {
+    enabled?: boolean;
+    allowlist?: string[];
+    blocklist?: string[];
+  }
+
+  interface HeaderValidatorOptions {
+    maxHeadersCount?: number;
+    maxHeaderSize?: number;
+  }
+
+  interface RateLimiterOptions {
+    maxRequests?: number;
+    windowMs?: number;
+  }
+
+  interface ResponseSizeGuardOptions {
+    maxResponseSize?: number;
+  }
+
+  interface SensitiveDataRedactorOptions {
+    sensitiveHeaders?: string[];
+  }
+
+  interface RequestJourney {
+    attempts: Array<{ attempt: number; status: number; duration: number }>;
+    cacheHit: boolean;
+    deduplicated: boolean;
+    tokenRefreshed: boolean;
+    redirects: number;
+    startTime: number;
+    endTime?: number;
+    totalDuration?: number;
+  }
+
+  interface SizeTracker {
+    total: number;
+    add(bytes: number): void;
   }
 
   // ─── v11: VERSION ────────────────────────────────────────────────────────
@@ -417,6 +459,21 @@ declare namespace ApiBridgeAI {
     autoContentType?: boolean;
     /** Params serializer — function or { encode, serialize } object (v15). */
     paramsSerializer?: ParamsSerializerConfig | ((params: any) => string);
+    // v16 options
+    /** SSRF guard options. Default: { enabled: true }. */
+    ssrf?: SSRFGuardOptions;
+    /** Header validation options. */
+    headerValidation?: HeaderValidatorOptions;
+    /** Client-side rate limiting options. */
+    rateLimiter?: RateLimiterOptions | null;
+    /** Response size guard options. */
+    responseSizeGuard?: ResponseSizeGuardOptions;
+    /** Sensitive data redactor options. */
+    redactor?: SensitiveDataRedactorOptions;
+    /** Replay detection window in milliseconds (0 = disabled). */
+    replayDetection?: number;
+    /** Enable request journey tracking. */
+    journeyTracking?: boolean;
   }
 
   // ─── v14 Configuration Interfaces ──────────────────────────────────────
@@ -517,6 +574,7 @@ declare namespace ApiBridgeAI {
     // v14 timing (when timing: true)
     duration?: number;
     timing?: ResponseTiming;
+    journey?: RequestJourney;
   }
 
   interface ProgressEvent {
@@ -698,6 +756,11 @@ declare namespace ApiBridgeAI {
     static readonly ERR_MAX_BODY_LENGTH_EXCEEDED: string;
     static readonly ERR_MAX_CONTENT_LENGTH_EXCEEDED: string;
     static readonly ERR_ABORTED: string;
+    static readonly ERR_SSRF_BLOCKED: string;
+    static readonly ERR_HEADER_VALIDATION: string;
+    static readonly ERR_RATE_LIMITED: string;
+    static readonly ERR_DUPLICATE_REQUEST: string;
+    static readonly ERR_RESPONSE_TOO_LARGE: string;
   }
 
   // ─── v10/v11 Cancel Token ──────────────────────────────────────────────
@@ -1225,6 +1288,56 @@ declare namespace ApiBridgeAI {
     constructor(message: string, interceptorName: string, reason: string);
   }
 
+  // ─── v16 Security Classes ─────────────────────────────────────────────
+
+  class SSRFGuard {
+    constructor(options?: SSRFGuardOptions);
+    enabled: boolean;
+    validateURL(url: string): true;
+  }
+
+  class HeaderValidator {
+    constructor(options?: HeaderValidatorOptions);
+    maxHeadersCount: number;
+    maxHeaderSize: number;
+    validateHeaderName(name: string): true;
+    validateHeaderValue(value: string): true;
+    validateHeaders(headers: Record<string, string>): true;
+  }
+
+  class RequestRateLimiter {
+    constructor(options?: RateLimiterOptions);
+    maxRequests: number;
+    windowMs: number;
+    acquire(endpoint?: string): boolean;
+    reset(endpoint?: string): void;
+  }
+
+  class ResponseSizeGuard {
+    constructor(options?: ResponseSizeGuardOptions);
+    maxResponseSize: number;
+    checkSize(contentLength: number | string): true;
+    createSizeTracker(): SizeTracker;
+  }
+
+  class SensitiveDataRedactor {
+    constructor(options?: SensitiveDataRedactorOptions);
+    isSensitiveHeader(name: string): boolean;
+    redactHeaders(headers: Record<string, string>): Record<string, string>;
+    redactConfig(config: Record<string, any>): Record<string, any>;
+    redactURL(url: string): string;
+  }
+
+  class RequestFingerprinter {
+    fingerprint(config: { method?: string; url?: string; data?: any; params?: any }): string;
+    isDuplicate(config: { method?: string; url?: string; data?: any; params?: any }, windowMs: number): boolean;
+    reset(): void;
+  }
+
+  function safeMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any>;
+  function sanitizeObject(obj: any): any;
+  function isPrivateIP(ip: string): boolean;
+
   // ─── Supporting Types ────────────────────────────────────────────────────
 
   interface SchemaField {
@@ -1347,6 +1460,16 @@ declare namespace ApiBridgeAI {
     AxiosHeaders: typeof AxiosHeaders;
     HttpStatusCode: typeof HttpStatusCode;
     InterceptorManager: typeof InterceptorManager;
+
+    SSRFGuard: typeof SSRFGuard;
+    HeaderValidator: typeof HeaderValidator;
+    RequestRateLimiter: typeof RequestRateLimiter;
+    ResponseSizeGuard: typeof ResponseSizeGuard;
+    SensitiveDataRedactor: typeof SensitiveDataRedactor;
+    RequestFingerprinter: typeof RequestFingerprinter;
+    safeMerge: typeof safeMerge;
+    sanitizeObject: typeof sanitizeObject;
+    isPrivateIP: typeof isPrivateIP;
 
     toFormData: typeof toFormData;
     toURLEncodedForm: typeof toURLEncodedForm;
