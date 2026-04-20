@@ -94,7 +94,7 @@ function isPrivateIP(ip) {
   if (Number.isNaN(long)) return false;
 
   for (const range of PRIVATE_IP_RANGES) {
-    if ((long & range.mask) === range.base) return true;
+    if (((long & range.mask) >>> 0) === (range.base >>> 0)) return true;
   }
   return false;
 }

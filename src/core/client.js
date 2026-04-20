@@ -1892,7 +1892,11 @@ class APIBridgeClient {
     const safeConfig = this._redactor ? this._redactor.redactConfig(reqConfig) : reqConfig;
 
     if (err instanceof ClientError) {
-      if (!err.config) err.config = safeConfig;
+      if (!err.config) {
+        err.config = safeConfig;
+      } else if (this._redactor) {
+        err.config = this._redactor.redactConfig(err.config);
+      }
       if (!err.response && response) {
         err.response = {
           data: response.data || response.details,
@@ -1901,6 +1905,8 @@ class APIBridgeClient {
           headers: response.headers || {},
           config: safeConfig,
         };
+      } else if (err.response && err.response.config && this._redactor) {
+        err.response.config = this._redactor.redactConfig(err.response.config);
       }
       err.isApiBridgeError = true;
       return err;
