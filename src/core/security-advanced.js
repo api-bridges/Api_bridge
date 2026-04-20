@@ -441,7 +441,7 @@ const HTML_ENTITIES = {
   '`': '&#96;',
 };
 
-const SCRIPT_RE = /<script\b[^<]*(?:(?!<\/script\s*>)<[^<]*)*<\/script\s*>/gi;
+const SCRIPT_RE = /<script\b[^<]*(?:(?!<\/script[\s>])<[^<]*)*<\/script[^>]*>/gi;
 const EVENT_HANDLER_RE = /\bon\w+\s*=/gi;
 const SQL_INJECTION_RE = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC|EXECUTE)\b\s)/gi;
 const PATH_TRAVERSAL_RE = /\.\.[/\\]/g;
