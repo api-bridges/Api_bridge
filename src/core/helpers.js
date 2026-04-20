@@ -1,11 +1,11 @@
 /**
- * APIBridge AI v11 — Type Detection & Utility Helpers
+ * nopes v11 — Type Detection & Utility Helpers
  *
  * Comprehensive set of type-checking and utility functions,
  * matching Axios's utils module for complete drop-in compatibility.
  *
  * Usage:
- *   const { isPlainObject, isFunction, isString } = require('api-bridge-ai');
+ *   const { isPlainObject, isFunction, isString } = require('nopes');
  */
 
 'use strict';

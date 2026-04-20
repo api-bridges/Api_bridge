@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v7 — Weighted Ensemble Fuzzy Matcher
+ * nopes v7 — Weighted Ensemble Fuzzy Matcher
  *
  * Multi-strategy fuzzy matching with weighted ensemble scoring:
  *  - Levenshtein distance with normalized scoring

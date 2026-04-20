@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Schema Diff Engine
+ * nopes v3 — Schema Diff Engine
  *
  * Compare two API responses or schemas to detect:
  *  - Added fields

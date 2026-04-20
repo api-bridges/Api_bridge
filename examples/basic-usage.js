@@ -1,5 +1,5 @@
 /**
- * APIBridge AI — Basic Usage Examples
+ * nopes — Basic Usage Examples
  *
  * Run: node examples/basic-usage.js
  */

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v15 — AxiosHeaders-compatible Header Management
+ * nopes v15 — AxiosHeaders-compatible Header Management
  *
  * A normalized header class that provides case-insensitive header access,
  * similar to Axios's AxiosHeaders class.

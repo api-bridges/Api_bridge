@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v18 — HTTP Client Engine (Full Axios Replacement + All APIBridge Features)
+ * nopes v18 — HTTP Client Engine (Full Axios Replacement + All nopes Features)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -75,7 +75,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { APIBridgeTransformer } = require('./transformer');
+const { nopesTransformer } = require('./transformer');
 const { LearningEngine } = require('./learning');
 const { FuzzyMatcher } = require('./fuzzy-matcher');
 const { TypeCoercer } = require('./type-coercer');
@@ -370,9 +370,9 @@ function mergeConfig(target, source) {
   return result;
 }
 
-// ─── APIBridgeClient ────────────────────────────────────────────────────────
+// ─── nopesClient ────────────────────────────────────────────────────────
 
-class APIBridgeClient {
+class nopesClient {
   /**
    * @param {object} [options={}]
    * @param {string} [options.baseURL=''] — Base URL for all requests
@@ -669,7 +669,7 @@ class APIBridgeClient {
     };
 
     // Core engines
-    this.transformer = new APIBridgeTransformer(options);
+    this.transformer = new nopesTransformer(options);
     this.learning = this.transformer.learning;
     this.fuzzyMatcher = new FuzzyMatcher(options.fuzzyMatcher || {});
     this.typeCoercer = new TypeCoercer({
@@ -1385,7 +1385,7 @@ class APIBridgeClient {
       }
     }
 
-    // 5. Transform outgoing body if needed (APIBridge auto-align)
+    // 5. Transform outgoing body if needed (nopes auto-align)
     if (reqConfig.body && typeof reqConfig.body === 'object' &&
         !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body) &&
         !isBuffer(reqConfig.body) && !isArrayBufferView(reqConfig.body) &&
@@ -2237,35 +2237,35 @@ class APIBridgeClient {
 // ─── Static Methods (Axios Compatibility) ─────────────────────────────────
 
 /**
- * Check if an error is an APIBridge client error (like axios.isAxiosError).
+ * Check if an error is an nopes client error (like axios.isAxiosError).
  * @param {*} err
  * @returns {boolean}
  */
-APIBridgeClient.isClientError = function isClientError(err) {
+nopesClient.isClientError = function isClientError(err) {
   return err instanceof ClientError || (err && (err.isApiBridgeError === true || err.isAxiosError === true));
 };
 
 /**
- * Check if an error is an APIBridge error.
+ * Check if an error is an nopes error.
  * @param {*} err
  * @returns {boolean}
  */
-APIBridgeClient.isApiBridgeError = APIBridgeClient.isClientError;
+nopesClient.isApiBridgeError = nopesClient.isClientError;
 
 // ─── Factory Function ───────────────────────────────────────────────────────
 
 /**
  * Create a new API client instance.
  *
- * @param {object} [options={}] — Client options (see APIBridgeClient constructor)
- * @returns {APIBridgeClient}
+ * @param {object} [options={}] — Client options (see nopesClient constructor)
+ * @returns {nopesClient}
  *
  * @example
  *   const api = createClient({ baseURL: "/api" });
  *   const res = await api.get("/user", { expect: { userName: "string" } });
  */
 function createClient(options = {}) {
-  return new APIBridgeClient(options);
+  return new nopesClient(options);
 }
 
 // ─── Concurrent Request Helpers ─────────────────────────────────────────────
@@ -2309,7 +2309,7 @@ function isApiBridgeError(err) {
 }
 
 // ─── Axios Aliases (v12: Complete drop-in compatibility) ─────────────────
-const Axios = APIBridgeClient;
+const Axios = nopesClient;
 const AxiosError = ClientError;
 
 /**
@@ -2322,7 +2322,7 @@ function isAxiosError(err) {
 }
 
 module.exports = {
-  APIBridgeClient,
+  nopesClient,
   ClientError,
   createClient,
   buildURL,

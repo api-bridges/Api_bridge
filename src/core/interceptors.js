@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v15 — Interceptor Manager
+ * nopes v15 — Interceptor Manager
  *
  * Axios-compatible interceptor system with improvements:
  *   - Request interceptors

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v16 — Security Module
+ * nopes v16 — Security Module
  *
  * Comprehensive security utilities for protecting API requests and responses
  * against common web vulnerabilities and abuse patterns.

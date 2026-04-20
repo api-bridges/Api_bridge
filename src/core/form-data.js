@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v10 — FormData Utilities
+ * nopes v10 — FormData Utilities
  *
  * Helpers for converting objects to FormData and detecting multipart content.
  *

@@ -1,10 +1,10 @@
 /**
- * APIBridge AI — Core Module
+ * nopes — Core Module
  *
  * Core transformation engine, matching algorithms, validation, and error classes.
  */
 
-const { APIBridgeTransformer } = require('./transformer');
+const { nopesTransformer } = require('./transformer');
 const { LearningEngine } = require('./learning');
 const { ResponseNormalizer } = require('./normalizer');
 const { SchemaValidator } = require('./validator');
@@ -20,7 +20,7 @@ const errors = require('./errors');
 
 // v9/v10 modules
 const {
-  APIBridgeClient, ClientError, createClient, buildURL,
+  nopesClient, ClientError, createClient, buildURL,
   all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
   VERSION,
   // v12: Axios aliases
@@ -65,7 +65,7 @@ const {
 
 module.exports = {
   // Classes
-  APIBridgeTransformer,
+  nopesTransformer,
   LearningEngine,
   ResponseNormalizer,
   SchemaValidator,
@@ -78,7 +78,7 @@ module.exports = {
   SchemaMigrator,
 
   // v9/v10 classes
-  APIBridgeClient,
+  nopesClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,

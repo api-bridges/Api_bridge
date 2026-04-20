@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v5 — Schema Registry
+ * nopes v5 — Schema Registry
  *
  * Centralized, versioned schema storage and retrieval:
  *  - Register schemas with version tags

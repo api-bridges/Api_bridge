@@ -1,10 +1,10 @@
 /**
- * APIBridge AI v18 — Comprehensive Test Suite
+ * nopes v18 — Comprehensive Test Suite
  * Tests every scenario a developer actually hits, including all v2-v18 features.
  */
 
 const {
-  APIBridgeTransformer,
+  nopesTransformer,
   bridge,
   bridgeFetch,
   transform,
@@ -79,7 +79,7 @@ const {
 
   // v9 exports
   createClient,
-  APIBridgeClient,
+  nopesClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,
@@ -244,11 +244,11 @@ function assertEqual(a, b, msg) {
   if (a !== b) throw new Error(msg || `Expected "${b}" but got "${a}"`);
 }
 
-const t = new APIBridgeTransformer({ logMismatches: false });
+const t = new nopesTransformer({ logMismatches: false });
 
 // ─────────────────────────────────────────────────────────────
 console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-console.log('  APIBridge AI v6 \u2014 Test Suite');
+console.log('  nopes v6 \u2014 Test Suite');
 console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n');
 
 // ─── 1. BASIC TRANSFORMATION ──────────────────────────────────
@@ -451,7 +451,7 @@ test('Razorpay-style payment response', () => {
 // ─── 7. LEARNING ENGINE ──────────────────────────────────────
 console.log('\n7. Learning engine');
 
-const learner = new APIBridgeTransformer({ logMismatches: false });
+const learner = new nopesTransformer({ logMismatches: false });
 
 test('approve a mapping \u2014 remembered', () => {
   learner.approve('usr_first_nm', 'firstName');
@@ -499,7 +499,7 @@ test('learning engine stats', () => {
 console.log('\n8. Export (CSV + JSON)');
 
 test('CSV generated with correct structure', () => {
-  const csvTransformer = new APIBridgeTransformer({ logMismatches: false });
+  const csvTransformer = new nopesTransformer({ logMismatches: false });
   csvTransformer.transform({
     first_name: 'John',
     last_name:  'Doe',
@@ -517,7 +517,7 @@ test('CSV generated with correct structure', () => {
 });
 
 test('CSV file exported to disk', () => {
-  const csvTransformer = new APIBridgeTransformer({ logMismatches: false });
+  const csvTransformer = new nopesTransformer({ logMismatches: false });
   csvTransformer.transform({ test_field: 'value', another_key: 123 });
 
   const filePath = exportMismatchCSV(
@@ -532,7 +532,7 @@ test('CSV file exported to disk', () => {
 });
 
 test('JSON export generates valid file', () => {
-  const jt = new APIBridgeTransformer({ logMismatches: false });
+  const jt = new nopesTransformer({ logMismatches: false });
   jt.transform({ test_key: 'val', another_key: 42 });
 
   const filePath = exportMismatchJSON(
@@ -550,7 +550,7 @@ test('JSON export generates valid file', () => {
 console.log('\n9. Pending review queue');
 
 test('low confidence mismatches flagged as pending', () => {
-  const pt = new APIBridgeTransformer({
+  const pt = new nopesTransformer({
     logMismatches: false,
     autoApplyThreshold: 0.99
   });
@@ -563,26 +563,26 @@ test('low confidence mismatches flagged as pending', () => {
 console.log('\n10. v2: Multiple output conventions');
 
 test('snake_case output', () => {
-  const st = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'snake_case' });
+  const st = new nopesTransformer({ logMismatches: false, targetConvention: 'snake_case' });
   const r = st.transform({ firstName: 'John', lastName: 'Doe' });
   assertEqual(r.first_name, 'John');
   assertEqual(r.last_name, 'Doe');
 });
 
 test('PascalCase output', () => {
-  const pt = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'PascalCase' });
+  const pt = new nopesTransformer({ logMismatches: false, targetConvention: 'PascalCase' });
   const r = pt.transform({ first_name: 'John' });
   assertEqual(r.FirstName, 'John');
 });
 
 test('kebab-case output', () => {
-  const kt = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'kebab-case' });
+  const kt = new nopesTransformer({ logMismatches: false, targetConvention: 'kebab-case' });
   const r = kt.transform({ first_name: 'John' });
   assertEqual(r['first-name'], 'John');
 });
 
 test('SCREAMING_SNAKE output', () => {
-  const sst = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'SCREAMING_SNAKE' });
+  const sst = new nopesTransformer({ logMismatches: false, targetConvention: 'SCREAMING_SNAKE' });
   const r = sst.transform({ first_name: 'John' });
   assertEqual(r['FIRST_NAME'], 'John');
 });
@@ -591,7 +591,7 @@ test('SCREAMING_SNAKE output', () => {
 console.log('\n11. v2: Batch transformation');
 
 test('transformBatch processes array of payloads', () => {
-  const bt = new APIBridgeTransformer({ logMismatches: false });
+  const bt = new nopesTransformer({ logMismatches: false });
   const results = bt.transformBatch([
     { first_name: 'John', last_name: 'Doe' },
     { first_name: 'Jane', last_name: 'Smith' },
@@ -603,7 +603,7 @@ test('transformBatch processes array of payloads', () => {
 });
 
 test('transformBatch rejects non-array', () => {
-  const bt = new APIBridgeTransformer({ logMismatches: false });
+  const bt = new nopesTransformer({ logMismatches: false });
   let threw = false;
   try {
     bt.transformBatch({ not: 'array' });
@@ -618,7 +618,7 @@ test('transformBatch rejects non-array', () => {
 console.log('\n12. v2: Reverse transform (frontend \u2192 backend)');
 
 test('reverse converts camelCase to snake_case', () => {
-  const rt = new APIBridgeTransformer({ logMismatches: false });
+  const rt = new nopesTransformer({ logMismatches: false });
   const r = rt.reverse({ firstName: 'John', lastName: 'Doe' });
   assertEqual(r.first_name, 'John');
   assertEqual(r.last_name, 'Doe');
@@ -854,7 +854,7 @@ test('NetworkError contains retry info', () => {
 console.log('\n19. v2: Event emitter');
 
 test('emits mismatch events', () => {
-  const et = new APIBridgeTransformer({ logMismatches: false });
+  const et = new nopesTransformer({ logMismatches: false });
   let emitted = false;
   et.on('mismatch', (record) => {
     emitted = true;
@@ -865,7 +865,7 @@ test('emits mismatch events', () => {
 });
 
 test('emits approved/rejected events', () => {
-  const et = new APIBridgeTransformer({ logMismatches: false });
+  const et = new nopesTransformer({ logMismatches: false });
   let approvedEvent = null;
   let rejectedEvent = null;
   et.on('approved', (e) => { approvedEvent = e; });
@@ -882,7 +882,7 @@ test('emits approved/rejected events', () => {
 console.log('\n20. v2: Session management');
 
 test('resetSession clears stats and mismatches', () => {
-  const st = new APIBridgeTransformer({ logMismatches: false });
+  const st = new nopesTransformer({ logMismatches: false });
   st.transform({ first_name: 'John' });
   assert(st.getStats().totalFields > 0, 'Should have stats');
   assert(st.mismatches.length > 0, 'Should have mismatches');
@@ -1599,7 +1599,7 @@ test('resolves $ref references', () => {
   assert(resolved.properties.name !== undefined, 'Should have name property');
 });
 
-test('converts OpenAPI schema to APIBridge format', () => {
+test('converts OpenAPI schema to nopes format', () => {
   const importer = new OpenAPIImporter();
   const schema = {
     type: 'object',
@@ -3191,7 +3191,7 @@ test('TypeCoercer coerceObject skips fields not in data', () => {
 console.log('\n31. Transformer v6 Integration');
 
 test('Transformer v6 resolves typo usr_email with schema', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const t6 = new nopesTransformer({ logMismatches: false, targetConvention: 'camelCase' });
   const schema = {
     userEmail: { type: 'string', from: 'user_email' },
     userName: { type: 'string' },
@@ -3203,7 +3203,7 @@ test('Transformer v6 resolves typo usr_email with schema', () => {
 });
 
 test('Transformer v6 performs type coercion with schema', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const t6 = new nopesTransformer({ logMismatches: false, targetConvention: 'camelCase' });
   const schema = {
     isActive: { type: 'boolean', column: 'is_active' },
   };
@@ -3212,7 +3212,7 @@ test('Transformer v6 performs type coercion with schema', () => {
 });
 
 test('Transformer v6 coerces integer string with schema', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const t6 = new nopesTransformer({ logMismatches: false, targetConvention: 'camelCase' });
   const schema = {
     age: { type: 'integer', column: 'age' },
   };
@@ -3221,7 +3221,7 @@ test('Transformer v6 coerces integer string with schema', () => {
 });
 
 test('Transformer v6 coerces date string with schema', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const t6 = new nopesTransformer({ logMismatches: false, targetConvention: 'camelCase' });
   const schema = {
     createdAt: { type: 'date', column: 'created_at' },
   };
@@ -3230,7 +3230,7 @@ test('Transformer v6 coerces date string with schema', () => {
 });
 
 test('Transformer v6 handles mixed type conflicts in batch', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const t6 = new nopesTransformer({ logMismatches: false, targetConvention: 'camelCase' });
   const schema = {
     isActive: { type: 'boolean', column: 'is_active' },
     count: { type: 'integer', column: 'count' },
@@ -3249,7 +3249,7 @@ test('Transformer v6 handles mixed type conflicts in batch', () => {
 });
 
 test('Transformer v6 enhanced fuzzy matching with schema', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const t6 = new nopesTransformer({ logMismatches: false, targetConvention: 'camelCase' });
   const schema = {
     userEmail: { type: 'string' },
     userName: { type: 'string' },
@@ -3263,7 +3263,7 @@ test('Transformer v6 enhanced fuzzy matching with schema', () => {
 });
 
 test('Transformer v6 stats track fuzzy and cryptic matches', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false, targetConvention: 'camelCase' });
+  const t6 = new nopesTransformer({ logMismatches: false, targetConvention: 'camelCase' });
   t6.transform({ first_name: 'John' }, null, 'toFrontend');
   const stats = t6.getStats();
   assert(stats.totalFields > 0, 'Should track total fields');
@@ -3395,14 +3395,14 @@ test('CrypticResolver isCryptic handles edge cases', () => {
 });
 
 test('Transformer v6 preserves existing behavior for standard transforms', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false });
+  const t6 = new nopesTransformer({ logMismatches: false });
   const result = t6.transform({ first_name: 'John', last_name: 'Doe' });
   assertEqual(result.firstName, 'John');
   assertEqual(result.lastName, 'Doe');
 });
 
 test('Transformer v6 preserves nested object transformation', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false });
+  const t6 = new nopesTransformer({ logMismatches: false });
   const result = t6.transform({
     user_data: {
       first_name: 'John',
@@ -3414,7 +3414,7 @@ test('Transformer v6 preserves nested object transformation', () => {
 });
 
 test('Transformer v6 preserves array transformation', () => {
-  const t6 = new APIBridgeTransformer({ logMismatches: false });
+  const t6 = new nopesTransformer({ logMismatches: false });
   const result = t6.transform([
     { first_name: 'John' },
     { first_name: 'Jane' },
@@ -3721,7 +3721,7 @@ test('v7 ngrams generates correct bigrams', () => {
 // ─── V7 TESTS: TRANSFORMER ACCURACY ───────────────────────────
 
 test('v7 Transformer abbreviation-aware semantic similarity', () => {
-  const t7 = new APIBridgeTransformer({ logMismatches: false });
+  const t7 = new nopesTransformer({ logMismatches: false });
   const schema = {
     userName: { column: 'usr_nm', type: 'string' },
     emailAddress: { column: 'eml_addr', type: 'string' },
@@ -3732,7 +3732,7 @@ test('v7 Transformer abbreviation-aware semantic similarity', () => {
 });
 
 test('v7 Transformer preserves backward compatibility', () => {
-  const t7 = new APIBridgeTransformer({ logMismatches: false });
+  const t7 = new nopesTransformer({ logMismatches: false });
   const result = t7.transform({
     first_name: 'John',
     last_name: 'Doe',
@@ -3746,7 +3746,7 @@ test('v7 Transformer preserves backward compatibility', () => {
 });
 
 test('v7 Transformer handles nested objects with accuracy', () => {
-  const t7 = new APIBridgeTransformer({ logMismatches: false });
+  const t7 = new nopesTransformer({ logMismatches: false });
   const result = t7.transform({
     user_data: {
       first_name: 'John',
@@ -4601,7 +4601,7 @@ test('v8 InterceptorError has correct properties', () => {
 // ═══════════════════════════════════════════════════════════════
 
 test('v8 backward compatibility — all v7 exports still available', () => {
-  assert(typeof APIBridgeTransformer === 'function', 'APIBridgeTransformer');
+  assert(typeof nopesTransformer === 'function', 'nopesTransformer');
   assert(typeof transform === 'function', 'transform');
   assert(typeof createTransformer === 'function', 'createTransformer');
   assert(typeof FuzzyMatcher === 'function', 'FuzzyMatcher');
@@ -5026,14 +5026,14 @@ test('ClientError — is ApiBridgeError', () => {
   assert(err instanceof Error, 'should extend Error');
 });
 
-console.log('\n━━━ v9: APIBridgeClient ━━━');
+console.log('\n━━━ v9: nopesClient ━━━');
 
-test('createClient — returns APIBridgeClient', () => {
+test('createClient — returns nopesClient', () => {
   const client = createClient({ baseURL: '/api' });
-  assert(client instanceof APIBridgeClient, 'should be APIBridgeClient');
+  assert(client instanceof nopesClient, 'should be nopesClient');
 });
 
-test('APIBridgeClient — default options', () => {
+test('nopesClient — default options', () => {
   const client = createClient();
   assertEqual(client.baseURL, '');
   assertEqual(client.timeout, 0);
@@ -5044,7 +5044,7 @@ test('APIBridgeClient — default options', () => {
   assertEqual(client._debug, false);
 });
 
-test('APIBridgeClient — custom options', () => {
+test('nopesClient — custom options', () => {
   const client = createClient({
     baseURL: 'https://api.example.com',
     timeout: 5000,
@@ -5063,13 +5063,13 @@ test('APIBridgeClient — custom options', () => {
   assertEqual(client.defaultHeaders['Authorization'], 'Bearer token');
 });
 
-test('APIBridgeClient — setSchema', () => {
+test('nopesClient — setSchema', () => {
   const client = createClient();
   client.setSchema({ userName: 'string', age: 'number' });
   assertEqual(client._schema.userName, 'string');
 });
 
-test('APIBridgeClient — setSchema rejects invalid', () => {
+test('nopesClient — setSchema rejects invalid', () => {
   const client = createClient();
   let threw = false;
   const schema = Object.create(null);
@@ -5078,7 +5078,7 @@ test('APIBridgeClient — setSchema rejects invalid', () => {
   assert(threw, 'should throw for invalid schema');
 });
 
-test('APIBridgeClient — enableDebug', () => {
+test('nopesClient — enableDebug', () => {
   const client = createClient();
   assert(!client._debug, 'debug off by default');
   client.enableDebug(true);
@@ -5087,34 +5087,34 @@ test('APIBridgeClient — enableDebug', () => {
   assert(!client._debug, 'debug should be off again');
 });
 
-test('APIBridgeClient — enableProxy', () => {
+test('nopesClient — enableProxy', () => {
   const client = createClient();
   assert(!client.proxyMode, 'proxy off by default');
   client.enableProxy(true);
   assert(client.proxyMode, 'proxy should be on');
 });
 
-test('APIBridgeClient — interceptors accessible', () => {
+test('nopesClient — interceptors accessible', () => {
   const client = createClient();
   assert(client.interceptors instanceof InterceptorManager, 'should have interceptors');
   assert(client.interceptors.request instanceof InterceptorChain, 'should have request chain');
   assert(client.interceptors.response instanceof InterceptorChain, 'should have response chain');
 });
 
-test('APIBridgeClient — interceptors.request.use returns id', () => {
+test('nopesClient — interceptors.request.use returns id', () => {
   const client = createClient();
   const id = client.interceptors.request.use((config) => config);
   assertEqual(typeof id, 'number');
 });
 
-test('APIBridgeClient — interceptors.request.eject', () => {
+test('nopesClient — interceptors.request.eject', () => {
   const client = createClient();
   const id = client.interceptors.request.use((config) => config);
   assert(client.interceptors.request.eject(id), 'should eject');
   assertEqual(client.interceptors.request.size, 0);
 });
 
-test('APIBridgeClient — getStats', () => {
+test('nopesClient — getStats', () => {
   const client = createClient();
   const stats = client.getStats();
   assertEqual(stats.requests, 0);
@@ -5124,7 +5124,7 @@ test('APIBridgeClient — getStats', () => {
   assert(stats.learning, 'should have learning stats');
 });
 
-test('APIBridgeClient — clearCache', () => {
+test('nopesClient — clearCache', () => {
   const client = createClient();
   client._endpointCache.set('test', true);
   assertEqual(client._endpointCache.size, 1);
@@ -5132,7 +5132,7 @@ test('APIBridgeClient — clearCache', () => {
   assertEqual(client._endpointCache.size, 0);
 });
 
-test('APIBridgeClient — reset', () => {
+test('nopesClient — reset', () => {
   const client = createClient();
   client.interceptors.request.use((x) => x);
   client._endpointCache.set('test', true);
@@ -5143,7 +5143,7 @@ test('APIBridgeClient — reset', () => {
   assertEqual(client._stats.requests, 0);
 });
 
-test('APIBridgeClient — has HTTP method shortcuts', () => {
+test('nopesClient — has HTTP method shortcuts', () => {
   const client = createClient();
   assertEqual(typeof client.get, 'function');
   assertEqual(typeof client.post, 'function');
@@ -5155,14 +5155,14 @@ test('APIBridgeClient — has HTTP method shortcuts', () => {
   assertEqual(typeof client.request, 'function');
 });
 
-test('APIBridgeClient — _coerceValue string→number', () => {
+test('nopesClient — _coerceValue string→number', () => {
   const client = createClient();
   assertEqual(client._coerceValue('5000', 'number'), 5000);
   assertEqual(client._coerceValue('3.14', 'number'), 3.14);
   assertEqual(client._coerceValue(42, 'number'), 42);
 });
 
-test('APIBridgeClient — _coerceValue string→boolean', () => {
+test('nopesClient — _coerceValue string→boolean', () => {
   const client = createClient();
   assertEqual(client._coerceValue('true', 'boolean'), true);
   assertEqual(client._coerceValue('false', 'boolean'), false);
@@ -5172,25 +5172,25 @@ test('APIBridgeClient — _coerceValue string→boolean', () => {
   assertEqual(client._coerceValue('0', 'boolean'), false);
 });
 
-test('APIBridgeClient — _coerceValue string→date', () => {
+test('nopesClient — _coerceValue string→date', () => {
   const client = createClient();
   const result = client._coerceValue('2024-01-15', 'date');
   assert(result instanceof Date, 'should be Date');
   assertEqual(result.getFullYear(), 2024);
 });
 
-test('APIBridgeClient — _coerceValue number→string', () => {
+test('nopesClient — _coerceValue number→string', () => {
   const client = createClient();
   assertEqual(client._coerceValue(42, 'string'), '42');
 });
 
-test('APIBridgeClient — _coerceValue passthrough for any', () => {
+test('nopesClient — _coerceValue passthrough for any', () => {
   const client = createClient();
   assertEqual(client._coerceValue('hello', 'any'), 'hello');
   assertEqual(client._coerceValue(42, 'any'), 42);
 });
 
-test('APIBridgeClient — _coerceToExpect with expect map', () => {
+test('nopesClient — _coerceToExpect with expect map', () => {
   const client = createClient();
   const expectMap = new Map([['balance', 'number'], ['active', 'boolean'], ['name', 'string']]);
   const data = { balance: '5000', active: 'true', name: 'John' };
@@ -5200,7 +5200,7 @@ test('APIBridgeClient — _coerceToExpect with expect map', () => {
   assertEqual(result.name, 'John');
 });
 
-test('APIBridgeClient — _coerceToExpect handles arrays', () => {
+test('nopesClient — _coerceToExpect handles arrays', () => {
   const client = createClient();
   const expectMap = new Map([['score', 'number']]);
   const data = [{ score: '100' }, { score: '200' }];
@@ -5209,7 +5209,7 @@ test('APIBridgeClient — _coerceToExpect handles arrays', () => {
   assertEqual(result[1].score, 200);
 });
 
-test('APIBridgeClient — _coerceToExpect handles nested objects', () => {
+test('nopesClient — _coerceToExpect handles nested objects', () => {
   const client = createClient();
   const expectMap = new Map([['age', 'number']]);
   const data = { user: { age: '25' } };
@@ -5221,7 +5221,7 @@ console.log('\n━━━ v9: Backward Compatibility ━━━');
 
 test('v9 backward compatibility — all v9 exports available', () => {
   assert(typeof createClient === 'function', 'createClient');
-  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient');
+  assert(typeof nopesClient === 'function', 'nopesClient');
   assert(typeof ClientError === 'function', 'ClientError');
   assert(typeof InterceptorManager === 'function', 'InterceptorManager');
   assert(typeof InterceptorChain === 'function', 'InterceptorChain');
@@ -5331,7 +5331,7 @@ test('validateExpect — depth limit protection', () => {
 
 test('createClient — transformer has correct options', () => {
   const client = createClient({ schema: { userName: 'string' } });
-  assert(client.transformer instanceof APIBridgeTransformer, 'should have transformer');
+  assert(client.transformer instanceof nopesTransformer, 'should have transformer');
   assert(client.learning, 'should have learning engine');
   assert(client.fuzzyMatcher instanceof FuzzyMatcher, 'should have fuzzy matcher');
   assert(client.typeCoercer instanceof TypeCoercer, 'should have type coercer');
@@ -5567,7 +5567,7 @@ test('toFormData — appends to existing FormData', () => {
 
 console.log('\n━━━ v10: Enhanced Client Options ━━━');
 
-test('APIBridgeClient — defaults object', () => {
+test('nopesClient — defaults object', () => {
   const client = createClient({ baseURL: '/api', timeout: 5000 });
   assertEqual(client.defaults.baseURL, '/api');
   assertEqual(client.defaults.timeout, 5000);
@@ -5576,25 +5576,25 @@ test('APIBridgeClient — defaults object', () => {
   assertEqual(client.defaults.headers.post['Content-Type'], 'application/json');
 });
 
-test('APIBridgeClient — auth option', () => {
+test('nopesClient — auth option', () => {
   const client = createClient({ auth: { username: 'user', password: 'pass' } });
   assertEqual(client.auth.username, 'user');
   assertEqual(client.auth.password, 'pass');
   assertEqual(client.defaults.auth.username, 'user');
 });
 
-test('APIBridgeClient — responseType option', () => {
+test('nopesClient — responseType option', () => {
   const client = createClient({ responseType: 'text' });
   assertEqual(client.responseType, 'text');
   assertEqual(client.defaults.responseType, 'text');
 });
 
-test('APIBridgeClient — default responseType is json', () => {
+test('nopesClient — default responseType is json', () => {
   const client = createClient();
   assertEqual(client.responseType, 'json');
 });
 
-test('APIBridgeClient — validateStatus option', () => {
+test('nopesClient — validateStatus option', () => {
   const custom = (status) => status < 500;
   const client = createClient({ validateStatus: custom });
   assert(client.validateStatus(200), '200 should be valid');
@@ -5602,7 +5602,7 @@ test('APIBridgeClient — validateStatus option', () => {
   assert(!client.validateStatus(500), '500 should not be valid');
 });
 
-test('APIBridgeClient — default validateStatus', () => {
+test('nopesClient — default validateStatus', () => {
   const client = createClient();
   assert(client.validateStatus(200), '200 valid');
   assert(client.validateStatus(299), '299 valid');
@@ -5611,67 +5611,67 @@ test('APIBridgeClient — default validateStatus', () => {
   assert(!client.validateStatus(500), '500 not valid');
 });
 
-test('APIBridgeClient — paramsSerializer option', () => {
+test('nopesClient — paramsSerializer option', () => {
   const custom = (params) => 'custom=true';
   const client = createClient({ paramsSerializer: custom });
   assertEqual(client.paramsSerializer({ any: 'thing' }), 'custom=true');
 });
 
-test('APIBridgeClient — maxContentLength option', () => {
+test('nopesClient — maxContentLength option', () => {
   const client = createClient({ maxContentLength: 1024 });
   assertEqual(client.maxContentLength, 1024);
   assertEqual(client.defaults.maxContentLength, 1024);
 });
 
-test('APIBridgeClient — maxBodyLength option', () => {
+test('nopesClient — maxBodyLength option', () => {
   const client = createClient({ maxBodyLength: 2048 });
   assertEqual(client.maxBodyLength, 2048);
   assertEqual(client.defaults.maxBodyLength, 2048);
 });
 
-test('APIBridgeClient — default maxContentLength is -1', () => {
+test('nopesClient — default maxContentLength is -1', () => {
   const client = createClient();
   assertEqual(client.maxContentLength, -1);
 });
 
-test('APIBridgeClient — default maxBodyLength is -1', () => {
+test('nopesClient — default maxBodyLength is -1', () => {
   const client = createClient();
   assertEqual(client.maxBodyLength, -1);
 });
 
-test('APIBridgeClient — transformRequest option', () => {
+test('nopesClient — transformRequest option', () => {
   const fn = (data) => data;
   const client = createClient({ transformRequest: [fn] });
   assert(Array.isArray(client.transformRequest), 'should be array');
   assertEqual(client.transformRequest.length, 1);
 });
 
-test('APIBridgeClient — transformResponse option', () => {
+test('nopesClient — transformResponse option', () => {
   const fn = (data) => data;
   const client = createClient({ transformResponse: [fn] });
   assert(Array.isArray(client.transformResponse), 'should be array');
   assertEqual(client.transformResponse.length, 1);
 });
 
-test('APIBridgeClient — withCredentials option', () => {
+test('nopesClient — withCredentials option', () => {
   const client = createClient({ withCredentials: true });
   assert(client.withCredentials, 'should be true');
   assert(client.defaults.withCredentials, 'defaults should match');
 });
 
-test('APIBridgeClient — xsrfCookieName / xsrfHeaderName', () => {
+test('nopesClient — xsrfCookieName / xsrfHeaderName', () => {
   const client = createClient({ xsrfCookieName: 'MY-XSRF', xsrfHeaderName: 'X-MY-XSRF' });
   assertEqual(client.xsrfCookieName, 'MY-XSRF');
   assertEqual(client.xsrfHeaderName, 'X-MY-XSRF');
 });
 
-test('APIBridgeClient — default xsrf names', () => {
+test('nopesClient — default xsrf names', () => {
   const client = createClient();
   assertEqual(client.xsrfCookieName, 'XSRF-TOKEN');
   assertEqual(client.xsrfHeaderName, 'X-XSRF-TOKEN');
 });
 
-test('APIBridgeClient — defaults.headers per-method', () => {
+test('nopesClient — defaults.headers per-method', () => {
   const client = createClient();
   assertEqual(client.defaults.headers.post['Content-Type'], 'application/json');
   assertEqual(client.defaults.headers.put['Content-Type'], 'application/json');
@@ -5680,7 +5680,7 @@ test('APIBridgeClient — defaults.headers per-method', () => {
   assert(typeof client.defaults.headers.delete === 'object', 'should have delete headers');
 });
 
-test('APIBridgeClient — mutable defaults', () => {
+test('nopesClient — mutable defaults', () => {
   const client = createClient();
   client.defaults.headers.common['X-Custom'] = 'test';
   assertEqual(client.defaults.headers.common['X-Custom'], 'test');
@@ -5690,20 +5690,20 @@ test('APIBridgeClient — mutable defaults', () => {
 
 console.log('\n━━━ v10: getUri ━━━');
 
-test('APIBridgeClient — getUri basic', () => {
+test('nopesClient — getUri basic', () => {
   const client = createClient({ baseURL: 'https://api.example.com' });
   const uri = client.getUri({ url: '/users' });
   assertEqual(uri, 'https://api.example.com/users');
 });
 
-test('APIBridgeClient — getUri with params', () => {
+test('nopesClient — getUri with params', () => {
   const client = createClient({ baseURL: '/api' });
   const uri = client.getUri({ url: '/users', params: { page: 1, limit: 10 } });
   assert(uri.includes('page=1'), 'should have page');
   assert(uri.includes('limit=10'), 'should have limit');
 });
 
-test('APIBridgeClient — getUri with custom paramsSerializer', () => {
+test('nopesClient — getUri with custom paramsSerializer', () => {
   const client = createClient({
     baseURL: '/api',
     paramsSerializer: () => 'custom=serialized',
@@ -5712,7 +5712,7 @@ test('APIBridgeClient — getUri with custom paramsSerializer', () => {
   assert(uri.includes('custom=serialized'), 'should use custom serializer');
 });
 
-test('APIBridgeClient — getUri overrides base with config', () => {
+test('nopesClient — getUri overrides base with config', () => {
   const client = createClient({ baseURL: '/default' });
   const uri = client.getUri({ baseURL: '/override', url: '/test' });
   assertEqual(uri, '/override/test');
@@ -5720,13 +5720,13 @@ test('APIBridgeClient — getUri overrides base with config', () => {
 
 console.log('\n━━━ v10: request(config) Pattern ━━━');
 
-test('APIBridgeClient — request with config object pattern', () => {
+test('nopesClient — request with config object pattern', () => {
   const client = createClient({ baseURL: '/api' });
   // Just verify it accepts config object without throwing
   assertEqual(typeof client.request, 'function');
 });
 
-test('APIBridgeClient — request config object has method/url', () => {
+test('nopesClient — request config object has method/url', () => {
   const client = createClient();
   // Verify the method signature accepts an object
   assert(typeof client.request === 'function', 'should be a function');
@@ -5790,13 +5790,13 @@ test('isApiBridgeError — alias for isClientError', () => {
   assert(!isApiBridgeError(new Error('test')), 'should not detect');
 });
 
-test('APIBridgeClient.isClientError static method', () => {
-  assert(APIBridgeClient.isClientError(new ClientError('test')), 'static should detect');
-  assert(!APIBridgeClient.isClientError(new Error('test')), 'static should not detect');
+test('nopesClient.isClientError static method', () => {
+  assert(nopesClient.isClientError(new ClientError('test')), 'static should detect');
+  assert(!nopesClient.isClientError(new Error('test')), 'static should not detect');
 });
 
-test('APIBridgeClient.isApiBridgeError static method', () => {
-  assert(APIBridgeClient.isApiBridgeError(new ClientError('test')), 'should detect');
+test('nopesClient.isApiBridgeError static method', () => {
+  assert(nopesClient.isApiBridgeError(new ClientError('test')), 'should detect');
 });
 
 console.log('\n━━━ v10: mergeConfig ━━━');
@@ -5905,7 +5905,7 @@ console.log('\n━━━ v10: create() Factory ━━━');
 test('create — is alias for createClient', () => {
   assert(typeof create === 'function', 'should be exported');
   const client = create({ baseURL: '/api' });
-  assert(client instanceof APIBridgeClient, 'should return APIBridgeClient');
+  assert(client instanceof nopesClient, 'should return nopesClient');
   assertEqual(client.baseURL, '/api');
 });
 
@@ -5928,7 +5928,7 @@ test('ClientError — config attached on existing ClientError', () => {
 
 console.log('\n━━━ v10: Response Shape ━━━');
 
-test('APIBridgeClient — has statusText and config in response', () => {
+test('nopesClient — has statusText and config in response', () => {
   const client = createClient();
   // Verify the response shape is compatible with axios
   // We can't make real HTTP requests but verify the method signatures exist
@@ -5968,7 +5968,7 @@ test('v10 backward compat — all v10 exports available', () => {
 
 test('v10 backward compat — all v9 exports still work', () => {
   assert(typeof createClient === 'function', 'createClient');
-  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient');
+  assert(typeof nopesClient === 'function', 'nopesClient');
   assert(typeof ClientError === 'function', 'ClientError');
   assert(typeof InterceptorManager === 'function', 'InterceptorManager');
   assert(typeof InterceptorChain === 'function', 'InterceptorChain');
@@ -6852,17 +6852,17 @@ test('ClientError — toJSON includes name and config', () => {
 
 console.log('\n━━━ v11: postForm/putForm/patchForm ━━━');
 
-test('APIBridgeClient — has postForm method', () => {
+test('nopesClient — has postForm method', () => {
   const client = createClient();
   assert(typeof client.postForm === 'function', 'should have postForm');
 });
 
-test('APIBridgeClient — has putForm method', () => {
+test('nopesClient — has putForm method', () => {
   const client = createClient();
   assert(typeof client.putForm === 'function', 'should have putForm');
 });
 
-test('APIBridgeClient — has patchForm method', () => {
+test('nopesClient — has patchForm method', () => {
   const client = createClient();
   assert(typeof client.patchForm === 'function', 'should have patchForm');
 });
@@ -6984,7 +6984,7 @@ test('v11 backward compat — all v10 exports still work', () => {
 
 test('v11 backward compat — all v9 exports still work', () => {
   assert(typeof createClient === 'function', 'createClient');
-  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient');
+  assert(typeof nopesClient === 'function', 'nopesClient');
   assert(typeof ClientError === 'function', 'ClientError');
   assert(typeof InterceptorManager === 'function', 'InterceptorManager');
   assert(typeof InterceptorChain === 'function', 'InterceptorChain');
@@ -7183,7 +7183,7 @@ test('v12: apiBridge.interceptors is accessible', () => {
 test('v12: apiBridge.create is createClient', () => {
   assert(typeof apiBridge.create === 'function', 'create exists');
   const instance = apiBridge.create({ baseURL: '/test' });
-  assert(instance instanceof APIBridgeClient, 'creates APIBridgeClient');
+  assert(instance instanceof nopesClient, 'creates nopesClient');
   assertEqual(instance.baseURL, '/test');
 });
 
@@ -7201,7 +7201,7 @@ test('v12: apiBridge has error checking methods', () => {
 });
 
 test('v12: apiBridge has class constructors', () => {
-  assert(apiBridge.Axios === APIBridgeClient, 'Axios === APIBridgeClient');
+  assert(apiBridge.Axios === nopesClient, 'Axios === nopesClient');
   assert(apiBridge.AxiosError === ClientError, 'AxiosError === ClientError');
   assert(apiBridge.CancelToken === CancelToken, 'CancelToken');
   assert(apiBridge.Cancel === Cancel, 'Cancel');
@@ -7224,8 +7224,8 @@ test('v12: apiBridge.VERSION is correct', () => {
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
 
-test('v12: Axios alias equals APIBridgeClient', () => {
-  assert(Axios === APIBridgeClient, 'Axios should be APIBridgeClient');
+test('v12: Axios alias equals nopesClient', () => {
+  assert(Axios === nopesClient, 'Axios should be nopesClient');
 });
 
 test('v12: AxiosError alias equals ClientError', () => {
@@ -9327,7 +9327,7 @@ test('v15: full API surface check', () => {
   assert(typeof apiBridge.resolveParamsSerializer === 'function', 'apiBridge.resolveParamsSerializer exists');
 });
 
-test('v15: all existing APIBridge features preserved', () => {
+test('v15: all existing nopes features preserved', () => {
   // Verify all core exports still exist
   assert(typeof bridge === 'function', 'bridge function exists');
   assert(typeof bridgeFetch === 'function', 'bridgeFetch function exists');
@@ -9355,7 +9355,7 @@ test('v15: all existing APIBridge features preserved', () => {
   assert(typeof DeepMerge === 'function', 'DeepMerge exists');
 
   // v9-v14 client features
-  assert(typeof APIBridgeClient === 'function', 'APIBridgeClient exists');
+  assert(typeof nopesClient === 'function', 'nopesClient exists');
   assert(typeof ClientError === 'function', 'ClientError exists');
   assert(typeof InterceptorManager === 'function', 'InterceptorManager exists');
   assert(typeof CancelToken === 'function', 'CancelToken exists');

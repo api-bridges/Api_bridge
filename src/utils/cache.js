@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Response Cache
+ * nopes v3 — Response Cache
  *
  * In-memory LRU cache with TTL support.
  * Prevents redundant transformations of identical payloads.

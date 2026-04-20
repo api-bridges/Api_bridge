@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v4 — Request Deduplicator
+ * nopes v4 — Request Deduplicator
  *
  * Coalesces concurrent identical requests so only one actual
  * execution happens. All callers with the same key receive

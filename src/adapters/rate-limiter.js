@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v3 — Rate Limiter
+ * nopes v3 — Rate Limiter
  *
  * Built-in request throttling with:
  *  - Token bucket algorithm

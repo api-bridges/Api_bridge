@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v7 — Enhanced Schema-Based Type Coercer
+ * nopes v7 — Enhanced Schema-Based Type Coercer
  *
  * Automatic type detection and coercion for type conflicts:
  *  - String ↔ Boolean ("1", "true", "yes", "TRUE", "Yes", "on" ↔ true/false)

@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v5 — Advanced Retry Strategy
+ * nopes v5 — Advanced Retry Strategy
  *
  * Pluggable retry strategies for resilient API calls:
  *  - Linear backoff

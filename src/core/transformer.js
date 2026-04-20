@@ -1,5 +1,5 @@
 /**
- * APIBridge AI v8 — Core Transformer
+ * nopes v8 — Core Transformer
  *
  * Multi-level mismatch detection and correction:
  *   Level 1 — Exact match          (skip, already correct)
@@ -253,7 +253,7 @@ function inferType(value) {
 
 // ─── MAIN TRANSFORMER ─────────────────────────────────────────────────────────
 
-class APIBridgeTransformer extends EventEmitter {
+class nopesTransformer extends EventEmitter {
   /**
    * @param {object} options
    * @param {string}  options.targetConvention    Frontend naming convention (default 'camelCase')
@@ -614,7 +614,7 @@ class APIBridgeTransformer extends EventEmitter {
 
     if (this.options.logMismatches && !entry.autoApplied) {
       console.warn(
-        `[APIBridge] \u26A0 Mismatch (${Math.round(entry.confidence * 100)}% confidence)\n` +
+        `[nopes] \u26A0 Mismatch (${Math.round(entry.confidence * 100)}% confidence)\n` +
         `  Path:     ${entry.path}\n` +
         `  API key:  "${entry.sourceKey}"\n` +
         `  Mapped:   "${entry.targetKey}"\n` +
@@ -637,7 +637,7 @@ class APIBridgeTransformer extends EventEmitter {
 }
 
 module.exports = {
-  APIBridgeTransformer,
+  nopesTransformer,
   tokenize,
   toCamel,
   toSnake,

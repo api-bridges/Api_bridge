@@ -1,10 +1,10 @@
 /**
- * APIBridge AI v11 — HTTP Status Codes
+ * nopes v11 — HTTP Status Codes
  *
  * Complete enum of HTTP status codes, matching Axios's HttpStatusCode.
  *
  * Usage:
- *   const { HttpStatusCode } = require('api-bridge-ai');
+ *   const { HttpStatusCode } = require('nopes');
  *   if (response.status === HttpStatusCode.Ok) { ... }
  *   if (response.status === HttpStatusCode.NotFound) { ... }
  */
