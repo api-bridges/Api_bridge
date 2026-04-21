@@ -198,6 +198,132 @@ interceptor.useRequest('addAuth', (ctx) => ({
 
 ---
 
+## V18 New Capabilities
+
+Version 18 adds the most advanced security layer — zero trust, threat intelligence, and cryptographic integrity:
+
+### Zero Trust Engine
+
+Every request is evaluated against an accumulated trust score. Trust factors include known context, consistent IP, consistent user-agent, and non-suspicious methods. Trust decays over time with configurable rates.
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  zeroTrust: {
+    trustThreshold: 50,
+    maxTrustScore: 100,
+    decayRate: 5,
+    decayIntervalMs: 60000,
+  },
+});
+// Low trust score → ERR_ZERO_TRUST_DENIED
+```
+
+### Threat Intelligence
+
+Real-time IP blocklist management with automatic blocking after suspicious activity threshold. URL pattern blocking and known attack pattern detection in headers (SQL injection, path traversal).
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  threatIntel: {
+    blockedIPs: ['1.2.3.4'],
+    suspiciousThreshold: 5,
+    autoBlock: true,
+  },
+});
+// Blocked IPs or detected threats → ERR_THREAT_DETECTED
+```
+
+### Secure Session Manager
+
+Cryptographic session tokens (32 bytes, hex-encoded) bound to IP and User-Agent for hijack prevention. Automatic session rotation with configurable intervals.
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  sessionManager: {
+    tokenLength: 32,
+    maxAge: 3600000,
+    bindToIP: true,
+    rotationInterval: 900000,
+  },
+});
+// Invalid/expired/hijacked sessions → ERR_SESSION_INVALID
+```
+
+### Request Integrity Chain
+
+Blockchain-inspired immutable request lineage. Every request is hashed with SHA-256:
+`hash = H(previousHash + method + url + timestamp + bodyHash)`. The full chain can be verified to detect tampering.
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  integrityChain: { algorithm: 'sha256', maxChainLength: 10000 },
+});
+// Tampered chain → ERR_INTEGRITY_VIOLATION
+```
+
+### Adaptive Rate Limiter
+
+Token bucket with dynamically adapted rates based on traffic statistics. Standard deviation-based anomaly detection flags unusual traffic patterns and adjusts rates automatically.
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  adaptiveRateLimiter: {
+    baseRate: 100,
+    windowMs: 60000,
+    anomalyThreshold: 2.0,
+  },
+});
+// Anomalous traffic → ERR_ADAPTIVE_RATE_LIMITED
+```
+
+### Security Headers Manager
+
+Auto-generates all OWASP-recommended security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin headers (COEP, COOP, CORP).
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  securityHeaders: {
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    frameOptions: 'DENY',
+  },
+});
+```
+
+### Encrypted Config Vault
+
+AES-256-GCM encrypted storage for API keys, secrets, and sensitive configuration. Supports master key rotation, fingerprinting, and backup/restore.
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  configVault: { masterKey: 'hex-encoded-32-byte-key' },
+});
+// Invalid access → ERR_VAULT_ACCESS_DENIED
+```
+
+### Mutual TLS Manager
+
+Client certificate validation with trusted CA fingerprint store, certificate revocation list management, and configurable certificate age limits.
+
+```js
+const api = createClient({
+  baseURL: 'https://api.example.com',
+  mtls: {
+    trustedCerts: ['sha256-fingerprint-1'],
+    requireClientCert: true,
+  },
+});
+// Certificate validation failure → ERR_MTLS_FAILED
+```
+
+---
+
 ## Using awsibnj in Your Project
 
 ### Install
@@ -206,7 +332,7 @@ interceptor.useRequest('addAuth', (ctx) => ({
 npm install awsibnj
 ```
 
-### Option 1: As Axios Replacement (v13 — Recommended)
+### Option 1: As Axios Replacement (v18 — Recommended)
 
 ```js
 const apiBridge = require('awsibnj');
