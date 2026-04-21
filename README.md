@@ -259,7 +259,7 @@ npm install
 
 awsibnj is not just an Axios wrapper — it's a **complete replacement** that gives you everything Axios does plus intelligent API transformation:
 
-| | Axios | awsibnj v13 |
+| | Axios | awsibnj v18 |
 |---|---|---|
 | HTTP client (GET/POST/PUT/PATCH/DELETE) | ✅ | ✅ |
 | Request/response interceptors | ✅ | ✅ |
@@ -277,7 +277,7 @@ awsibnj is not just an Axios wrapper — it's a **complete replacement** that gi
 | **Learning engine** | ❌ | ✅ |
 | **Schema migration** | ❌ | ✅ |
 | **Smart Proxy mode** | ❌ | ✅ |
-| **60+ utility modules** | ❌ | ✅ |
+| **80+ utility modules** | ❌ | ✅ |
 
 ### Quick Migration from Axios
 
@@ -384,7 +384,7 @@ awsibnj/
 │   ├── basic-usage.js           # Basic usage examples
 │   ├── advanced-usage.js        # Advanced SDK patterns
 │   └── plugin-example.js        # Custom plugin development
-├── test.js                      # 849 tests
+├── test.js                      # 1178 tests
 ├── package.json
 ├── CHANGELOG.md
 └── README.md
@@ -514,7 +514,7 @@ function createMetricsPlugin(options = {}) {
 
 ## Quick Start
 
-### 1. As Axios Replacement (v14 — Recommended)
+### 1. As Axios Replacement (v18 — Recommended)
 
 ```js
 const apiBridge = require('awsibnj');
