@@ -219,7 +219,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Security pipeline extended: SSRF → Headers → Rate Limit → Replay → Permissions → Input Sanitize → Sign → Idempotency → **Threat Intel → Zero Trust → Adaptive Rate Limit → Integrity Chain → Security Headers** → Execute
-- Package version bumped to 18.0.0
+- Package version bumped to 18.0.1
 - Package description updated to reflect elite security capabilities
 - Added 16 new keywords: zero-trust, threat-intelligence, secure-sessions, request-integrity, adaptive-rate-limiting, owasp-security-headers, encrypted-config-vault, mutual-tls, mtls, session-management, anomaly-detection, hash-chain, trust-scoring, ip-reputation
 - TypeScript definitions updated with all v18 classes, interfaces, and options

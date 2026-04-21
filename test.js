@@ -6169,7 +6169,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '19.0.0');
+  assertEqual(VERSION, '18.0.1');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7229,7 +7229,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '19.0.0');
+  assertEqual(apiBridge.VERSION, '18.0.1');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7909,7 +7909,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '19.0.0');
+  assertEqual(api.VERSION, '18.0.1');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
@@ -8787,7 +8787,7 @@ test('v14: full API surface check', () => {
   const api = require('./src/index');
 
   // Version
-  assertEqual(api.VERSION, '19.0.0');
+  assertEqual(api.VERSION, '18.0.1');
 
   // v14 options available in client defaults
   const client = api.createClient({
@@ -9320,7 +9320,7 @@ test('v15: full API surface check', () => {
   // v15 new exports available
   const api = { resolveParamsSerializer, VERSION };
   assertEqual(typeof resolveParamsSerializer, 'function');
-  assertEqual(api.VERSION, '19.0.0');
+  assertEqual(api.VERSION, '18.0.1');
 
   // AxiosHeaders v15 enhancements
   assert(typeof AxiosHeaders.fromString === 'function', 'AxiosHeaders.fromString exists');
@@ -10015,8 +10015,8 @@ test('v16: new error codes exist on ClientError', () => {
   assertEqual(ClientError.ERR_RESPONSE_TOO_LARGE, 'ERR_RESPONSE_TOO_LARGE');
 });
 
-test('v18: VERSION is 18.0.0', () => {
-  assertEqual(VERSION, '19.0.0');
+test('v18: VERSION is 18.0.1', () => {
+  assertEqual(VERSION, '18.0.1');
 });
 
 // ─── v16 Export Tests ─────────────────────────────────────────────────────────
@@ -11875,8 +11875,8 @@ test('v18: client with all v16+v17+v18 features combined', async () => {
   assert(client._integrityChain.getLength() >= 1, 'integrity chain recorded');
 });
 
-test('v18: VERSION is 18.0.0', () => {
-  assertEqual(VERSION, '19.0.0');
+test('v18: VERSION is 18.0.1', () => {
+  assertEqual(VERSION, '18.0.1');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -12653,7 +12653,7 @@ test('v19: client with eventCorrelator records request events', async () => {
 });
 
 test('v19: VERSION is 19.0.0', () => {
-  assertEqual(VERSION, '19.0.0');
+  assertEqual(VERSION, '18.0.1');
 });
 
 test('v19: ERR_HONEYPOT_TRIP error code exists', () => {
