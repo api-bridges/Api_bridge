@@ -98,12 +98,13 @@ const { generateUID, isPlainObject } = require('./helpers');
 const { SSRFGuard, HeaderValidator, RequestRateLimiter, ResponseSizeGuard, SensitiveDataRedactor, RequestFingerprinter, safeMerge, sanitizeObject } = require('./security');
 const { ContentSecurityPolicy, CertificatePinning, RequestSigning, InputSanitizer, SecurityAuditLogger, PermissionPolicy, PayloadEncryptor, IdempotencyManager } = require('./security-advanced');
 const { ZeroTrustEngine, ThreatIntelligence, SecureSessionManager, RequestIntegrityChain, AdaptiveRateLimiter, SecurityHeadersManager, EncryptedConfigVault, MutualTLSManager } = require('./security-elite');
+const { QuantumResistantCrypto, BehavioralAnalytics, HoneypotManager, SubresourceIntegrity, RequestThrottleGuard, GeofenceGuard, CryptoKeyRotator, SecurityEventCorrelator } = require('./security-fortress');
 
 /**
  * Library version.
  * @type {string}
  */
-const VERSION = '18.0.0';
+const VERSION = '19.0.0';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 
@@ -191,6 +192,15 @@ ClientError.ERR_ADAPTIVE_RATE_LIMITED = 'ERR_ADAPTIVE_RATE_LIMITED';
 ClientError.ERR_MTLS_FAILED = 'ERR_MTLS_FAILED';
 ClientError.ERR_VAULT_ACCESS_DENIED = 'ERR_VAULT_ACCESS_DENIED';
 ClientError.ERR_SECURITY_HEADER_VIOLATION = 'ERR_SECURITY_HEADER_VIOLATION';
+// v19: Fortress security error codes
+ClientError.ERR_QUANTUM_VERIFY_FAILED = 'ERR_QUANTUM_VERIFY_FAILED';
+ClientError.ERR_BEHAVIORAL_ANOMALY = 'ERR_BEHAVIORAL_ANOMALY';
+ClientError.ERR_HONEYPOT_TRIP = 'ERR_HONEYPOT_TRIP';
+ClientError.ERR_SRI_MISMATCH = 'ERR_SRI_MISMATCH';
+ClientError.ERR_THROTTLE_BLOCKED = 'ERR_THROTTLE_BLOCKED';
+ClientError.ERR_GEOFENCE_BLOCKED = 'ERR_GEOFENCE_BLOCKED';
+ClientError.ERR_KEY_ROTATION_FAILED = 'ERR_KEY_ROTATION_FAILED';
+ClientError.ERR_CORRELATION_ALERT = 'ERR_CORRELATION_ALERT';
 
 /**
  * Create a ClientError with full context (like AxiosError.from).
@@ -580,6 +590,24 @@ class awsibnjClient {
     this._configVault = options.configVault ? new EncryptedConfigVault(options.configVault) : null;
     // Mutual TLS Manager
     this._mtls = options.mtls ? new MutualTLSManager(options.mtls) : null;
+
+    // ─── v19: Fortress Security ───────────────────────────────────
+    // Quantum-resistant crypto
+    this._quantumCrypto = options.quantumCrypto ? new QuantumResistantCrypto(options.quantumCrypto) : null;
+    // Behavioral analytics
+    this._behavioralAnalytics = options.behavioralAnalytics ? new BehavioralAnalytics(options.behavioralAnalytics) : null;
+    // Honeypot manager
+    this._honeypot = options.honeypot ? new HoneypotManager(options.honeypot) : null;
+    // Subresource integrity
+    this._sri = options.sri ? new SubresourceIntegrity(options.sri) : null;
+    // Multi-level throttle guard
+    this._throttleGuard = options.throttleGuard ? new RequestThrottleGuard(options.throttleGuard) : null;
+    // Geofence guard
+    this._geofence = options.geofence ? new GeofenceGuard(options.geofence) : null;
+    // Crypto key rotator
+    this._keyRotator = options.keyRotator ? new CryptoKeyRotator(options.keyRotator) : null;
+    // Security event correlator
+    this._eventCorrelator = options.eventCorrelator ? new SecurityEventCorrelator(options.eventCorrelator) : null;
 
     // v14: Internal state for caching, dedup, and token refresh
     this._responseCache = new Map();
@@ -1326,6 +1354,113 @@ class awsibnjClient {
       }
     }
 
+    // 3.15 v19: Honeypot check — block scanner/bot access to canary endpoints
+    if (this._honeypot) {
+      const clientIP = reqConfig._clientIP || reqConfig.clientIP || null;
+      const honeypotResult = this._honeypot.checkRequest(reqConfig.url, clientIP);
+      if (honeypotResult.tripped) {
+        this._stats.failures++;
+        if (this._eventCorrelator) {
+          this._eventCorrelator.record({ type: 'honeypot_trip', severity: 'critical', source: clientIP || 'unknown', details: { honeypot: honeypotResult.honeypot, url: reqConfig.url } });
+        }
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'honeypot_trip', severity: 'critical', details: { honeypot: honeypotResult.honeypot, url: reqConfig.url } });
+        }
+        throw new ClientError(`Honeypot endpoint accessed: ${honeypotResult.honeypot}`, {
+          code: 'ERR_HONEYPOT_TRIP',
+          details: { honeypot: honeypotResult.honeypot, severity: honeypotResult.severity },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.16 v19: Geofence check
+    if (this._geofence) {
+      const clientIP = reqConfig._clientIP || reqConfig.clientIP || null;
+      if (clientIP) {
+        const geoResult = this._geofence.check(clientIP);
+        if (!geoResult.allowed) {
+          this._stats.failures++;
+          if (this._eventCorrelator) {
+            this._eventCorrelator.record({ type: 'geofence_block', severity: 'high', source: clientIP, details: { region: geoResult.region } });
+          }
+          if (this._auditLog) {
+            this._auditLog.log({ event: 'geofence_blocked', severity: 'warn', details: { ip: clientIP, region: geoResult.region } });
+          }
+          throw new ClientError('Request blocked by geofence policy', {
+            code: 'ERR_GEOFENCE_BLOCKED',
+            details: { ip: clientIP, region: geoResult.region, action: geoResult.action },
+            config: reqConfig,
+          });
+        }
+      }
+    }
+
+    // 3.17 v19: Behavioral analytics — detect anomalous request patterns
+    if (this._behavioralAnalytics) {
+      const contextId = reqConfig._contextId || reqConfig.contextId || 'default';
+      this._behavioralAnalytics.recordRequest(contextId, { method: reqConfig.method, url: reqConfig.url });
+      const analysisResult = this._behavioralAnalytics.analyze(contextId);
+      if (analysisResult.anomaly) {
+        this._stats.failures++;
+        if (this._eventCorrelator) {
+          this._eventCorrelator.record({ type: 'behavioral_anomaly', severity: 'high', source: contextId, details: { score: analysisResult.score, reasons: analysisResult.reasons } });
+        }
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'behavioral_anomaly', severity: 'warn', details: { contextId, score: analysisResult.score, reasons: analysisResult.reasons } });
+        }
+        throw new ClientError('Behavioral anomaly detected', {
+          code: 'ERR_BEHAVIORAL_ANOMALY',
+          details: { score: analysisResult.score, reasons: analysisResult.reasons },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.18 v19: Multi-level throttle guard
+    if (this._throttleGuard) {
+      const throttleKey = `${reqConfig.method}:${reqConfig.url}`;
+      const throttleResult = this._throttleGuard.check(throttleKey);
+      if (!throttleResult.allowed) {
+        this._stats.failures++;
+        if (this._eventCorrelator) {
+          this._eventCorrelator.record({ type: 'throttle_block', severity: 'warn', source: throttleKey, details: { level: throttleResult.level, usagePercent: throttleResult.usagePercent } });
+        }
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'throttle_blocked', severity: 'warn', details: { key: throttleKey, level: throttleResult.level } });
+        }
+        throw new ClientError('Request blocked by throttle guard', {
+          code: 'ERR_THROTTLE_BLOCKED',
+          details: { level: throttleResult.level, remaining: throttleResult.remaining, usagePercent: throttleResult.usagePercent },
+          config: reqConfig,
+        });
+      }
+    }
+
+    // 3.19 v19: Security event correlator — check for coordinated attack alert
+    if (this._eventCorrelator) {
+      // Record this request as an event
+      this._eventCorrelator.record({ type: 'request', severity: 'info', source: reqConfig._clientIP || reqConfig.clientIP || 'client', details: { method: reqConfig.method, url: reqConfig.url } });
+      // Check correlation alerts
+      const correlation = this._eventCorrelator.correlate();
+      const highAlerts = correlation.alerts.filter(a => a.severity === 'critical' || a.severity === 'high');
+      if (highAlerts.length > 0 && (correlation.risk === 'critical' || correlation.risk === 'high')) {
+        if (this._auditLog) {
+          this._auditLog.log({ event: 'correlation_alert', severity: 'critical', details: { risk: correlation.risk, patterns: correlation.patterns } });
+        }
+        // Don't block automatically — only log and surface in audit log
+        // (Blocking is left to the application layer using getAlerts())
+      }
+    }
+
+    // 3.20 v19: Crypto key rotator — inject current key version header if key rotator is configured
+    if (this._keyRotator) {
+      const currentKey = this._keyRotator.getCurrentKey();
+      if (currentKey) {
+        reqConfig.headers['x-key-version'] = currentKey.version;
+      }
+    }
+
     // 3.15. Form submission: convert plain object to FormData (v11)
     if (reqConfig._formSubmission && reqConfig.body && typeof reqConfig.body === 'object' &&
         !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body)) {
@@ -1623,6 +1758,25 @@ class awsibnjClient {
           journey.totalDuration = journey.endTime - journey.startTime;
           journey.attempts.push({ attempt: attempt + 1, status: response.status, duration: Date.now() - requestStartTime });
           result.journey = journey;
+        }
+
+        // v19: SRI — verify response data integrity if manifest entry exists
+        if (this._sri && result.data != null) {
+          const sriKey = `${reqConfig.method}:${reqConfig.url}`;
+          const manifestHash = this._sri._manifest.get(sriKey);
+          if (manifestHash !== undefined) {
+            if (!this._sri.verify(result.data, manifestHash)) {
+              this._stats.failures++;
+              if (this._auditLog) {
+                this._auditLog.log({ event: 'sri_mismatch', severity: 'critical', details: { url: reqConfig.url } });
+              }
+              throw new ClientError('Response integrity check failed (SRI mismatch)', {
+                code: 'ERR_SRI_MISMATCH',
+                details: { url: reqConfig.url },
+                config: reqConfig,
+              });
+            }
+          }
         }
 
         // 9. Run response interceptors
