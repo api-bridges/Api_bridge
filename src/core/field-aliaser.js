@@ -1,5 +1,5 @@
 /**
- * yarou v8 — Multi-Alias Field Resolution
+ * awsibnj v8 — Multi-Alias Field Resolution
  *
  * Enables mapping a single canonical field name to multiple aliases across different APIs.
  * When different backends use different names for the same concept (e.g., "user_id", "userId",

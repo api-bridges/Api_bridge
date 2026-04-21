@@ -1,5 +1,5 @@
 /**
- * yarou — Utils Module
+ * awsibnj — Utils Module
  *
  * Caching, deduplication, diffing, export, masking, metrics, and more.
  */

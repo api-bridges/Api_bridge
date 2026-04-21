@@ -1,5 +1,5 @@
 /**
- * yarou v11 — Adapter System
+ * awsibnj v11 — Adapter System
  *
  * Pluggable adapter architecture, like Axios's adapter system.
  * Allows switching between fetch (default), XMLHttpRequest, or custom adapters.

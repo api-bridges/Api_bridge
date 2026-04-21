@@ -1,10 +1,10 @@
 /**
- * yarou v11 — HTTP Status Codes
+ * awsibnj v11 — HTTP Status Codes
  *
  * Complete enum of HTTP status codes, matching Axios's HttpStatusCode.
  *
  * Usage:
- *   const { HttpStatusCode } = require('yarou');
+ *   const { HttpStatusCode } = require('awsibnj');
  *   if (response.status === HttpStatusCode.Ok) { ... }
  *   if (response.status === HttpStatusCode.NotFound) { ... }
  */

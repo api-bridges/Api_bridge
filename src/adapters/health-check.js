@@ -1,5 +1,5 @@
 /**
- * yarou v5 — Health Check Monitor
+ * awsibnj v5 — Health Check Monitor
  *
  * Endpoint health monitoring with:
  *  - Configurable health check probes (custom check functions)

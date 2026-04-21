@@ -1,5 +1,5 @@
 /**
- * yarou v9 — Smart Proxy
+ * awsibnj v9 — Smart Proxy
  *
  * Returns response data wrapped in a Proxy that dynamically resolves
  * field names using multiple strategies:

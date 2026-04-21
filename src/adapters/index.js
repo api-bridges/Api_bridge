@@ -1,5 +1,5 @@
 /**
- * yarou — Adapters Module
+ * awsibnj — Adapters Module
  *
  * Protocol bridges, middleware, resilience patterns, and orchestration.
  */

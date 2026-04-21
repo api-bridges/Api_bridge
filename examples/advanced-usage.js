@@ -1,5 +1,5 @@
 /**
- * yarou — Advanced SDK Usage Examples
+ * awsibnj — Advanced SDK Usage Examples
  *
  * Demonstrates SDK-level features: plugins, pipelines, circuit breakers,
  * event-driven architecture, and custom extension patterns.

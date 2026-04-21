@@ -1,5 +1,5 @@
 /**
- * yarou v3 — Response Cache
+ * awsibnj v3 — Response Cache
  *
  * In-memory LRU cache with TTL support.
  * Prevents redundant transformations of identical payloads.

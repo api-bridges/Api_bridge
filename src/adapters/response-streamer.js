@@ -1,5 +1,5 @@
 /**
- * yarou v5 — Response Streamer
+ * awsibnj v5 — Response Streamer
  *
  * Streaming/chunked JSON response transformer:
  *  - Process large JSON responses in chunks

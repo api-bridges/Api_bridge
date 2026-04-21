@@ -1,5 +1,5 @@
 /**
- * yarou v3 — Schema Inference Engine
+ * awsibnj v3 — Schema Inference Engine
  *
  * Automatically generates schemas from API response data.
  * Analyzes one or more sample payloads and infers:

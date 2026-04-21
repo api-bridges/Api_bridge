@@ -1,5 +1,5 @@
 /**
- * yarou v3 — Response Normalizer
+ * awsibnj v3 — Response Normalizer
  *
  * Standardises common API response shapes so your frontend
  * always gets a predictable structure, regardless of the backend.

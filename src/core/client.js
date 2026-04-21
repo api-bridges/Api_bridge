@@ -1,5 +1,5 @@
 /**
- * yarou v18 — HTTP Client Engine (Full Axios Replacement + All yarou Features)
+ * awsibnj v18 — HTTP Client Engine (Full Axios Replacement + All awsibnj Features)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -75,7 +75,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { yarouTransformer } = require('./transformer');
+const { awsibnjTransformer } = require('./transformer');
 const { LearningEngine } = require('./learning');
 const { FuzzyMatcher } = require('./fuzzy-matcher');
 const { TypeCoercer } = require('./type-coercer');
@@ -370,9 +370,9 @@ function mergeConfig(target, source) {
   return result;
 }
 
-// ─── yarouClient ────────────────────────────────────────────────────────
+// ─── awsibnjClient ────────────────────────────────────────────────────────
 
-class yarouClient {
+class awsibnjClient {
   /**
    * @param {object} [options={}]
    * @param {string} [options.baseURL=''] — Base URL for all requests
@@ -669,7 +669,7 @@ class yarouClient {
     };
 
     // Core engines
-    this.transformer = new yarouTransformer(options);
+    this.transformer = new awsibnjTransformer(options);
     this.learning = this.transformer.learning;
     this.fuzzyMatcher = new FuzzyMatcher(options.fuzzyMatcher || {});
     this.typeCoercer = new TypeCoercer({
@@ -1385,7 +1385,7 @@ class yarouClient {
       }
     }
 
-    // 5. Transform outgoing body if needed (yarou auto-align)
+    // 5. Transform outgoing body if needed (awsibnj auto-align)
     if (reqConfig.body && typeof reqConfig.body === 'object' &&
         !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body) &&
         !isBuffer(reqConfig.body) && !isArrayBufferView(reqConfig.body) &&
@@ -2237,35 +2237,35 @@ class yarouClient {
 // ─── Static Methods (Axios Compatibility) ─────────────────────────────────
 
 /**
- * Check if an error is an yarou client error (like axios.isAxiosError).
+ * Check if an error is an awsibnj client error (like axios.isAxiosError).
  * @param {*} err
  * @returns {boolean}
  */
-yarouClient.isClientError = function isClientError(err) {
+awsibnjClient.isClientError = function isClientError(err) {
   return err instanceof ClientError || (err && (err.isYarouError === true || err.isAxiosError === true));
 };
 
 /**
- * Check if an error is an yarou error.
+ * Check if an error is an awsibnj error.
  * @param {*} err
  * @returns {boolean}
  */
-yarouClient.isYarouError = yarouClient.isClientError;
+awsibnjClient.isYarouError = awsibnjClient.isClientError;
 
 // ─── Factory Function ───────────────────────────────────────────────────────
 
 /**
  * Create a new API client instance.
  *
- * @param {object} [options={}] — Client options (see yarouClient constructor)
- * @returns {yarouClient}
+ * @param {object} [options={}] — Client options (see awsibnjClient constructor)
+ * @returns {awsibnjClient}
  *
  * @example
  *   const api = createClient({ baseURL: "/api" });
  *   const res = await api.get("/user", { expect: { userName: "string" } });
  */
 function createClient(options = {}) {
-  return new yarouClient(options);
+  return new awsibnjClient(options);
 }
 
 // ─── Concurrent Request Helpers ─────────────────────────────────────────────
@@ -2309,7 +2309,7 @@ function isYarouError(err) {
 }
 
 // ─── Axios Aliases (v12: Complete drop-in compatibility) ─────────────────
-const Axios = yarouClient;
+const Axios = awsibnjClient;
 const AxiosError = ClientError;
 
 /**
@@ -2322,7 +2322,7 @@ function isAxiosError(err) {
 }
 
 module.exports = {
-  yarouClient,
+  awsibnjClient,
   ClientError,
   createClient,
   buildURL,

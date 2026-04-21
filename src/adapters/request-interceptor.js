@@ -1,5 +1,5 @@
 /**
- * yarou v8 — Request Interceptor Chain
+ * awsibnj v8 — Request Interceptor Chain
  *
  * Priority-ordered interceptor chain for modifying requests and responses.
  * More powerful than middleware — supports priority ordering, async interceptors,

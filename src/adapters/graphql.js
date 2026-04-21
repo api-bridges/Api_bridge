@@ -1,5 +1,5 @@
 /**
- * yarou v4 — GraphQL Bridge
+ * awsibnj v4 — GraphQL Bridge
  *
  * Transforms GraphQL responses and variable names between
  * naming conventions so your frontend and server always speak

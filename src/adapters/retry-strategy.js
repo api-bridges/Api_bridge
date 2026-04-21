@@ -1,5 +1,5 @@
 /**
- * yarou v5 — Advanced Retry Strategy
+ * awsibnj v5 — Advanced Retry Strategy
  *
  * Pluggable retry strategies for resilient API calls:
  *  - Linear backoff

@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for yarou v18
-// Type definitions for yarou 18.0.0
+// TypeScript Type Declarations for awsibnj v18
+// Type definitions for awsibnj 18.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -8,12 +8,12 @@ declare namespace ApiBridgeAI {
   // ─── Main API ────────────────────────────────────────────────────────────
 
   /**
-   * Wrap an Axios instance with yarou transformation.
+   * Wrap an Axios instance with awsibnj transformation.
    */
   function bridge(axiosInstance: any, options?: BridgeOptions): any;
 
   /**
-   * Wrap native fetch with yarou transformation, retry, caching, and middleware.
+   * Wrap native fetch with awsibnj transformation, retry, caching, and middleware.
    */
   function bridgeFetch(options?: BridgeFetchOptions): BridgeFetchInstance;
 
@@ -25,17 +25,17 @@ declare namespace ApiBridgeAI {
   /**
    * Create a reusable transformer instance.
    */
-  function createTransformer(options?: TransformOptions): yarouTransformer;
+  function createTransformer(options?: TransformOptions): awsibnjTransformer;
 
   /**
    * Create a new API client instance (v9+).
    */
-  function createClient(options?: ClientOptions): yarouClient;
+  function createClient(options?: ClientOptions): awsibnjClient;
 
   /**
    * Alias for createClient (Axios-compatible).
    */
-  function create(options?: ClientOptions): yarouClient;
+  function create(options?: ClientOptions): awsibnjClient;
 
   /**
    * Execute multiple requests concurrently (like axios.all).
@@ -940,7 +940,7 @@ declare namespace ApiBridgeAI {
 
   // ─── v11 Client Class ──────────────────────────────────────────────────
 
-  class yarouClient {
+  class awsibnjClient {
     constructor(options?: ClientOptions);
     baseURL: string;
     defaultHeaders: Record<string, string>;
@@ -962,7 +962,7 @@ declare namespace ApiBridgeAI {
     xsrfCookieName: string;
     xsrfHeaderName: string;
     defaults: ClientDefaults;
-    transformer: yarouTransformer;
+    transformer: awsibnjTransformer;
     learning: LearningEngine;
     fuzzyMatcher: FuzzyMatcher;
     typeCoercer: TypeCoercer;
@@ -1214,7 +1214,7 @@ declare namespace ApiBridgeAI {
 
   // ─── Core Classes ────────────────────────────────────────────────────────
 
-  class yarouTransformer {
+  class awsibnjTransformer {
     constructor(options?: TransformOptions);
     transform(data: Record<string, any>, schema: Record<string, string> | null, direction: string): Record<string, any>;
     approve(source: string, target: string): void;
@@ -1941,9 +1941,9 @@ declare namespace ApiBridgeAI {
   // ─── v12: Axios Class Aliases ─────────────────────────────────────────
 
   /**
-   * Axios class alias (same as yarouClient).
+   * Axios class alias (same as awsibnjClient).
    */
-  const Axios: typeof yarouClient;
+  const Axios: typeof awsibnjClient;
 
   /**
    * AxiosError alias (same as ClientError, with error code constants).
@@ -1982,8 +1982,8 @@ declare namespace ApiBridgeAI {
 
     defaults: ClientDefaults;
     interceptors: InterceptorManager;
-    create(options?: ClientOptions): yarouClient;
-    createClient(options?: ClientOptions): yarouClient;
+    create(options?: ClientOptions): awsibnjClient;
+    createClient(options?: ClientOptions): awsibnjClient;
 
     all<T>(promises: Promise<T>[]): Promise<T[]>;
     spread<T, R>(callback: (...args: T[]) => R): (arr: T[]) => R;
@@ -1994,9 +1994,9 @@ declare namespace ApiBridgeAI {
     isCancel(value: any): boolean;
     isCancelToken(value: any): boolean;
 
-    Axios: typeof yarouClient;
+    Axios: typeof awsibnjClient;
     AxiosError: typeof ClientError;
-    yarouClient: typeof yarouClient;
+    awsibnjClient: typeof awsibnjClient;
     ClientError: typeof ClientError;
     CancelToken: typeof CancelToken;
     Cancel: typeof Cancel;

@@ -1,5 +1,5 @@
 /**
- * yarou v3 — Learning Engine
+ * awsibnj v3 — Learning Engine
  *
  * Persistent, session-aware learning with:
  *  - Confidence decay over time
@@ -231,7 +231,7 @@ class LearningEngine {
 
       fs.writeFileSync(this.storePath, JSON.stringify(data, null, 2));
     } catch (e) {
-      console.error(`[yarou] Failed to save learned data: ${e.message}`);
+      console.error(`[awsibnj] Failed to save learned data: ${e.message}`);
     }
   }
 
@@ -270,7 +270,7 @@ class LearningEngine {
         Object.entries(data.rejected || {}).map(([k, v]) => [k, new Set(v)])
       );
     } catch (e) {
-      console.error(`[yarou] Failed to load learned data: ${e.message}`);
+      console.error(`[awsibnj] Failed to load learned data: ${e.message}`);
     }
   }
 

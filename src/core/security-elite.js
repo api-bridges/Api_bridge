@@ -1,5 +1,5 @@
 /**
- * yarou v18 — Elite Security Module
+ * awsibnj v18 — Elite Security Module
  *
  * Next-generation elite-grade security utilities for protecting API requests
  * and responses with zero-trust architecture, threat intelligence, encrypted

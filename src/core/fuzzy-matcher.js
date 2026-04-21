@@ -1,5 +1,5 @@
 /**
- * yarou v7 — Weighted Ensemble Fuzzy Matcher
+ * awsibnj v7 — Weighted Ensemble Fuzzy Matcher
  *
  * Multi-strategy fuzzy matching with weighted ensemble scoring:
  *  - Levenshtein distance with normalized scoring

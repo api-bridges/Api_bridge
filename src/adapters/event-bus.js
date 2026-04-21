@@ -1,5 +1,5 @@
 /**
- * yarou v5 — Event Bus
+ * awsibnj v5 — Event Bus
  *
  * Typed, cross-module pub/sub event bus:
  *  - Subscribe/unsubscribe to named events
