@@ -145,7 +145,7 @@ class QuantumResistantCrypto {
 
 /**
  * Per-context request pattern tracker that detects anomalies by comparing
- * recent behaviour against a rolling baseline.
+ * recent behavior against a rolling baseline.
  *
  * @example
  *   const ba = new BehavioralAnalytics({ windowMs: 60000 });
@@ -197,7 +197,7 @@ class BehavioralAnalytics {
   }
 
   /**
-   * Analyse the recent request history for a context and return an anomaly report.
+   * Analyze the recent request history for a context and return an anomaly report.
    *
    * @param {string} contextId
    * @returns {{ anomaly: boolean, score: number, reasons: string[], requestCount: number }}
@@ -262,7 +262,7 @@ class BehavioralAnalytics {
   }
 
   /**
-   * Set an expected-behaviour baseline for a context.
+   * Set an expected-behavior baseline for a context.
    *
    * @param {string} contextId
    * @param {object} baseline

@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Composite anomaly score (0–100) with configurable `anomalyScoreThreshold`
   - `recordRequest(contextId, request)` — track method, URL, and timestamp
   - `analyze(contextId)` — returns `{ anomaly, score, reasons, requestCount }`
-  - `setBaseline(contextId, baseline)` — configure expected behaviour
+  - `setBaseline(contextId, baseline)` — configure expected behavior
   - `resetProfile(contextId)` / `reset()` — clear stored profiles
   - `behavioralAnalytics: { windowMs: 300000, maxRequestsPerWindow: 200, anomalyScoreThreshold: 70 }` in client config
 
