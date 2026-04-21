@@ -5,7 +5,130 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.0.0] - 2026-04-20
+## [19.0.0] - 2026-04-21
+
+### Added — Fortress Security Architecture (Post-Quantum + Behavioral + Event Correlation)
+
+- **Quantum-Resistant Crypto (`QuantumResistantCrypto`)** — Post-quantum-inspired key derivation & signing
+  - Multi-round PBKDF2 key derivation with domain-separation context for maximum classical resistance
+  - Double-HMAC signing with configurable `hashRounds` to resist length-extension and pre-image attacks
+  - Timing-safe `verify()` using `crypto.timingSafeEqual` to prevent timing-oracle attacks
+  - `deriveKey(secret, salt, context)` — PBKDF2 with context mixed into salt for domain separation
+  - `sign(data, key)` — multi-round HMAC-SHA512 signature
+  - `verify(data, signature, key)` — constant-time verification
+  - `hash(data, algorithm)` — multi-round deterministic hash
+  - `getAlgorithmInfo()` — inspect algorithm parameters
+  - `quantumCrypto: { iterations: 100000, keyLength: 64, digest: 'sha512', hashRounds: 3 }` in client config
+
+- **Behavioral Analytics (`BehavioralAnalytics`)** — Per-context request pattern anomaly detection
+  - Rolling-window request history per context with configurable `windowMs` and `maxProfileHistory`
+  - Volume anomaly detection: flags when requests exceed `maxRequestsPerWindow`
+  - Burst detection: flags rapid-fire requests within 5-second micro-windows
+  - Mutating method ratio detection: flags contexts sending abnormally high POST/PUT/DELETE/PATCH rates
+  - Baseline deviation: compares current rate against configured expected baseline
+  - Composite anomaly score (0–100) with configurable `anomalyScoreThreshold`
+  - `recordRequest(contextId, request)` — track method, URL, and timestamp
+  - `analyze(contextId)` — returns `{ anomaly, score, reasons, requestCount }`
+  - `setBaseline(contextId, baseline)` — configure expected behaviour
+  - `resetProfile(contextId)` / `reset()` — clear stored profiles
+  - `behavioralAnalytics: { windowMs: 300000, maxRequestsPerWindow: 200, anomalyScoreThreshold: 70 }` in client config
+
+- **Honeypot Manager (`HoneypotManager`)** — Canary endpoint detection for scanners and bots
+  - Register honeypot paths; any matching request is flagged as a scanner or bot
+  - Supports strict exact-path matching or contains-based matching (`strictMatch` option)
+  - Per-IP trip history with configurable alert threshold
+  - `addHoneypot(path, options)` — register canary path with `severity` label
+  - `removeHoneypot(path)` — deregister a canary
+  - `checkRequest(url, ip)` — returns `{ tripped, honeypot, severity, label }`
+  - `getTrips(ip)` — trip history for a specific IP
+  - `getTotalTrips()` — aggregate trip counter
+  - `getHoneypots()` — list registered canary paths
+  - `reset()` — clear all honeypots and trips
+  - Blocked requests throw `ERR_HONEYPOT_TRIP`
+  - `honeypot: { strictMatch: false, alertThreshold: 1 }` in client config
+
+- **Subresource Integrity (`SubresourceIntegrity`)** — API-level response hash verification
+  - SHA-256 / SHA-384 integrity hashes for API responses (API equivalent of browser SRI)
+  - Timing-safe comparison via `crypto.timingSafeEqual`
+  - Manifest support: pre-register expected hashes and verify multiple responses at once
+  - `computeHash(data, algorithm)` — compute integrity hash of string, Buffer, or object
+  - `verify(data, expectedHash)` — timing-safe single-response verification
+  - `sign(data)` — returns `{ hash, algorithm, encoding }` descriptor
+  - `createManifest(entries)` — register expected hashes by key
+  - `verifyManifest(responses)` — batch verification returning `{ valid, failures }`
+  - SRI mismatch in client pipeline throws `ERR_SRI_MISMATCH`
+  - `sri: { algorithm: 'sha256', encoding: 'hex' }` in client config
+
+- **Request Throttle Guard (`RequestThrottleGuard`)** — Multi-level progressive throttling
+  - Three escalating response levels: `NONE` → `WARN` → `DELAY` → `BLOCK`
+  - Configurable capacity thresholds: `warnAt` (default 60%), `delayAt` (80%), `blockAt` (95%)
+  - Rolling window request counting with `windowMs`
+  - Progressive penalty system: `penalize(key, amount)` raises effective usage count
+  - Penalty forgiveness: `forgive(key, amount)` reduces accumulated penalty
+  - `check(key)` — returns `{ level, allowed, remaining, usagePercent }`
+  - `getLevel(key)` — inspect current level without recording a request
+  - `resetKey(key)` / `reset()` — clear specific key or all state
+  - Blocked requests throw `ERR_THROTTLE_BLOCKED`
+  - `throttleGuard: { maxRequests: 100, windowMs: 60000, warnAt: 60, delayAt: 80, blockAt: 95 }` in client config
+
+- **Geofence Guard (`GeofenceGuard`)** — IP-prefix based geographic access control
+  - Define named regions with IP prefix patterns and allow/deny actions
+  - Configurable `defaultAction` for IPs that match no region
+  - First-match evaluation of regions in insertion order
+  - `addRegion(name, prefixes, action)` — register region with IP prefix array
+  - `removeRegion(name)` — deregister a region
+  - `check(ip)` — returns `{ allowed, region, action, matched }`
+  - `setDefaultAction(action)` — change default for unmatched IPs
+  - `getRegions()` — list all region names
+  - `getRegion(name)` — inspect region configuration
+  - `reset()` — clear all regions and restore default action
+  - Blocked requests throw `ERR_GEOFENCE_BLOCKED`
+  - `geofence: { defaultAction: 'allow' }` in client config
+
+- **Crypto Key Rotator (`CryptoKeyRotator`)** — Versioned key rotation with scheduled expiry
+  - Maintain multiple key versions simultaneously for seamless rotation without downtime
+  - Automatic expiry tracking with `pruneExpired()` cleanup
+  - Capacity management: configurable `maxVersions` with oldest-first eviction
+  - Injects `x-key-version` header into requests when configured
+  - `addKey(version, keyMaterial, expiresAt)` — register a key version
+  - `getCurrentKey()` — get latest non-expired key `{ version, key, expiresAt }`
+  - `getKey(version)` — retrieve specific version with `expired` flag
+  - `rotateKeys(newVersion, keyMaterial, expiresAt)` — add new version and set as current
+  - `pruneExpired()` — remove expired versions, returns count removed
+  - `listVersions()` — list all stored version labels
+  - `isValid(version)` — check if version is non-expired
+  - `reset()` — clear all key versions
+  - `keyRotator: { maxVersions: 10 }` in client config
+
+- **Security Event Correlator (`SecurityEventCorrelator`)** — SIEM-inspired cross-module correlation
+  - Records security events from all layers (honeypot, geofence, throttle, behavioral, etc.)
+  - Detects coordinated attack patterns within configurable time windows
+  - Three correlation patterns: high event volume, critical storm, multi-vector attack
+  - Risk level assessment: none / low / medium / high / critical
+  - `record(event)` — store `{ type, severity, source, details, timestamp }`
+  - `correlate(windowMs)` — analyze recent events: `{ alerts, patterns, risk, eventCount }`
+  - `getAlerts()` — retrieve all raised alerts
+  - `clearAlerts()` — reset alert list
+  - `getStats(windowMs)` — event counts by type and severity
+  - `reset()` — clear all events and alerts
+  - Automatically receives events from honeypot, geofence, throttle, and behavioral modules
+  - `eventCorrelator: { alertThreshold: 3, criticalThreshold: 2, maxEvents: 10000 }` in client config
+
+### New Error Codes (v19)
+- `ERR_QUANTUM_VERIFY_FAILED` — QuantumResistantCrypto signature verification failed
+- `ERR_BEHAVIORAL_ANOMALY` — BehavioralAnalytics detected anomalous request pattern
+- `ERR_HONEYPOT_TRIP` — HoneypotManager detected access to canary endpoint
+- `ERR_SRI_MISMATCH` — SubresourceIntegrity response hash mismatch
+- `ERR_THROTTLE_BLOCKED` — RequestThrottleGuard blocked request at BLOCK level
+- `ERR_GEOFENCE_BLOCKED` — GeofenceGuard denied request from restricted IP region
+- `ERR_KEY_ROTATION_FAILED` — CryptoKeyRotator key operation failed
+- `ERR_CORRELATION_ALERT` — SecurityEventCorrelator raised coordinated attack alert
+
+### Version
+- Bumped to `19.0.0`
+- 1275 tests (97 new tests added)
+
+
 
 ### Added — Elite Security Architecture (Zero-Trust + Threat Intelligence + mTLS)
 - **Zero Trust Engine (`ZeroTrustEngine`)** — Continuous verification with dynamic trust scoring

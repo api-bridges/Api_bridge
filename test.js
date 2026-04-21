@@ -202,6 +202,16 @@ const {
   SecurityHeadersManager,
   EncryptedConfigVault,
   MutualTLSManager,
+
+  // v19 exports
+  QuantumResistantCrypto,
+  BehavioralAnalytics,
+  HoneypotManager,
+  SubresourceIntegrity,
+  RequestThrottleGuard,
+  GeofenceGuard,
+  CryptoKeyRotator,
+  SecurityEventCorrelator,
 } = require('./src/index');
 
 const fs = require('fs');
@@ -6159,7 +6169,7 @@ console.log('\n━━━ v11: VERSION ━━━');
 
 test('VERSION is exported and correct', () => {
   assert(typeof VERSION === 'string', 'VERSION should be a string');
-  assertEqual(VERSION, '18.0.0');
+  assertEqual(VERSION, '19.0.0');
 });
 
 console.log('\n━━━ v11: AxiosHeaders ━━━');
@@ -7219,7 +7229,7 @@ test('v12: apiBridge has utilities', () => {
 });
 
 test('v12: apiBridge.VERSION is correct', () => {
-  assertEqual(apiBridge.VERSION, '18.0.0');
+  assertEqual(apiBridge.VERSION, '19.0.0');
 });
 
 console.log('\n━━━ v12: Axios Class Aliases ━━━');
@@ -7899,7 +7909,7 @@ test('v13: full Axios replacement API surface check (v13)', () => {
   const api = require('./src/index');
 
   // v13: VERSION
-  assertEqual(api.VERSION, '18.0.0');
+  assertEqual(api.VERSION, '19.0.0');
 
   // Classes with isAxiosError support
   const err = new api.ClientError('test');
@@ -8777,7 +8787,7 @@ test('v14: full API surface check', () => {
   const api = require('./src/index');
 
   // Version
-  assertEqual(api.VERSION, '18.0.0');
+  assertEqual(api.VERSION, '19.0.0');
 
   // v14 options available in client defaults
   const client = api.createClient({
@@ -9310,7 +9320,7 @@ test('v15: full API surface check', () => {
   // v15 new exports available
   const api = { resolveParamsSerializer, VERSION };
   assertEqual(typeof resolveParamsSerializer, 'function');
-  assertEqual(api.VERSION, '18.0.0');
+  assertEqual(api.VERSION, '19.0.0');
 
   // AxiosHeaders v15 enhancements
   assert(typeof AxiosHeaders.fromString === 'function', 'AxiosHeaders.fromString exists');
@@ -10006,7 +10016,7 @@ test('v16: new error codes exist on ClientError', () => {
 });
 
 test('v18: VERSION is 18.0.0', () => {
-  assertEqual(VERSION, '18.0.0');
+  assertEqual(VERSION, '19.0.0');
 });
 
 // ─── v16 Export Tests ─────────────────────────────────────────────────────────
@@ -11866,7 +11876,816 @@ test('v18: client with all v16+v17+v18 features combined', async () => {
 });
 
 test('v18: VERSION is 18.0.0', () => {
-  assertEqual(VERSION, '18.0.0');
+  assertEqual(VERSION, '19.0.0');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// v19: Fortress Security Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── QuantumResistantCrypto Tests ──────────────────────────────────────────
+
+test('v19: QuantumResistantCrypto constructor defaults', () => {
+  const qrc = new QuantumResistantCrypto();
+  assertEqual(qrc.iterations, 100000);
+  assertEqual(qrc.keyLength, 64);
+  assertEqual(qrc.digest, 'sha512');
+  assertEqual(qrc.hashRounds, 3);
+});
+
+test('v19: QuantumResistantCrypto custom options', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 10000, keyLength: 32, digest: 'sha256', hashRounds: 1 });
+  assertEqual(qrc.iterations, 10000);
+  assertEqual(qrc.keyLength, 32);
+  assertEqual(qrc.digest, 'sha256');
+  assertEqual(qrc.hashRounds, 1);
+});
+
+test('v19: QuantumResistantCrypto deriveKey returns Buffer', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 1000 });
+  const key = qrc.deriveKey('secret', 'salt', 'context');
+  assert(Buffer.isBuffer(key), 'key is a Buffer');
+  assertEqual(key.length, 64);
+});
+
+test('v19: QuantumResistantCrypto deriveKey is deterministic for same inputs', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 1000 });
+  const key1 = qrc.deriveKey('secret', 'salt', 'ctx');
+  const key2 = qrc.deriveKey('secret', 'salt', 'ctx');
+  assertEqual(key1.toString('hex'), key2.toString('hex'));
+});
+
+test('v19: QuantumResistantCrypto deriveKey differs with different context', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 1000 });
+  const key1 = qrc.deriveKey('secret', 'salt', 'ctx-a');
+  const key2 = qrc.deriveKey('secret', 'salt', 'ctx-b');
+  assert(key1.toString('hex') !== key2.toString('hex'), 'different context → different key');
+});
+
+test('v19: QuantumResistantCrypto sign returns string', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 1000, hashRounds: 1 });
+  const key = qrc.deriveKey('secret', 'salt', 'ctx');
+  const sig = qrc.sign('my-data', key);
+  assert(typeof sig === 'string', 'signature is string');
+  assert(sig.length > 0, 'signature not empty');
+});
+
+test('v19: QuantumResistantCrypto verify returns true for correct data', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 1000, hashRounds: 1 });
+  const key = qrc.deriveKey('secret', 'salt', 'ctx');
+  const sig = qrc.sign('my-data', key);
+  assertEqual(qrc.verify('my-data', sig, key), true);
+});
+
+test('v19: QuantumResistantCrypto verify returns false for tampered data', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 1000, hashRounds: 1 });
+  const key = qrc.deriveKey('secret', 'salt', 'ctx');
+  const sig = qrc.sign('my-data', key);
+  assertEqual(qrc.verify('tampered-data', sig, key), false);
+});
+
+test('v19: QuantumResistantCrypto verify returns false for wrong key', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 1000, hashRounds: 1 });
+  const key1 = qrc.deriveKey('secret1', 'salt', 'ctx');
+  const key2 = qrc.deriveKey('secret2', 'salt', 'ctx');
+  const sig = qrc.sign('my-data', key1);
+  assertEqual(qrc.verify('my-data', sig, key2), false);
+});
+
+test('v19: QuantumResistantCrypto hash returns string', () => {
+  const qrc = new QuantumResistantCrypto({ hashRounds: 1 });
+  const h = qrc.hash('test-data');
+  assert(typeof h === 'string', 'hash is string');
+  assert(h.length > 0, 'hash not empty');
+});
+
+test('v19: QuantumResistantCrypto hash is deterministic', () => {
+  const qrc = new QuantumResistantCrypto({ hashRounds: 1 });
+  const h1 = qrc.hash('abc');
+  const h2 = qrc.hash('abc');
+  assertEqual(h1, h2);
+});
+
+test('v19: QuantumResistantCrypto getAlgorithmInfo returns correct structure', () => {
+  const qrc = new QuantumResistantCrypto({ iterations: 5000, keyLength: 32, digest: 'sha256', hashRounds: 2 });
+  const info = qrc.getAlgorithmInfo();
+  assertEqual(info.digest, 'sha256');
+  assertEqual(info.iterations, 5000);
+  assertEqual(info.keyLength, 32);
+  assertEqual(info.hashRounds, 2);
+});
+
+// ─── BehavioralAnalytics Tests ─────────────────────────────────────────────
+
+test('v19: BehavioralAnalytics constructor defaults', () => {
+  const ba = new BehavioralAnalytics();
+  assertEqual(ba.windowMs, 300000);
+  assertEqual(ba.maxRequestsPerWindow, 200);
+  assertEqual(ba.anomalyScoreThreshold, 70);
+});
+
+test('v19: BehavioralAnalytics analyze — no profile returns clean', () => {
+  const ba = new BehavioralAnalytics();
+  const result = ba.analyze('unknown-context');
+  assertEqual(result.anomaly, false);
+  assertEqual(result.score, 0);
+  assertEqual(result.requestCount, 0);
+});
+
+test('v19: BehavioralAnalytics recordRequest creates profile', () => {
+  const ba = new BehavioralAnalytics();
+  ba.recordRequest('ctx-1', { method: 'GET', url: '/api' });
+  const profile = ba.getProfile('ctx-1');
+  assert(profile !== null, 'profile created');
+  assertEqual(profile.requests.length, 1);
+});
+
+test('v19: BehavioralAnalytics analyze — low volume, no anomaly', () => {
+  const ba = new BehavioralAnalytics({ maxRequestsPerWindow: 100, anomalyScoreThreshold: 50 });
+  for (let i = 0; i < 5; i++) {
+    ba.recordRequest('ctx-1', { method: 'GET', url: '/api' });
+  }
+  const result = ba.analyze('ctx-1');
+  assertEqual(result.anomaly, false);
+});
+
+test('v19: BehavioralAnalytics analyze — high volume flags anomaly', () => {
+  const ba = new BehavioralAnalytics({ maxRequestsPerWindow: 10, anomalyScoreThreshold: 30 });
+  for (let i = 0; i < 25; i++) {
+    ba.recordRequest('ctx-1', { method: 'GET', url: '/api' });
+  }
+  const result = ba.analyze('ctx-1');
+  assertEqual(result.anomaly, true);
+  assert(result.score > 0, 'score > 0');
+  assert(result.reasons.length > 0, 'has reasons');
+});
+
+test('v19: BehavioralAnalytics setBaseline and baseline deviation', () => {
+  const ba = new BehavioralAnalytics({ maxRequestsPerWindow: 1000, anomalyScoreThreshold: 20 });
+  ba.setBaseline('ctx-1', { avgRequestsPerWindow: 5 });
+  for (let i = 0; i < 20; i++) {
+    ba.recordRequest('ctx-1', { method: 'GET', url: '/api' });
+  }
+  const result = ba.analyze('ctx-1');
+  assert(result.score > 0, 'baseline deviation detected');
+});
+
+test('v19: BehavioralAnalytics resetProfile removes profile', () => {
+  const ba = new BehavioralAnalytics();
+  ba.recordRequest('ctx-1', { method: 'GET', url: '/api' });
+  ba.resetProfile('ctx-1');
+  assertEqual(ba.getProfile('ctx-1'), null);
+});
+
+test('v19: BehavioralAnalytics reset clears all profiles', () => {
+  const ba = new BehavioralAnalytics();
+  ba.recordRequest('ctx-1', { method: 'GET', url: '/api' });
+  ba.recordRequest('ctx-2', { method: 'POST', url: '/data' });
+  ba.reset();
+  assertEqual(ba.getProfile('ctx-1'), null);
+  assertEqual(ba.getProfile('ctx-2'), null);
+});
+
+// ─── HoneypotManager Tests ─────────────────────────────────────────────────
+
+test('v19: HoneypotManager constructor defaults', () => {
+  const hp = new HoneypotManager();
+  assertEqual(hp.strictMatch, false);
+  assertEqual(hp.alertThreshold, 1);
+});
+
+test('v19: HoneypotManager addHoneypot and getHoneypots', () => {
+  const hp = new HoneypotManager();
+  hp.addHoneypot('/admin-backup');
+  hp.addHoneypot('/secret-config', { severity: 'critical' });
+  const honeypots = hp.getHoneypots();
+  assert(honeypots.includes('/admin-backup'), 'has /admin-backup');
+  assert(honeypots.includes('/secret-config'), 'has /secret-config');
+});
+
+test('v19: HoneypotManager checkRequest — not tripped', () => {
+  const hp = new HoneypotManager();
+  hp.addHoneypot('/admin-backup');
+  const result = hp.checkRequest('/api/users', '1.2.3.4');
+  assertEqual(result.tripped, false);
+});
+
+test('v19: HoneypotManager checkRequest — tripped', () => {
+  const hp = new HoneypotManager();
+  hp.addHoneypot('/admin-backup', { severity: 'high' });
+  const result = hp.checkRequest('/admin-backup/db.sql', '5.5.5.5');
+  assertEqual(result.tripped, true);
+  assertEqual(result.severity, 'high');
+  assert(result.honeypot.length > 0, 'honeypot path returned');
+});
+
+test('v19: HoneypotManager getTrips tracks IP trips', () => {
+  const hp = new HoneypotManager();
+  hp.addHoneypot('/trap');
+  hp.checkRequest('/trap', '10.0.0.1');
+  hp.checkRequest('/trap', '10.0.0.1');
+  const trips = hp.getTrips('10.0.0.1');
+  assert(trips !== null, 'trips exist');
+  assertEqual(trips.count, 2);
+});
+
+test('v19: HoneypotManager getTotalTrips counts all trips', () => {
+  const hp = new HoneypotManager();
+  hp.addHoneypot('/canary');
+  hp.checkRequest('/canary', '1.1.1.1');
+  hp.checkRequest('/canary', '2.2.2.2');
+  hp.checkRequest('/canary', '3.3.3.3');
+  assertEqual(hp.getTotalTrips(), 3);
+});
+
+test('v19: HoneypotManager strictMatch mode', () => {
+  const hp = new HoneypotManager({ strictMatch: true });
+  hp.addHoneypot('/trap');
+  const r1 = hp.checkRequest('/trap', '1.1.1.1');
+  assertEqual(r1.tripped, true);
+  const r2 = hp.checkRequest('/trap/subpath', '2.2.2.2');
+  assertEqual(r2.tripped, false);
+});
+
+test('v19: HoneypotManager removeHoneypot works', () => {
+  const hp = new HoneypotManager();
+  hp.addHoneypot('/bait');
+  hp.removeHoneypot('/bait');
+  assertEqual(hp.getHoneypots().includes('/bait'), false);
+  const result = hp.checkRequest('/bait', '1.1.1.1');
+  assertEqual(result.tripped, false);
+});
+
+test('v19: HoneypotManager reset clears all', () => {
+  const hp = new HoneypotManager();
+  hp.addHoneypot('/trap1');
+  hp.checkRequest('/trap1', '1.1.1.1');
+  hp.reset();
+  assertEqual(hp.getHoneypots().length, 0);
+  assertEqual(hp.getTotalTrips(), 0);
+  assertEqual(hp.getTrips('1.1.1.1'), null);
+});
+
+// ─── SubresourceIntegrity Tests ────────────────────────────────────────────
+
+test('v19: SubresourceIntegrity constructor defaults', () => {
+  const sri = new SubresourceIntegrity();
+  assertEqual(sri.algorithm, 'sha256');
+  assertEqual(sri.encoding, 'hex');
+});
+
+test('v19: SubresourceIntegrity computeHash returns string', () => {
+  const sri = new SubresourceIntegrity();
+  const hash = sri.computeHash('test data');
+  assert(typeof hash === 'string', 'hash is string');
+  assertEqual(hash.length, 64); // sha256 hex = 64 chars
+});
+
+test('v19: SubresourceIntegrity computeHash is deterministic', () => {
+  const sri = new SubresourceIntegrity();
+  const h1 = sri.computeHash('hello world');
+  const h2 = sri.computeHash('hello world');
+  assertEqual(h1, h2);
+});
+
+test('v19: SubresourceIntegrity computeHash handles objects', () => {
+  const sri = new SubresourceIntegrity();
+  const hash = sri.computeHash({ key: 'value' });
+  assert(typeof hash === 'string', 'hash is string');
+  assert(hash.length === 64, '64 chars');
+});
+
+test('v19: SubresourceIntegrity verify returns true for matching data', () => {
+  const sri = new SubresourceIntegrity();
+  const data = 'important response data';
+  const hash = sri.computeHash(data);
+  assertEqual(sri.verify(data, hash), true);
+});
+
+test('v19: SubresourceIntegrity verify returns false for tampered data', () => {
+  const sri = new SubresourceIntegrity();
+  const hash = sri.computeHash('original data');
+  assertEqual(sri.verify('tampered data', hash), false);
+});
+
+test('v19: SubresourceIntegrity sign returns hash descriptor', () => {
+  const sri = new SubresourceIntegrity();
+  const result = sri.sign('test data');
+  assert(typeof result.hash === 'string', 'hash is string');
+  assertEqual(result.algorithm, 'sha256');
+  assertEqual(result.encoding, 'hex');
+});
+
+test('v19: SubresourceIntegrity createManifest and verifyManifest — valid', () => {
+  const sri = new SubresourceIntegrity();
+  const r1 = { key: '/api/users', data: [{ id: 1 }] };
+  const r2 = { key: '/api/posts', data: [{ id: 2 }] };
+  sri.createManifest([
+    { key: r1.key, hash: sri.computeHash(r1.data) },
+    { key: r2.key, hash: sri.computeHash(r2.data) },
+  ]);
+  const result = sri.verifyManifest([r1, r2]);
+  assertEqual(result.valid, true);
+  assertEqual(result.failures.length, 0);
+});
+
+test('v19: SubresourceIntegrity verifyManifest — detects mismatch', () => {
+  const sri = new SubresourceIntegrity();
+  sri.createManifest([{ key: '/api/data', hash: sri.computeHash('original') }]);
+  const result = sri.verifyManifest([{ key: '/api/data', data: 'tampered' }]);
+  assertEqual(result.valid, false);
+  assert(result.failures.length > 0, 'has failures');
+});
+
+test('v19: SubresourceIntegrity verifyManifest — key not in manifest', () => {
+  const sri = new SubresourceIntegrity();
+  const result = sri.verifyManifest([{ key: '/not-in-manifest', data: 'x' }]);
+  assertEqual(result.valid, false);
+  assert(result.failures[0].includes('not in manifest'), 'reports not in manifest');
+});
+
+test('v19: SubresourceIntegrity clearManifest works', () => {
+  const sri = new SubresourceIntegrity();
+  sri.createManifest([{ key: '/test', hash: 'abc' }]);
+  assertEqual(sri.getManifestSize(), 1);
+  sri.clearManifest();
+  assertEqual(sri.getManifestSize(), 0);
+});
+
+test('v19: SubresourceIntegrity sha384 algorithm', () => {
+  const sri = new SubresourceIntegrity({ algorithm: 'sha384' });
+  const hash = sri.computeHash('test');
+  assertEqual(hash.length, 96); // sha384 hex = 96 chars
+  assertEqual(sri.verify('test', hash), true);
+});
+
+// ─── RequestThrottleGuard Tests ────────────────────────────────────────────
+
+test('v19: RequestThrottleGuard constructor defaults', () => {
+  const guard = new RequestThrottleGuard();
+  assertEqual(guard.maxRequests, 100);
+  assertEqual(guard.windowMs, 60000);
+  assertEqual(guard.warnAt, 60);
+  assertEqual(guard.delayAt, 80);
+  assertEqual(guard.blockAt, 95);
+});
+
+test('v19: RequestThrottleGuard check — NONE for low usage', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 100 });
+  const result = guard.check('user-1');
+  assertEqual(result.level, 'NONE');
+  assertEqual(result.allowed, true);
+  assert(typeof result.remaining === 'number', 'remaining is number');
+});
+
+test('v19: RequestThrottleGuard check — WARN at 60%', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 10, warnAt: 60, delayAt: 80, blockAt: 95 });
+  for (let i = 0; i < 6; i++) guard.check('key');
+  const result = guard.check('key');
+  assert(result.level === 'WARN' || result.level === 'DELAY' || result.level === 'BLOCK', 'elevated level');
+});
+
+test('v19: RequestThrottleGuard check — BLOCK blocks request', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 5, warnAt: 30, delayAt: 60, blockAt: 80 });
+  for (let i = 0; i < 4; i++) guard.check('blocked-key');
+  // At 80% (4/5), should be BLOCK
+  const result = guard.check('blocked-key');
+  assertEqual(result.allowed, false);
+  assertEqual(result.level, 'BLOCK');
+});
+
+test('v19: RequestThrottleGuard penalize increases usage count', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 100, warnAt: 10, delayAt: 30, blockAt: 50 });
+  guard.check('penalized');
+  guard.penalize('penalized', 60); // adds 60 penalty tokens
+  const result = guard.check('penalized');
+  assert(result.usagePercent >= 50, 'penalty raised usage');
+});
+
+test('v19: RequestThrottleGuard forgive reduces penalty', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 100 });
+  guard.penalize('key', 50);
+  guard.forgive('key', 40);
+  const level = guard.getLevel('key');
+  assert(typeof level === 'string', 'level is string');
+});
+
+test('v19: RequestThrottleGuard getLevel without recording request', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 100 });
+  assertEqual(guard.getLevel('fresh-key'), 'NONE');
+});
+
+test('v19: RequestThrottleGuard resetKey clears specific key', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 5, warnAt: 10, delayAt: 40, blockAt: 80 });
+  for (let i = 0; i < 5; i++) guard.check('r-key');
+  guard.resetKey('r-key');
+  assertEqual(guard.getLevel('r-key'), 'NONE');
+});
+
+test('v19: RequestThrottleGuard reset clears all', () => {
+  const guard = new RequestThrottleGuard({ maxRequests: 5 });
+  for (let i = 0; i < 5; i++) guard.check('k1');
+  for (let i = 0; i < 5; i++) guard.check('k2');
+  guard.reset();
+  assertEqual(guard.getLevel('k1'), 'NONE');
+  assertEqual(guard.getLevel('k2'), 'NONE');
+});
+
+// ─── GeofenceGuard Tests ───────────────────────────────────────────────────
+
+test('v19: GeofenceGuard constructor defaults', () => {
+  const gf = new GeofenceGuard();
+  assertEqual(gf.defaultAction, 'allow');
+});
+
+test('v19: GeofenceGuard addRegion and getRegions', () => {
+  const gf = new GeofenceGuard();
+  gf.addRegion('internal', ['10.', '192.168.'], 'allow');
+  gf.addRegion('blocked', ['5.5.5.'], 'deny');
+  const regions = gf.getRegions();
+  assert(regions.includes('internal'), 'has internal');
+  assert(regions.includes('blocked'), 'has blocked');
+});
+
+test('v19: GeofenceGuard check — no match, default allow', () => {
+  const gf = new GeofenceGuard({ defaultAction: 'allow' });
+  const result = gf.check('1.2.3.4');
+  assertEqual(result.allowed, true);
+  assertEqual(result.matched, false);
+});
+
+test('v19: GeofenceGuard check — no match, default deny', () => {
+  const gf = new GeofenceGuard({ defaultAction: 'deny' });
+  const result = gf.check('9.9.9.9');
+  assertEqual(result.allowed, false);
+  assertEqual(result.matched, false);
+});
+
+test('v19: GeofenceGuard check — matched allow region', () => {
+  const gf = new GeofenceGuard();
+  gf.addRegion('trusted', ['192.168.1.'], 'allow');
+  const result = gf.check('192.168.1.100');
+  assertEqual(result.allowed, true);
+  assertEqual(result.matched, true);
+  assertEqual(result.region, 'trusted');
+});
+
+test('v19: GeofenceGuard check — matched deny region', () => {
+  const gf = new GeofenceGuard({ defaultAction: 'allow' });
+  gf.addRegion('blocked', ['5.5.5.'], 'deny');
+  const result = gf.check('5.5.5.10');
+  assertEqual(result.allowed, false);
+  assertEqual(result.matched, true);
+  assertEqual(result.region, 'blocked');
+});
+
+test('v19: GeofenceGuard setDefaultAction changes default', () => {
+  const gf = new GeofenceGuard({ defaultAction: 'allow' });
+  gf.setDefaultAction('deny');
+  assertEqual(gf.check('8.8.8.8').allowed, false);
+});
+
+test('v19: GeofenceGuard removeRegion removes it', () => {
+  const gf = new GeofenceGuard({ defaultAction: 'allow' });
+  gf.addRegion('r1', ['5.'], 'deny');
+  gf.removeRegion('r1');
+  assertEqual(gf.check('5.5.5.5').matched, false);
+});
+
+test('v19: GeofenceGuard getRegion returns details', () => {
+  const gf = new GeofenceGuard();
+  gf.addRegion('r1', ['10.'], 'allow');
+  const region = gf.getRegion('r1');
+  assert(region !== null, 'region details returned');
+  assert(region.prefixes.includes('10.'), 'has prefix');
+  assertEqual(region.action, 'allow');
+});
+
+test('v19: GeofenceGuard reset clears all regions', () => {
+  const gf = new GeofenceGuard({ defaultAction: 'deny' });
+  gf.addRegion('r1', ['1.'], 'deny');
+  gf.addRegion('r2', ['2.'], 'deny');
+  gf.reset();
+  assertEqual(gf.getRegions().length, 0);
+  assertEqual(gf.defaultAction, 'allow');
+});
+
+// ─── CryptoKeyRotator Tests ────────────────────────────────────────────────
+
+test('v19: CryptoKeyRotator constructor defaults', () => {
+  const r = new CryptoKeyRotator();
+  assertEqual(r.maxVersions, 10);
+  assertEqual(r.getCurrentKey(), null);
+  assertEqual(r.listVersions().length, 0);
+});
+
+test('v19: CryptoKeyRotator addKey and getCurrentKey', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'deadbeef', Date.now() + 3600000);
+  const current = r.getCurrentKey();
+  assert(current !== null, 'current key exists');
+  assertEqual(current.version, 'v1');
+  assertEqual(current.key, 'deadbeef');
+});
+
+test('v19: CryptoKeyRotator getCurrentKey returns null for expired key', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'deadbeef', Date.now() - 1000); // already expired
+  assertEqual(r.getCurrentKey(), null);
+});
+
+test('v19: CryptoKeyRotator getKey returns specific version', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'key1', Date.now() + 3600000);
+  r.addKey('v2', 'key2', Date.now() + 7200000);
+  const k1 = r.getKey('v1');
+  assert(k1 !== null, 'v1 exists');
+  assertEqual(k1.key, 'key1');
+  assertEqual(k1.expired, false);
+});
+
+test('v19: CryptoKeyRotator getKey returns null for nonexistent version', () => {
+  const r = new CryptoKeyRotator();
+  assertEqual(r.getKey('nonexistent'), null);
+});
+
+test('v19: CryptoKeyRotator rotateKeys updates current', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'old-key', Date.now() + 3600000);
+  r.rotateKeys('v2', 'new-key', Date.now() + 7200000);
+  const current = r.getCurrentKey();
+  assertEqual(current.version, 'v2');
+  assertEqual(current.key, 'new-key');
+});
+
+test('v19: CryptoKeyRotator pruneExpired removes expired versions', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'k1', Date.now() - 1000); // expired
+  r.addKey('v2', 'k2', Date.now() + 3600000); // valid
+  const pruned = r.pruneExpired();
+  assertEqual(pruned, 1);
+  assert(!r.listVersions().includes('v1'), 'v1 removed');
+  assert(r.listVersions().includes('v2'), 'v2 kept');
+});
+
+test('v19: CryptoKeyRotator listVersions returns all version labels', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'k1', Date.now() + 3600000);
+  r.addKey('v2', 'k2', Date.now() + 7200000);
+  const versions = r.listVersions();
+  assert(versions.includes('v1'), 'has v1');
+  assert(versions.includes('v2'), 'has v2');
+});
+
+test('v19: CryptoKeyRotator isValid — true for non-expired key', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'k', Date.now() + 3600000);
+  assertEqual(r.isValid('v1'), true);
+});
+
+test('v19: CryptoKeyRotator isValid — false for expired key', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'k', Date.now() - 1000);
+  assertEqual(r.isValid('v1'), false);
+});
+
+test('v19: CryptoKeyRotator isValid — false for nonexistent key', () => {
+  const r = new CryptoKeyRotator();
+  assertEqual(r.isValid('vX'), false);
+});
+
+test('v19: CryptoKeyRotator reset clears all keys', () => {
+  const r = new CryptoKeyRotator();
+  r.addKey('v1', 'k1', Date.now() + 3600000);
+  r.reset();
+  assertEqual(r.listVersions().length, 0);
+  assertEqual(r.getCurrentKey(), null);
+});
+
+// ─── SecurityEventCorrelator Tests ─────────────────────────────────────────
+
+test('v19: SecurityEventCorrelator constructor defaults', () => {
+  const sec = new SecurityEventCorrelator();
+  assertEqual(sec.maxEvents, 10000);
+  assertEqual(sec.alertThreshold, 3);
+  assertEqual(sec.criticalThreshold, 2);
+});
+
+test('v19: SecurityEventCorrelator record stores event', () => {
+  const sec = new SecurityEventCorrelator();
+  sec.record({ type: 'auth_fail', severity: 'warn', source: '1.2.3.4' });
+  const stats = sec.getStats(60000);
+  assertEqual(stats.total, 1);
+});
+
+test('v19: SecurityEventCorrelator correlate — no events, risk none', () => {
+  const sec = new SecurityEventCorrelator();
+  const result = sec.correlate(60000);
+  assertEqual(result.risk, 'none');
+  assertEqual(result.eventCount, 0);
+});
+
+test('v19: SecurityEventCorrelator correlate — low events, low risk', () => {
+  const sec = new SecurityEventCorrelator({ alertThreshold: 10 });
+  sec.record({ type: 'auth_fail', severity: 'warn', source: '1.2.3.4' });
+  sec.record({ type: 'auth_fail', severity: 'warn', source: '1.2.3.4' });
+  const result = sec.correlate(60000);
+  assertEqual(result.risk, 'low');
+});
+
+test('v19: SecurityEventCorrelator correlate — high volume triggers alert', () => {
+  const sec = new SecurityEventCorrelator({ alertThreshold: 3 });
+  for (let i = 0; i < 5; i++) {
+    sec.record({ type: 'auth_fail', severity: 'warn', source: '10.0.0.1' });
+  }
+  const result = sec.correlate(60000);
+  assert(result.risk === 'medium' || result.risk === 'high', 'risk elevated');
+  assert(result.patterns.length > 0, 'patterns detected');
+});
+
+test('v19: SecurityEventCorrelator correlate — critical storm', () => {
+  const sec = new SecurityEventCorrelator({ criticalThreshold: 2 });
+  sec.record({ type: 'breach', severity: 'critical', source: '5.5.5.5' });
+  sec.record({ type: 'breach', severity: 'critical', source: '5.5.5.5' });
+  const result = sec.correlate(60000);
+  assertEqual(result.risk, 'critical');
+  assert(result.patterns.some(p => p.includes('critical_storm')), 'critical_storm pattern detected');
+});
+
+test('v19: SecurityEventCorrelator correlate — multi-vector attack', () => {
+  const sec = new SecurityEventCorrelator({ alertThreshold: 100 });
+  sec.record({ type: 'rate_limit', severity: 'warn', source: '3.3.3.3' });
+  sec.record({ type: 'auth_fail', severity: 'warn', source: '3.3.3.3' });
+  sec.record({ type: 'honeypot_trip', severity: 'high', source: '3.3.3.3' });
+  sec.record({ type: 'geofence_block', severity: 'high', source: '3.3.3.3' });
+  const result = sec.correlate(60000);
+  assert(result.patterns.some(p => p.includes('multi_vector')), 'multi_vector_attack detected');
+});
+
+test('v19: SecurityEventCorrelator getAlerts returns alerts array', () => {
+  const sec = new SecurityEventCorrelator({ criticalThreshold: 1 });
+  sec.record({ type: 'breach', severity: 'critical', source: '5.5.5.5' });
+  sec.correlate(60000);
+  const alerts = sec.getAlerts();
+  assert(Array.isArray(alerts), 'alerts is array');
+});
+
+test('v19: SecurityEventCorrelator clearAlerts empties alerts', () => {
+  const sec = new SecurityEventCorrelator({ criticalThreshold: 1 });
+  sec.record({ type: 'breach', severity: 'critical', source: '5.5.5.5' });
+  sec.correlate(60000);
+  sec.clearAlerts();
+  assertEqual(sec.getAlerts().length, 0);
+});
+
+test('v19: SecurityEventCorrelator getStats by type and severity', () => {
+  const sec = new SecurityEventCorrelator();
+  sec.record({ type: 'auth_fail', severity: 'warn', source: 'a' });
+  sec.record({ type: 'rate_limit', severity: 'warn', source: 'b' });
+  sec.record({ type: 'auth_fail', severity: 'high', source: 'c' });
+  const stats = sec.getStats(60000);
+  assertEqual(stats.total, 3);
+  assertEqual(stats.byType['auth_fail'], 2);
+  assertEqual(stats.byType['rate_limit'], 1);
+});
+
+test('v19: SecurityEventCorrelator reset clears events and alerts', () => {
+  const sec = new SecurityEventCorrelator();
+  sec.record({ type: 'x', severity: 'warn', source: '1.1.1.1' });
+  sec.reset();
+  assertEqual(sec.getStats(60000).total, 0);
+  assertEqual(sec.getAlerts().length, 0);
+});
+
+// ─── v19: Client Integration Tests ────────────────────────────────────────
+
+test('v19: client with honeypot blocks matching URL', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    honeypot: {},
+  });
+  client._honeypot.addHoneypot('/admin-backup');
+  let caught = null;
+  try {
+    await client.get('/admin-backup/db');
+  } catch (e) {
+    caught = e;
+  }
+  assert(caught !== null, 'error thrown');
+  assertEqual(caught.code, 'ERR_HONEYPOT_TRIP');
+});
+
+test('v19: client with geofence blocks denied IP', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    geofence: { defaultAction: 'allow' },
+  });
+  client._geofence.addRegion('blocked', ['5.5.5.'], 'deny');
+  // Inject client IP via interceptor
+  client.interceptors.request.use((config) => {
+    config.clientIP = '5.5.5.10';
+    return config;
+  });
+  let caught = null;
+  try {
+    await client.get('/api');
+  } catch (e) {
+    caught = e;
+  }
+  assert(caught !== null, 'error thrown');
+  assertEqual(caught.code, 'ERR_GEOFENCE_BLOCKED');
+});
+
+test('v19: client with throttleGuard blocks over-limit requests', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    throttleGuard: { maxRequests: 3, windowMs: 60000, warnAt: 10, delayAt: 40, blockAt: 80 },
+  });
+  // Pre-fill throttle to past BLOCK threshold
+  client._throttleGuard.penalize('GET:/api', 100);
+  let caught = null;
+  try {
+    await client.get('/api');
+  } catch (e) {
+    caught = e;
+  }
+  assert(caught !== null, 'error thrown');
+  assertEqual(caught.code, 'ERR_THROTTLE_BLOCKED');
+});
+
+test('v19: client with keyRotator injects key version header', async () => {
+  const mockAdapter = async (config) => ({
+    data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK',
+    headers: {}, request: {},
+  });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    keyRotator: {},
+  });
+  client._keyRotator.addKey('v1', 'mykey', Date.now() + 3600000);
+  const res = await client.get('/api');
+  assert(res.config.headers['x-key-version'] !== undefined, 'key version header injected');
+  assertEqual(res.config.headers['x-key-version'], 'v1');
+});
+
+test('v19: client with eventCorrelator records request events', async () => {
+  const mockAdapter = async () => ({ data: { ok: true }, rawData: { ok: true }, status: 200, statusText: 'OK', headers: {}, request: {} });
+  const client = createClient({
+    adapter: mockAdapter,
+    ssrf: { enabled: false },
+    baseURL: 'http://example.com',
+    eventCorrelator: { alertThreshold: 100 },
+  });
+  await client.get('/api');
+  const stats = client._eventCorrelator.getStats(60000);
+  assert(stats.total >= 1, 'at least one event recorded');
+});
+
+test('v19: VERSION is 19.0.0', () => {
+  assertEqual(VERSION, '19.0.0');
+});
+
+test('v19: ERR_HONEYPOT_TRIP error code exists', () => {
+  assertEqual(ClientError.ERR_HONEYPOT_TRIP, 'ERR_HONEYPOT_TRIP');
+});
+
+test('v19: ERR_GEOFENCE_BLOCKED error code exists', () => {
+  assertEqual(ClientError.ERR_GEOFENCE_BLOCKED, 'ERR_GEOFENCE_BLOCKED');
+});
+
+test('v19: ERR_BEHAVIORAL_ANOMALY error code exists', () => {
+  assertEqual(ClientError.ERR_BEHAVIORAL_ANOMALY, 'ERR_BEHAVIORAL_ANOMALY');
+});
+
+test('v19: ERR_THROTTLE_BLOCKED error code exists', () => {
+  assertEqual(ClientError.ERR_THROTTLE_BLOCKED, 'ERR_THROTTLE_BLOCKED');
+});
+
+test('v19: ERR_SRI_MISMATCH error code exists', () => {
+  assertEqual(ClientError.ERR_SRI_MISMATCH, 'ERR_SRI_MISMATCH');
+});
+
+test('v19: ERR_QUANTUM_VERIFY_FAILED error code exists', () => {
+  assertEqual(ClientError.ERR_QUANTUM_VERIFY_FAILED, 'ERR_QUANTUM_VERIFY_FAILED');
+});
+
+test('v19: ERR_KEY_ROTATION_FAILED error code exists', () => {
+  assertEqual(ClientError.ERR_KEY_ROTATION_FAILED, 'ERR_KEY_ROTATION_FAILED');
+});
+
+test('v19: ERR_CORRELATION_ALERT error code exists', () => {
+  assertEqual(ClientError.ERR_CORRELATION_ALERT, 'ERR_CORRELATION_ALERT');
 });
 
 // Wait a tick for async tests

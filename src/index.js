@@ -418,6 +418,12 @@ const {
   AdaptiveRateLimiter, SecurityHeadersManager, EncryptedConfigVault, MutualTLSManager,
 } = require('./core/security-elite');
 
+// ─── v19 Fortress Security ────────────────────────────────────────────────────
+const {
+  QuantumResistantCrypto, BehavioralAnalytics, HoneypotManager, SubresourceIntegrity,
+  RequestThrottleGuard, GeofenceGuard, CryptoKeyRotator, SecurityEventCorrelator,
+} = require('./core/security-fortress');
+
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const { ResponseCache } = require('./utils/cache');
 const { RequestDeduplicator } = require('./utils/dedup');
@@ -826,6 +832,16 @@ apiBridge.SecurityHeadersManager = SecurityHeadersManager;
 apiBridge.EncryptedConfigVault = EncryptedConfigVault;
 apiBridge.MutualTLSManager = MutualTLSManager;
 
+// v19: Fortress Security
+apiBridge.QuantumResistantCrypto = QuantumResistantCrypto;
+apiBridge.BehavioralAnalytics = BehavioralAnalytics;
+apiBridge.HoneypotManager = HoneypotManager;
+apiBridge.SubresourceIntegrity = SubresourceIntegrity;
+apiBridge.RequestThrottleGuard = RequestThrottleGuard;
+apiBridge.GeofenceGuard = GeofenceGuard;
+apiBridge.CryptoKeyRotator = CryptoKeyRotator;
+apiBridge.SecurityEventCorrelator = SecurityEventCorrelator;
+
 module.exports = {
   // v12: Callable default export
   default: apiBridge,
@@ -1082,4 +1098,14 @@ module.exports = {
   SecurityHeadersManager,
   EncryptedConfigVault,
   MutualTLSManager,
+
+  // v19: Fortress Security
+  QuantumResistantCrypto,
+  BehavioralAnalytics,
+  HoneypotManager,
+  SubresourceIntegrity,
+  RequestThrottleGuard,
+  GeofenceGuard,
+  CryptoKeyRotator,
+  SecurityEventCorrelator,
 };
