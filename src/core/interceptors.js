@@ -1,5 +1,5 @@
 /**
- * yarou v15 — Interceptor Manager
+ * awsibnj v15 — Interceptor Manager
  *
  * Axios-compatible interceptor system with improvements:
  *   - Request interceptors

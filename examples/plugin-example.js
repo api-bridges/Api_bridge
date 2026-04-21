@@ -1,7 +1,7 @@
 /**
- * yarou — Plugin Extension Example
+ * awsibnj — Plugin Extension Example
  *
- * Shows how to create custom plugins to extend yarou.
+ * Shows how to create custom plugins to extend awsibnj.
  *
  * Run: node examples/plugin-example.js
  */

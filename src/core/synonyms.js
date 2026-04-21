@@ -1,5 +1,5 @@
 /**
- * yarou v7 — Developer Vocabulary Synonym Dictionary
+ * awsibnj v7 — Developer Vocabulary Synonym Dictionary
  *
  * Expanded for v2 with more domain-specific groups,
  * abbreviation handling, and internationalised variants.

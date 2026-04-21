@@ -1,5 +1,5 @@
 /**
- * yarou v10 — Cancel Token
+ * awsibnj v10 — Cancel Token
  *
  * Axios-compatible cancellation system. Supports both:
  *   - CancelToken (legacy axios pattern)

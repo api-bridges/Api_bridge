@@ -1,5 +1,5 @@
 /**
- * yarou v10 — FormData Utilities
+ * awsibnj v10 — FormData Utilities
  *
  * Helpers for converting objects to FormData and detecting multipart content.
  *

@@ -1,5 +1,5 @@
 /**
- * yarou v3 — Middleware Pipeline
+ * awsibnj v3 — Middleware Pipeline
  *
  * Composable before/after hooks for request and response processing.
  *

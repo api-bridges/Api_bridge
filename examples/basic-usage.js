@@ -1,5 +1,5 @@
 /**
- * yarou — Basic Usage Examples
+ * awsibnj — Basic Usage Examples
  *
  * Run: node examples/basic-usage.js
  */

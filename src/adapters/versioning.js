@@ -1,5 +1,5 @@
 /**
- * yarou v4 — API Versioning
+ * awsibnj v4 — API Versioning
  *
  * Version-specific transform strategies with:
  *  - Per-version schema and transform registration

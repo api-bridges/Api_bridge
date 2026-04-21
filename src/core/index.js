@@ -1,10 +1,10 @@
 /**
- * yarou — Core Module
+ * awsibnj — Core Module
  *
  * Core transformation engine, matching algorithms, validation, and error classes.
  */
 
-const { yarouTransformer } = require('./transformer');
+const { awsibnjTransformer } = require('./transformer');
 const { LearningEngine } = require('./learning');
 const { ResponseNormalizer } = require('./normalizer');
 const { SchemaValidator } = require('./validator');
@@ -20,7 +20,7 @@ const errors = require('./errors');
 
 // v9/v10 modules
 const {
-  yarouClient, ClientError, createClient, buildURL,
+  awsibnjClient, ClientError, createClient, buildURL,
   all, spread, isClientError, isYarouError, mergeConfig, defaultParamsSerializer,
   VERSION,
   // v12: Axios aliases
@@ -65,7 +65,7 @@ const {
 
 module.exports = {
   // Classes
-  yarouTransformer,
+  awsibnjTransformer,
   LearningEngine,
   ResponseNormalizer,
   SchemaValidator,
@@ -78,7 +78,7 @@ module.exports = {
   SchemaMigrator,
 
   // v9/v10 classes
-  yarouClient,
+  awsibnjClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,

@@ -1,8 +1,8 @@
 /**
- * yarou v4 — OpenAPI Schema Importer
+ * awsibnj v4 — OpenAPI Schema Importer
  *
  * Parses OpenAPI (v3) and Swagger (v2) specification objects and extracts
- * field schemas compatible with the yarou ecosystem.
+ * field schemas compatible with the awsibnj ecosystem.
  *
  * Handles:
  *  - Endpoint discovery from paths
@@ -100,7 +100,7 @@ class OpenAPIImporter {
 
   /**
    * Extract all named schemas / definitions from the spec.
-   * Returns a map of schema names to yarou-compatible schemas.
+   * Returns a map of schema names to awsibnj-compatible schemas.
    *
    * @param {object} spec  Parsed OpenAPI / Swagger specification object
    * @returns {{ [name: string]: object }}
@@ -153,14 +153,14 @@ class OpenAPIImporter {
   }
 
   /**
-   * Convert a single OpenAPI schema object to yarou format.
+   * Convert a single OpenAPI schema object to awsibnj format.
    *
    * Handles: type, required, properties, items (arrays), $ref, enum,
    * description, default, format.
    *
    * @param {object} openApiSchema  An OpenAPI schema object
    * @param {object} spec           The root specification (for $ref resolution)
-   * @returns {object} yarou-compatible schema: { [field]: { type, required, description, ... } }
+   * @returns {object} awsibnj-compatible schema: { [field]: { type, required, description, ... } }
    */
   convertSchema(openApiSchema, spec) {
     if (!openApiSchema || typeof openApiSchema !== 'object') {
@@ -243,13 +243,13 @@ class OpenAPIImporter {
   // ─── HELPERS ────────────────────────────────────────────────────────────────
 
   /**
-   * Convert a single field schema to yarou field descriptor.
+   * Convert a single field schema to awsibnj field descriptor.
    *
    * @param {string} field          Original field name
    * @param {object} fieldSchema    OpenAPI field schema
    * @param {Set|Array} requiredFields  Set or array of required field names
    * @param {object} spec           Root spec for $ref resolution
-   * @returns {object} yarou field descriptor
+   * @returns {object} awsibnj field descriptor
    */
   _convertField(field, fieldSchema, requiredFields, spec) {
     let schema = fieldSchema;
@@ -301,10 +301,10 @@ class OpenAPIImporter {
   }
 
   /**
-   * Map an OpenAPI type + format to an yarou type string.
+   * Map an OpenAPI type + format to an awsibnj type string.
    *
    * @param {object} schema  OpenAPI schema with `type` and optional `format`
-   * @returns {string} yarou type
+   * @returns {string} awsibnj type
    */
   _mapType(schema) {
     if (!schema || !schema.type) return 'object';
@@ -323,7 +323,7 @@ class OpenAPIImporter {
    *
    * @param {object} operation  OpenAPI operation object
    * @param {object} spec       Root spec for $ref resolution
-   * @returns {object|null} Converted yarou schema or null
+   * @returns {object|null} Converted awsibnj schema or null
    */
   _extractRequestSchema(operation, spec) {
     // OpenAPI v3: requestBody.content.application/json.schema
@@ -355,7 +355,7 @@ class OpenAPIImporter {
    *
    * @param {object} operation  OpenAPI operation object
    * @param {object} spec       Root spec for $ref resolution
-   * @returns {object|null} Converted yarou schema or null
+   * @returns {object|null} Converted awsibnj schema or null
    */
   _extractResponseSchema(operation, spec) {
     const responses = operation.responses;

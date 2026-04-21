@@ -1,5 +1,5 @@
 /**
- * yarou v5 — API Dependency Graph
+ * awsibnj v5 — API Dependency Graph
  *
  * Orchestrate dependent API calls with:
  *  - Directed acyclic graph (DAG) execution

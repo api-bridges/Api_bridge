@@ -1,5 +1,5 @@
 /**
- * yarou v3 — Rate Limiter
+ * awsibnj v3 — Rate Limiter
  *
  * Built-in request throttling with:
  *  - Token bucket algorithm

@@ -1,5 +1,5 @@
 /**
- * yarou v8 — Custom Error Classes
+ * awsibnj v8 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
  *  - ValidationError        — schema or type mismatch

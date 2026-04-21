@@ -1,14 +1,14 @@
-# yarou v18
+# awsibnj v18
 
 > Created by **awsibnj**
 
-[![npm version](https://img.shields.io/npm/v/yarou.svg)](https://www.npmjs.com/package/yarou)
-[![license](https://img.shields.io/npm/l/yarou.svg)](https://github.com/api-bridges/Api_bridge/blob/main/LICENSE)
-[![Node.js](https://img.shields.io/node/v/yarou.svg)](https://nodejs.org)
+[![npm version](https://img.shields.io/npm/v/awsibnj.svg)](https://www.npmjs.com/package/awsibnj)
+[![license](https://img.shields.io/npm/l/awsibnj.svg)](https://github.com/api-bridges/Api_bridge/blob/main/LICENSE)
+[![Node.js](https://img.shields.io/node/v/awsibnj.svg)](https://nodejs.org)
 
 **Enterprise-grade Axios replacement with elite security and production power tools** — a complete, zero-dependency HTTP client with zero-trust engine, threat intelligence, mTLS, request integrity chains, adaptive rate limiting, OWASP security headers, encrypted config vault, SSRF protection, input sanitization, RBAC permissions, auto-retry, response caching, request dedup, token refresh, lifecycle hooks, intelligent API mismatch detection, and 80+ modules.
 
-yarou is a **true drop-in replacement for Axios** that also bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
+awsibnj is a **true drop-in replacement for Axios** that also bridges the gap between backend and frontend naming conventions. It detects `snake_case`, `PascalCase`, `kebab-case`, `SCREAMING_SNAKE` keys from your API and transforms them into your preferred convention — with AI-powered semantic matching, persistent learning, and zero manual mapping.
 
 > **v18 Highlights:** Zero-trust engine, threat intelligence, secure sessions, request integrity chain, adaptive rate limiting, OWASP security headers, encrypted config vault, mutual TLS — plus CSP, certificate pinning, HMAC signing, input sanitization, RBAC, payload encryption, idempotency, SSRF protection, replay detection, journey tracking, auto-retry, caching, dedup, token refresh, 1178 tests.
 
@@ -242,7 +242,7 @@ yarou is a **true drop-in replacement for Axios** that also bridges the gap betw
 ## Installation
 
 ```bash
-npm install yarou
+npm install awsibnj
 ```
 
 Or clone the repo:
@@ -257,9 +257,9 @@ npm install
 
 ## Why Replace Axios?
 
-yarou is not just an Axios wrapper — it's a **complete replacement** that gives you everything Axios does plus intelligent API transformation:
+awsibnj is not just an Axios wrapper — it's a **complete replacement** that gives you everything Axios does plus intelligent API transformation:
 
-| | Axios | yarou v13 |
+| | Axios | awsibnj v13 |
 |---|---|---|
 | HTTP client (GET/POST/PUT/PATCH/DELETE) | ✅ | ✅ |
 | Request/response interceptors | ✅ | ✅ |
@@ -286,8 +286,8 @@ yarou is not just an Axios wrapper — it's a **complete replacement** that give
 const axios = require('axios');
 const api = axios.create({ baseURL: '/api' });
 
-// After (yarou — drop-in replacement)
-const apiBridge = require('yarou');
+// After (awsibnj — drop-in replacement)
+const apiBridge = require('awsibnj');
 const api = apiBridge.create({ baseURL: '/api' });
 
 // Everything works the same:
@@ -314,7 +314,7 @@ try {
 ## Project Structure
 
 ```
-yarou/
+awsibnj/
 ├── src/
 │   ├── index.js                 # Main entry point (exports everything)
 │   ├── core/                    # Core transformation engine
@@ -397,7 +397,7 @@ yarou/
 ### Full Import (default)
 
 ```js
-const { bridge, transform, CircuitBreaker, EventBus } = require('yarou');
+const { bridge, transform, CircuitBreaker, EventBus } = require('awsibnj');
 ```
 
 ### Subpath Imports (tree-shakeable)
@@ -406,16 +406,16 @@ Import only the modules you need for smaller bundle sizes:
 
 ```js
 // Core transformation & matching
-const { yarouTransformer, FuzzyMatcher, SchemaValidator } = require('yarou/core');
+const { awsibnjTransformer, FuzzyMatcher, SchemaValidator } = require('awsibnj/core');
 
 // Utilities
-const { ResponseCache, DeepMerge, OutputFormatter } = require('yarou/utils');
+const { ResponseCache, DeepMerge, OutputFormatter } = require('awsibnj/utils');
 
 // Adapters & middleware
-const { CircuitBreaker, EventBus, PluginManager } = require('yarou/adapters');
+const { CircuitBreaker, EventBus, PluginManager } = require('awsibnj/adapters');
 
 // Error classes only
-const { ValidationError, TransformError } = require('yarou/errors');
+const { ValidationError, TransformError } = require('awsibnj/errors');
 ```
 
 ---
@@ -425,7 +425,7 @@ const { ValidationError, TransformError } = require('yarou/errors');
 TypeScript type declarations are included out of the box:
 
 ```ts
-import { transform, SchemaValidator, CircuitBreaker } from 'yarou';
+import { transform, SchemaValidator, CircuitBreaker } from 'awsibnj';
 
 const result = transform({ first_name: 'John' });
 // result is Record<string, any>
@@ -438,12 +438,12 @@ const { valid, errors } = validator.validate(data, schema);
 
 ## Plugin & Extension System
 
-yarou has a built-in plugin system for extending functionality:
+awsibnj has a built-in plugin system for extending functionality:
 
 ### Creating a Plugin
 
 ```js
-const { PluginManager } = require('yarou');
+const { PluginManager } = require('awsibnj');
 
 const myPlugin = {
   name: 'my-plugin',
@@ -517,7 +517,7 @@ function createMetricsPlugin(options = {}) {
 ### 1. As Axios Replacement (v14 — Recommended)
 
 ```js
-const apiBridge = require('yarou');
+const apiBridge = require('awsibnj');
 
 // Works exactly like axios:
 const api = apiBridge.create({ baseURL: 'https://api.example.com' });
@@ -546,7 +546,7 @@ try {
 
 ```js
 const axios = require('axios');
-const { bridge } = require('yarou');
+const { bridge } = require('awsibnj');
 
 const api = bridge(axios.create({ baseURL: 'https://api.example.com' }), {
   schema: {
@@ -564,7 +564,7 @@ console.log(data.isActive);  // true (from integer 1)
 ### 3. With Native Fetch
 
 ```js
-const { bridgeFetch } = require('yarou');
+const { bridgeFetch } = require('awsibnj');
 
 const api = bridgeFetch({
   retries: 3,
@@ -579,7 +579,7 @@ console.log(user.firstName); // from "first_name"
 ### 4. Direct Transform (No HTTP)
 
 ```js
-const { transform } = require('yarou');
+const { transform } = require('awsibnj');
 
 const result = transform({
   user_id: 1,
@@ -602,7 +602,7 @@ const result = transform({
 ### 5. Schema Inference (v3)
 
 ```js
-const { SchemaInference } = require('yarou');
+const { SchemaInference } = require('awsibnj');
 
 const inference = new SchemaInference();
 const schema = inference.infer([
@@ -615,7 +615,7 @@ const schema = inference.infer([
 ### 5. Data Masking (v3)
 
 ```js
-const { DataMasker } = require('yarou');
+const { DataMasker } = require('awsibnj');
 
 const masker = new DataMasker();
 const masked = masker.mask({
@@ -630,7 +630,7 @@ const masked = masker.mask({
 ### 6. Circuit Breaker (v4)
 
 ```js
-const { CircuitBreaker } = require('yarou');
+const { CircuitBreaker } = require('awsibnj');
 
 const breaker = new CircuitBreaker({
   failureThreshold: 5,  // Open after 5 consecutive failures
@@ -651,7 +651,7 @@ console.log(breaker.getState()); // 'CLOSED', 'OPEN', or 'HALF_OPEN'
 ### 7. GraphQL Bridge (v4)
 
 ```js
-const { GraphQLBridge } = require('yarou');
+const { GraphQLBridge } = require('awsibnj');
 
 const gql = new GraphQLBridge({
   convention: 'camelCase',
@@ -676,7 +676,7 @@ const posts = gql.extractData(response, 'user.posts');
 ### 8. Composable Pipeline (v4)
 
 ```js
-const { ComposablePipeline } = require('yarou');
+const { ComposablePipeline } = require('awsibnj');
 
 const pipe = new ComposablePipeline({ name: 'userPipeline' });
 
@@ -693,7 +693,7 @@ const { result, stages, duration } = await pipe.execute({ name: 'John', age: 30 
 ### 9. Enhanced Fuzzy Matcher (v6)
 
 ```js
-const { FuzzyMatcher } = require('yarou');
+const { FuzzyMatcher } = require('awsibnj');
 
 const fuzzy = new FuzzyMatcher();
 
@@ -713,7 +713,7 @@ const abbr = fuzzy.findBestMatch('usr_nm', ['user_name', 'email']);
 ### 10. Cryptic Name Resolver (v6)
 
 ```js
-const { CrypticResolver } = require('yarou');
+const { CrypticResolver } = require('awsibnj');
 
 const resolver = new CrypticResolver();
 
@@ -733,7 +733,7 @@ const suffix = resolver.resolve('x_user_flag', ['is_active', 'user_flag']);
 ### 11. Schema-Based Type Coercer (v6)
 
 ```js
-const { TypeCoercer } = require('yarou');
+const { TypeCoercer } = require('awsibnj');
 
 const coercer = new TypeCoercer();
 
@@ -766,7 +766,7 @@ coercer.getStats();
 Advanced retry configuration with custom strategies, conditions, and callbacks:
 
 ```js
-const { createClient } = require('yarou');
+const { createClient } = require('awsibnj');
 
 const api = createClient({
   baseURL: 'https://api.example.com',
@@ -908,7 +908,7 @@ const api = createClient({
 Conditional and synchronous interceptor execution:
 
 ```js
-const { createClient } = require('yarou');
+const { createClient } = require('awsibnj');
 
 const api = createClient({ baseURL: 'https://api.example.com' });
 
@@ -995,7 +995,7 @@ const res = await api.get('/users');
 Server-Side Request Forgery prevention — enabled by default:
 
 ```js
-const { createClient } = require('yarou');
+const { createClient } = require('awsibnj');
 
 const api = createClient({ baseURL: 'https://api.example.com' });
 
@@ -1104,7 +1104,7 @@ console.log(res.journey);
 Build and validate CSP headers:
 
 ```js
-const { createClient } = require('yarou');
+const { createClient } = require('awsibnj');
 
 const api = createClient({
   baseURL: 'https://api.example.com',
@@ -1247,7 +1247,7 @@ const api = createClient({
 Continuous verification with dynamic trust scoring — never implicitly trust any request:
 
 ```js
-const { createClient } = require('yarou');
+const { createClient } = require('awsibnj');
 
 const api = createClient({
   baseURL: 'https://api.example.com',
@@ -1389,7 +1389,7 @@ const api = createClient({
 ### Multi-Alias Field Resolution
 
 ```js
-const { FieldAliaser } = require('yarou');
+const { FieldAliaser } = require('awsibnj');
 
 const aliaser = new FieldAliaser();
 
@@ -1423,7 +1423,7 @@ aliaser.getStats(); // { totalGroups, totalAliases, lookups, hits, misses, hitRa
 ### Schema Migration Engine
 
 ```js
-const { SchemaMigrator } = require('yarou');
+const { SchemaMigrator } = require('awsibnj');
 
 const migrator = new SchemaMigrator();
 
@@ -1466,7 +1466,7 @@ migrator.getStats(); // { totalMigrations, historyLength, versions }
 ### Batch Request Orchestrator
 
 ```js
-const { BatchOrchestrator } = require('yarou');
+const { BatchOrchestrator } = require('awsibnj');
 
 const batch = new BatchOrchestrator({
   concurrency: 5,
@@ -1504,7 +1504,7 @@ batch.getStats(); // { totalBatches, totalRequests, successRate, avgDuration }
 ### Field Analytics Collector
 
 ```js
-const { FieldStats } = require('yarou');
+const { FieldStats } = require('awsibnj');
 
 const stats = new FieldStats();
 
@@ -1535,7 +1535,7 @@ const analytics = stats.export();
 ### Conditional Transformation
 
 ```js
-const { ConditionalTransform } = require('yarou');
+const { ConditionalTransform } = require('awsibnj');
 
 const ct = new ConditionalTransform();
 
@@ -1573,7 +1573,7 @@ ct.getStats(); // { totalRules, totalEvaluations, ruleHits, topRules }
 ### Deep Merge Engine
 
 ```js
-const { DeepMerge } = require('yarou');
+const { DeepMerge } = require('awsibnj');
 
 const merger = new DeepMerge({
   arrayStrategy: 'union',       // 'concat', 'union', 'replace', 'interleave'
@@ -1611,7 +1611,7 @@ merger.getStats(); // { totalMerges, conflicts, fieldsProcessed }
 ### Output Formatter
 
 ```js
-const { OutputFormatter } = require('yarou');
+const { OutputFormatter } = require('awsibnj');
 
 const fmt = new OutputFormatter();
 
@@ -1647,7 +1647,7 @@ fmt.getStats(); // { json: 1, xml: 2, csv: 1, keyvalue: 0, table: 0, template: 1
 ### Request Interceptor Chain
 
 ```js
-const { RequestInterceptor } = require('yarou');
+const { RequestInterceptor } = require('awsibnj');
 
 const interceptor = new RequestInterceptor();
 
@@ -1769,7 +1769,7 @@ await api.request(method, url, body, config)  // Generic
 ### `transform()` — Direct Transform
 
 ```js
-const { transform } = require('yarou');
+const { transform } = require('awsibnj');
 
 // Simple
 const result = transform({ snake_key: 'value' });
@@ -1787,7 +1787,7 @@ const result = transform(data, {
 ### `createTransformer()` — Reusable Instance
 
 ```js
-const { createTransformer } = require('yarou');
+const { createTransformer } = require('awsibnj');
 
 const t = createTransformer({ logMismatches: false });
 
@@ -1806,7 +1806,7 @@ console.log(t.getStats()); // Stats accumulate across calls
 v7 replaces the max-based scoring of v6 with a **weighted ensemble** that combines all 7 matching strategies with tuned weights for 99%+ accuracy:
 
 ```js
-const { FuzzyMatcher } = require('yarou');
+const { FuzzyMatcher } = require('awsibnj');
 
 const fuzzy = new FuzzyMatcher();
 
@@ -1828,7 +1828,7 @@ fuzzy.setWeights({ levenshtein: 0.5, tokenMatch: 0.3 }); // Custom tuning
 New bigram-based similarity scoring that catches matches missed by Levenshtein distance — especially effective for short/garbled field names:
 
 ```js
-const { ngramSimilarity, ngrams } = require('yarou/src/fuzzy-matcher');
+const { ngramSimilarity, ngrams } = require('awsibnj/src/fuzzy-matcher');
 
 // Generate bigrams
 ngrams('hello'); // ['he', 'el', 'll', 'lo']
@@ -1847,7 +1847,7 @@ v7's transformer uses abbreviation expansion in semantic similarity, meaning fie
 v7 adds case-insensitive boolean parsing, percentage strings, comma-separated numbers, and more date formats:
 
 ```js
-const { TypeCoercer } = require('yarou');
+const { TypeCoercer } = require('awsibnj');
 
 const coercer = new TypeCoercer();
 
@@ -1887,7 +1887,7 @@ v7 adds **4 new domain dictionaries** with 60+ new synonym groups:
 The cryptic resolver now automatically strips common database prefixes (`tbl_`, `fk_`, `pk_`, `vw_`, `sp_`, `idx_`, `fn_`) before matching:
 
 ```js
-const { CrypticResolver } = require('yarou');
+const { CrypticResolver } = require('awsibnj');
 
 const resolver = new CrypticResolver();
 
@@ -1907,7 +1907,7 @@ resolver.resolve('fk_order_id', ['order_id', 'product_id']);
 Multi-strategy fuzzy matching engine for resolving typos, abbreviations, and near-matches with 97%+ accuracy:
 
 ```js
-const { FuzzyMatcher } = require('yarou');
+const { FuzzyMatcher } = require('awsibnj');
 
 const fuzzy = new FuzzyMatcher({
   levenshteinThreshold: 0.35,   // Max normalized distance to consider
@@ -1957,7 +1957,7 @@ fuzzy.getStrategies();
 Best-effort resolution of cryptic and arbitrary field names commonly found in legacy systems:
 
 ```js
-const { CrypticResolver } = require('yarou');
+const { CrypticResolver } = require('awsibnj');
 
 const resolver = new CrypticResolver({
   minConfidence: 0.45,         // Minimum confidence to report
@@ -1997,7 +1997,7 @@ resolver.isCryptic('user_name');    // false (recognizable words)
 Automatic type detection and coercion for resolving type conflicts between API data and schemas:
 
 ```js
-const { TypeCoercer } = require('yarou');
+const { TypeCoercer } = require('awsibnj');
 
 const coercer = new TypeCoercer({
   autoCoerce: true,           // Automatically coerce values (default true)
@@ -2059,7 +2059,7 @@ coercer.clearConflicts();  // Clear history
 Advanced pluggable retry strategies with configurable backoff, budget, and abort support:
 
 ```js
-const { RetryStrategy } = require('yarou');
+const { RetryStrategy } = require('awsibnj');
 
 // Exponential backoff with jitter (default)
 const retry = new RetryStrategy({
@@ -2106,7 +2106,7 @@ retry.getStats(); // { totalExecutions, totalRetries, totalSuccesses, totalFailu
 Structured request/response logging with automatic field redaction:
 
 ```js
-const { RequestLogger } = require('yarou');
+const { RequestLogger } = require('awsibnj');
 
 const logger = new RequestLogger({
   level: 'info',          // 'debug' | 'info' | 'warn' | 'error' | 'silent'
@@ -2146,7 +2146,7 @@ logger.getStats(); // { totalLogs, byLevel, redactedFields, bufferSize }
 Centralized, versioned schema storage with compatibility checking:
 
 ```js
-const { SchemaRegistry } = require('yarou');
+const { SchemaRegistry } = require('awsibnj');
 
 const registry = new SchemaRegistry({
   strict: false,
@@ -2193,7 +2193,7 @@ registry.getStats(); // { totalRegistrations, totalLookups, totalSchemas, namesp
 Chunked JSON response transformation with field filtering and progress tracking:
 
 ```js
-const { ResponseStreamer } = require('yarou');
+const { ResponseStreamer } = require('awsibnj');
 
 const streamer = new ResponseStreamer({
   convention: 'camelCase',
@@ -2226,7 +2226,7 @@ streamer.getStats(); // { chunksProcessed, keysTransformed, totalBytesProcessed,
 DAG-based orchestration for dependent API calls with parallel execution:
 
 ```js
-const { DependencyGraph } = require('yarou');
+const { DependencyGraph } = require('awsibnj');
 
 const graph = new DependencyGraph();
 
@@ -2270,7 +2270,7 @@ graph.getStats(); // { totalExecutions, totalNodeRuns, lastDuration, errors }
 Built-in mock server for testing with request recording and assertion helpers:
 
 ```js
-const { MockServer } = require('yarou');
+const { MockServer } = require('awsibnj');
 
 const mock = new MockServer({
   defaultDelay: 0,
@@ -2322,7 +2322,7 @@ mock.getStats(); // { totalRequests, matchedRequests, unmatchedRequests, routesR
 Endpoint health monitoring with configurable probes and alert callbacks:
 
 ```js
-const { HealthCheck } = require('yarou');
+const { HealthCheck } = require('awsibnj');
 
 const health = new HealthCheck({
   failureThreshold: 3,    // Consecutive failures → UNHEALTHY
@@ -2371,7 +2371,7 @@ health.getStats(); // { totalChecks, totalFailures, totalSuccesses, endpointsReg
 Typed, cross-module pub/sub event bus with wildcards and priority ordering:
 
 ```js
-const { EventBus } = require('yarou');
+const { EventBus } = require('awsibnj');
 
 const bus = new EventBus({
   recordHistory: true,
@@ -2422,7 +2422,7 @@ bus.getStats(); // { totalEmits, totalListeners, totalDeliveries, eventsWithList
 Fault-tolerant API calls with automatic failure detection and recovery:
 
 ```js
-const { CircuitBreaker } = require('yarou');
+const { CircuitBreaker } = require('awsibnj');
 
 const breaker = new CircuitBreaker({
   failureThreshold: 5,    // Open after 5 consecutive failures
@@ -2471,7 +2471,7 @@ breaker.destroy();        // Clear timers
 Coalesce concurrent identical requests — only one network call is made:
 
 ```js
-const { RequestDeduplicator } = require('yarou');
+const { RequestDeduplicator } = require('awsibnj');
 
 const dedup = new RequestDeduplicator({
   ttl: 5000,      // Max time to keep a pending entry
@@ -2501,7 +2501,7 @@ console.log(dedup.getStats());
 Transform GraphQL responses and variables between naming conventions:
 
 ```js
-const { GraphQLBridge } = require('yarou');
+const { GraphQLBridge } = require('awsibnj');
 
 const gql = new GraphQLBridge({
   convention: 'camelCase',      // Target convention for response fields
@@ -2542,10 +2542,10 @@ const query = gql.buildQuery('query GetUser($userId: ID!) { ... }', { userId: 1 
 
 ### OpenAPI Schema Importer
 
-Auto-generate yarou schemas from OpenAPI/Swagger specifications:
+Auto-generate awsibnj schemas from OpenAPI/Swagger specifications:
 
 ```js
-const { OpenAPIImporter } = require('yarou');
+const { OpenAPIImporter } = require('awsibnj');
 
 const importer = new OpenAPIImporter({
   convention: 'camelCase',       // Target naming convention
@@ -2603,7 +2603,7 @@ const endpoints = importer.getEndpoints(spec);
 Version-specific transforms with migration support:
 
 ```js
-const { APIVersionManager } = require('yarou');
+const { APIVersionManager } = require('awsibnj');
 
 const versions = new APIVersionManager({ defaultVersion: 'v1' });
 
@@ -2654,7 +2654,7 @@ const all = versions.list();
 Normalize incoming webhook payloads from any provider:
 
 ```js
-const { WebhookHandler } = require('yarou');
+const { WebhookHandler } = require('awsibnj');
 
 const webhooks = new WebhookHandler({
   convention: 'camelCase',      // Normalize payload keys
@@ -2697,7 +2697,7 @@ console.log(webhooks.getStats());
 Generate and apply RFC 6902 JSON Patch operations:
 
 ```js
-const { JSONPatchGenerator } = require('yarou');
+const { JSONPatchGenerator } = require('awsibnj');
 
 const patcher = new JSONPatchGenerator({ deepClone: true });
 
@@ -2744,7 +2744,7 @@ const merged = patcher.merge(patchesA, patchesB);
 Build functional, stage-based data transformation pipelines:
 
 ```js
-const { ComposablePipeline } = require('yarou');
+const { ComposablePipeline } = require('awsibnj');
 
 const pipe = new ComposablePipeline({
   name: 'userPipeline',
@@ -2807,7 +2807,7 @@ const pipe2 = pipe.clone();
 Extensible architecture for registering hooks into the transform pipeline:
 
 ```js
-const { PluginManager } = require('yarou');
+const { PluginManager } = require('awsibnj');
 
 const plugins = new PluginManager();
 
@@ -2846,7 +2846,7 @@ plugins.unregister('logger');
 Auto-generate schemas from API response data:
 
 ```js
-const { SchemaInference } = require('yarou');
+const { SchemaInference } = require('awsibnj');
 
 const inference = new SchemaInference({
   requiredThreshold: 1.0,  // Field must appear in 100% of samples to be required
@@ -2879,7 +2879,7 @@ const merged = inference.merge([schemaA, schemaB]);
 Select, omit, rename, and reshape fields — like SQL SELECT for objects:
 
 ```js
-const { FieldProjection } = require('yarou');
+const { FieldProjection } = require('awsibnj');
 
 const fp = new FieldProjection();
 
@@ -2914,7 +2914,7 @@ fp.compact({ a: 1, b: null, c: undefined });
 Protect PII and sensitive data with automatic detection and multiple masking strategies:
 
 ```js
-const { DataMasker } = require('yarou');
+const { DataMasker } = require('awsibnj');
 
 // Auto-detect sensitive fields
 const masker = new DataMasker();
@@ -2948,7 +2948,7 @@ const masker = new DataMasker({
 Built-in request throttling with token bucket algorithm:
 
 ```js
-const { RateLimiter } = require('yarou');
+const { RateLimiter } = require('awsibnj');
 
 const limiter = new RateLimiter({
   maxRequests: 60,      // 60 requests per window
@@ -2983,7 +2983,7 @@ console.log(limiter.getStats());
 Detect API schema drift and breaking changes:
 
 ```js
-const { SchemaDiff } = require('yarou');
+const { SchemaDiff } = require('awsibnj');
 
 const differ = new SchemaDiff();
 
@@ -3014,7 +3014,7 @@ console.log(schemaDiff.hasBreakingChanges);
 Generate TypeScript interfaces and type guards from schemas or data:
 
 ```js
-const { TypeGenerator } = require('yarou');
+const { TypeGenerator } = require('awsibnj');
 
 const gen = new TypeGenerator({
   exportTypes: true,
@@ -3029,7 +3029,7 @@ const ts = gen.fromSchema('User', {
 });
 // Output:
 // /**
-//  * Auto-generated by yarou v4
+//  * Auto-generated by awsibnj v4
 //  * @generated
 //  */
 // export interface User {
@@ -3061,7 +3061,7 @@ const nested = gen.fromNestedData('Order', {
 Track performance and usage metrics with percentile calculations:
 
 ```js
-const { MetricsCollector } = require('yarou');
+const { MetricsCollector } = require('awsibnj');
 
 const metrics = new MetricsCollector({ windowSize: 1000 });
 
@@ -3094,7 +3094,7 @@ const report = metrics.getReport();
 ### All Output Conventions
 
 ```js
-const { createTransformer } = require('yarou');
+const { createTransformer } = require('awsibnj');
 const input = { user_first_name: 'John' };
 
 // camelCase (default)
@@ -3123,7 +3123,7 @@ createTransformer({ targetConvention: 'SCREAMING_SNAKE' }).transform(input);
 ### Schema Validation
 
 ```js
-const { SchemaValidator } = require('yarou');
+const { SchemaValidator } = require('awsibnj');
 
 const validator = new SchemaValidator({ strict: true, throwOnError: false });
 
@@ -3152,7 +3152,7 @@ console.log(data);   // { name: 'John', email: 'john@example.com', isActive: tru
 Standardizes API responses regardless of backend format:
 
 ```js
-const { ResponseNormalizer } = require('yarou');
+const { ResponseNormalizer } = require('awsibnj');
 const normalizer = new ResponseNormalizer();
 
 // Envelope unwrapping
@@ -3272,7 +3272,7 @@ try {
 Transform multiple payloads in one call:
 
 ```js
-const { createTransformer } = require('yarou');
+const { createTransformer } = require('awsibnj');
 const t = createTransformer();
 
 const results = t.transformBatch([
@@ -3294,7 +3294,7 @@ const results = t.transformBatch([
 Convert frontend data back to backend format:
 
 ```js
-const { createTransformer } = require('yarou');
+const { createTransformer } = require('awsibnj');
 const t = createTransformer();
 
 const backendData = t.reverse({ firstName: 'John', lastName: 'Doe', isActive: true });
@@ -3308,7 +3308,7 @@ const backendData = t.reverse({ firstName: 'John', lastName: 'Doe', isActive: tr
 The transformer is an `EventEmitter`:
 
 ```js
-const { createTransformer } = require('yarou');
+const { createTransformer } = require('awsibnj');
 const t = createTransformer();
 
 t.on('mismatch', (record) => {
@@ -3335,7 +3335,7 @@ t.on('warning', ({ message, path }) => {
 Share learned mappings across projects or environments:
 
 ```js
-const { createTransformer } = require('yarou');
+const { createTransformer } = require('awsibnj');
 const t = createTransformer();
 
 // Export all learned mappings
@@ -3409,7 +3409,7 @@ const schema = {
 
 ## Learning Engine
 
-yarou learns from your corrections and gets smarter over time.
+awsibnj learns from your corrections and gets smarter over time.
 
 ```js
 const api = bridgeFetch();
@@ -3484,7 +3484,7 @@ api.exportJSON('/path/to/report.json');
 ### Schema Suggestions
 
 ```js
-const { exportSchemaSuggestions } = require('yarou');
+const { exportSchemaSuggestions } = require('awsibnj');
 exportSchemaSuggestions(api.__bridge.learning, '/path/to/suggestions.json');
 ```
 
@@ -3530,7 +3530,7 @@ const {
   //   ERR_ZERO_TRUST_DENIED, ERR_THREAT_DETECTED, ERR_SESSION_INVALID,
   //   ERR_INTEGRITY_VIOLATION, ERR_ADAPTIVE_RATE_LIMITED, ERR_MTLS_FAILED,
   //   ERR_VAULT_ACCESS_DENIED, ERR_SECURITY_HEADER_VIOLATION
-} = require('yarou');
+} = require('awsibnj');
 
 try {
   await retry.execute(() => api.get('/data'));
@@ -3626,7 +3626,7 @@ try {
 ## Architecture
 
 ```
-yarou/
+awsibnj/
 ├── src/
 │   ├── index.js                   # Main entry — bridge(), bridgeFetch(), transform()
 │   ├── core/                      # Core transformation engine
@@ -3775,11 +3775,11 @@ This runs 1178 tests covering:
 
 ## Axios Migration Guide
 
-### Step 1: Install yarou
+### Step 1: Install awsibnj
 
 ```bash
 npm uninstall axios
-npm install yarou
+npm install awsibnj
 ```
 
 ### Step 2: Update Imports
@@ -3791,9 +3791,9 @@ const axios = require('axios');
 import axios from 'axios';
 
 // After
-const apiBridge = require('yarou');
+const apiBridge = require('awsibnj');
 // or
-import apiBridge from 'yarou';
+import apiBridge from 'awsibnj';
 ```
 
 ### Step 3: Everything Just Works
@@ -3859,7 +3859,7 @@ await api.postForm('/upload', formData);
 
 ### What You Get Extra (Free)
 
-When you replace Axios with yarou, you automatically get:
+When you replace Axios with awsibnj, you automatically get:
 - **Intelligent field mapping**: `user_name` → `userName` automatically
 - **Fuzzy matching**: `usr_nm` → `userName` with 95%+ confidence
 - **Learning engine**: remembers field mappings across sessions
@@ -3906,19 +3906,19 @@ V8 is backward compatible. Your V7 code will work without changes.
 
 ```js
 // Same as V7 (still works)
-const { bridge, bridgeFetch, transform } = require('yarou');
+const { bridge, bridgeFetch, transform } = require('awsibnj');
 
 // New in V8: subpath imports
-const { FuzzyMatcher } = require('yarou/core');
-const { DeepMerge } = require('yarou/utils');
-const { CircuitBreaker } = require('yarou/adapters');
+const { FuzzyMatcher } = require('awsibnj/core');
+const { DeepMerge } = require('awsibnj/utils');
+const { CircuitBreaker } = require('awsibnj/adapters');
 ```
 
 **New v8 features you can adopt incrementally:**
 
 ```js
 // Multi-alias field resolution
-const { FieldAliaser } = require('yarou');
+const { FieldAliaser } = require('awsibnj');
 const aliaser = new FieldAliaser();
 aliaser.register('userId', ['user_id', 'uid', 'member_id']);
 aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
@@ -3928,13 +3928,13 @@ aliaser.register('userId', ['usr_id'], { api: 'legacyService' });
 aliaser.resolve('usr_id', 'legacyService'); // { canonical: 'userId' }
 
 // Schema migration engine
-const { SchemaMigrator } = require('yarou');
+const { SchemaMigrator } = require('awsibnj');
 const migrator = new SchemaMigrator();
 migrator.define('1.0', '2.0', { rename: { user_name: 'username' } });
 migrator.migrate(data, '1.0', '2.0');
 
 // Batch request orchestrator
-const { BatchOrchestrator } = require('yarou');
+const { BatchOrchestrator } = require('awsibnj');
 const batch = new BatchOrchestrator({ concurrency: 5 });
 await batch.executeParallel([
   { id: 'users', execute: () => fetchUsers() },
@@ -3942,24 +3942,24 @@ await batch.executeParallel([
 ]);
 
 // Field analytics
-const { FieldStats } = require('yarou');
+const { FieldStats } = require('awsibnj');
 const stats = new FieldStats();
 stats.record('user_name', { confidence: 0.97, method: 'pattern_conversion' });
 stats.getLowConfidenceFields(); // Find fields that need schema definitions
 
 // Conditional transforms
-const { ConditionalTransform } = require('yarou');
+const { ConditionalTransform } = require('awsibnj');
 const ct = new ConditionalTransform();
 ct.when('nullToNA', (v) => v === null, () => 'N/A');
 ct.applyAll({ name: 'John', status: null });
 
 // Deep merge
-const { DeepMerge } = require('yarou');
+const { DeepMerge } = require('awsibnj');
 const merger = new DeepMerge({ arrayStrategy: 'union' });
 merger.merge(apiResponse1, apiResponse2);
 
 // Output formatter
-const { OutputFormatter } = require('yarou');
+const { OutputFormatter } = require('awsibnj');
 const fmt = new OutputFormatter();
 fmt.toXML(data);   // XML output
 fmt.toCSV(data);   // CSV output
@@ -3967,7 +3967,7 @@ fmt.toTable(data);  // Table output
 fmt.fromTemplate(data, 'Hello {{name}}');
 
 // Request interceptor chain
-const { RequestInterceptor } = require('yarou');
+const { RequestInterceptor } = require('awsibnj');
 const interceptor = new RequestInterceptor();
 interceptor.useRequest('addAuth', (ctx) => ({ ...ctx, headers: { Authorization: 'Bearer token' } }));
 ```

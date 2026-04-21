@@ -1,15 +1,15 @@
-# How yarou Works
+# How awsibnj Works
 
-yarou solves one problem: **your backend sends field names in one style, your frontend expects another.**
+awsibnj solves one problem: **your backend sends field names in one style, your frontend expects another.**
 
-For example, your API returns `first_name` but your React app uses `firstName`. Instead of writing manual mapping for every field, yarou does it automatically.
+For example, your API returns `first_name` but your React app uses `firstName`. Instead of writing manual mapping for every field, awsibnj does it automatically.
 
 ---
 
 ## The Core Idea
 
 ```
-Backend Response              yarou              Your Frontend
+Backend Response              awsibnj              Your Frontend
 ─────────────────          ──────────────          ─────────────────
 {                    →     auto-detects     →     {
   "first_name": "John"      & converts              "firstName": "John"
@@ -24,7 +24,7 @@ No config needed for simple cases. It just works.
 
 ## How Mismatches Are Resolved
 
-When yarou sees a field name, it goes through **7 levels** to figure out the correct mapping. It stops at the first level that gives a confident answer.
+When awsibnj sees a field name, it goes through **7 levels** to figure out the correct mapping. It stops at the first level that gives a confident answer.
 
 ### Level 1 — Exact Match (100% confidence)
 
@@ -37,7 +37,7 @@ Result: "firstName"    → already correct, skip
 
 ### Level 2 — Learned Mapping (99% confidence)
 
-You approved this mapping before. yarou remembers it.
+You approved this mapping before. awsibnj remembers it.
 
 ```
 Input:  "usr_nm"
@@ -68,7 +68,7 @@ This handles standard conversions between `snake_case`, `camelCase`, `PascalCase
 
 ### Level 5 — Synonym Match (92% confidence)
 
-yarou has a built-in dictionary of 160+ developer vocabulary synonym groups spanning multiple domains (person, contact, auth, status, dates, media, pricing, healthcare, analytics, infrastructure, financial, IoT, education, social). It knows that `phone`, `mobile`, `cell`, `tel`, and `contact_number` all mean the same thing.
+awsibnj has a built-in dictionary of 160+ developer vocabulary synonym groups spanning multiple domains (person, contact, auth, status, dates, media, pricing, healthcare, analytics, infrastructure, financial, IoT, education, social). It knows that `phone`, `mobile`, `cell`, `tel`, and `contact_number` all mean the same thing.
 
 ```
 Input:  "cell_number"
@@ -77,7 +77,7 @@ Result: "phone"        → recognized as synonym for "phone"
 
 ### Level 6 — Fuzzy + Semantic Match (70–95% confidence)
 
-When a schema is provided, yarou compares the field against schema keys using a **weighted ensemble of 7 strategies**: Levenshtein distance, token matching, vowel-drop detection, phonetic similarity, abbreviation expansion, n-gram overlap, and substring containment.
+When a schema is provided, awsibnj compares the field against schema keys using a **weighted ensemble of 7 strategies**: Levenshtein distance, token matching, vowel-drop detection, phonetic similarity, abbreviation expansion, n-gram overlap, and substring containment.
 
 All strategies are combined with tuned weights and the ensemble score is compared against the best individual strategy. Multiple strategies agreeing boosts confidence further. The semantic similarity engine also expands abbreviations (`txn` → `transaction`, `dev` → `device`, etc.) before comparing tokens.
 
@@ -91,7 +91,7 @@ Result: "transactionId" → abbreviation expansion + token match
 
 ### Level 7 — Best Effort with Cryptic Resolution (55–70% confidence)
 
-When nothing else matches, yarou attempts to resolve cryptic/arbitrary field names by:
+When nothing else matches, awsibnj attempts to resolve cryptic/arbitrary field names by:
 - Stripping cryptic prefixes (`x_`, `z9_`, etc.)
 - Stripping database prefixes (`tbl_`, `fk_`, `pk_`, `vw_`, `sp_`, `idx_`)
 - Matching by suffixes (`_id`, `_flag`, `_date`)
@@ -120,7 +120,7 @@ Result: "xqFlag"       → converted but flagged for review
 When different APIs use different names for the same concept, the FieldAliaser maps them all to a canonical name:
 
 ```js
-const { FieldAliaser } = require('yarou');
+const { FieldAliaser } = require('awsibnj');
 const aliaser = new FieldAliaser();
 aliaser.register('userId', ['user_id', 'uid', 'member_id']);
 aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
@@ -131,7 +131,7 @@ aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
 When your API's field names change across versions, the SchemaMigrator upgrades or downgrades data automatically:
 
 ```js
-const { SchemaMigrator } = require('yarou');
+const { SchemaMigrator } = require('awsibnj');
 const migrator = new SchemaMigrator();
 migrator.define('1.0', '2.0', { rename: { user_name: 'username' }, add: { version: '2.0' } });
 migrator.migrate(data, '1.0', '2.0'); // Applies renames, adds, removes, transforms
@@ -142,7 +142,7 @@ migrator.migrate(data, '1.0', '2.0'); // Applies renames, adds, removes, transfo
 Execute multiple API calls with concurrency control, failure handling, and result aggregation:
 
 ```js
-const { BatchOrchestrator } = require('yarou');
+const { BatchOrchestrator } = require('awsibnj');
 const batch = new BatchOrchestrator({ concurrency: 5 });
 await batch.executeParallel([
   { id: 'users', execute: () => fetchUsers() },
@@ -155,7 +155,7 @@ await batch.executeParallel([
 Intelligently merge responses from multiple APIs with configurable conflict resolution:
 
 ```js
-const { DeepMerge } = require('yarou');
+const { DeepMerge } = require('awsibnj');
 const merger = new DeepMerge({ arrayStrategy: 'union' });
 const combined = merger.merge(apiResponse1, apiResponse2, apiResponse3);
 ```
@@ -165,7 +165,7 @@ const combined = merger.merge(apiResponse1, apiResponse2, apiResponse3);
 Apply different transformations based on field values, types, or context:
 
 ```js
-const { ConditionalTransform } = require('yarou');
+const { ConditionalTransform } = require('awsibnj');
 const ct = new ConditionalTransform();
 ct.when('nullToNA', (v) => v === null, () => 'N/A');
 ct.when('vipDiscount', (v, field, ctx) => ctx.isVip, (v) => v * 0.8, { fields: ['price'] });
@@ -176,7 +176,7 @@ ct.when('vipDiscount', (v, field, ctx) => ctx.isVip, (v) => v * 0.8, { fields: [
 Format transformed data into XML, CSV, key-value pairs, tables, or custom templates:
 
 ```js
-const { OutputFormatter } = require('yarou');
+const { OutputFormatter } = require('awsibnj');
 const fmt = new OutputFormatter();
 fmt.toXML(data);   // XML output
 fmt.toCSV(data);   // CSV output
@@ -189,7 +189,7 @@ fmt.fromTemplate(data, 'Hello {{name}}');
 Priority-ordered, groupable interceptors for modifying requests and responses:
 
 ```js
-const { RequestInterceptor } = require('yarou');
+const { RequestInterceptor } = require('awsibnj');
 const interceptor = new RequestInterceptor();
 interceptor.useRequest('addAuth', (ctx) => ({
   ...ctx, headers: { ...ctx.headers, Authorization: 'Bearer token' }
@@ -198,18 +198,18 @@ interceptor.useRequest('addAuth', (ctx) => ({
 
 ---
 
-## Using yarou in Your Project
+## Using awsibnj in Your Project
 
 ### Install
 
 ```bash
-npm install yarou
+npm install awsibnj
 ```
 
 ### Option 1: As Axios Replacement (v13 — Recommended)
 
 ```js
-const apiBridge = require('yarou');
+const apiBridge = require('awsibnj');
 
 // Create a client instance (like axios.create())
 const api = apiBridge.create({
@@ -258,7 +258,7 @@ const api2 = apiBridge.create(); // transformRequest/Response are set by default
 
 ```js
 const axios = require('axios');
-const { bridge } = require('yarou');
+const { bridge } = require('awsibnj');
 
 const api = bridge(axios.create({ baseURL: 'https://api.example.com' }));
 
@@ -271,7 +271,7 @@ console.log(response.data);
 ### Option 3: With Fetch
 
 ```js
-const { bridgeFetch } = require('yarou');
+const { bridgeFetch } = require('awsibnj');
 
 const api = bridgeFetch();
 
@@ -283,7 +283,7 @@ console.log(user);
 ### Option 4: Direct Transform (No HTTP)
 
 ```js
-const { transform } = require('yarou');
+const { transform } = require('awsibnj');
 
 const result = transform({
   first_name: 'John',
@@ -299,7 +299,7 @@ console.log(result);
 
 ## Two-Way Transformation
 
-yarou also converts **frontend → backend** when you send data.
+awsibnj also converts **frontend → backend** when you send data.
 
 ```js
 // When you POST data, it auto-converts back to snake_case for the backend
@@ -313,7 +313,7 @@ await api.post('/users', {
 
 ## Enhanced Type Coercion (v7)
 
-yarou v7+ automatically coerces values when a schema is provided, with support for:
+awsibnj v7+ automatically coerces values when a schema is provided, with support for:
 
 | Input | Target Type | Output |
 |-------|-------------|--------|
@@ -349,7 +349,7 @@ The schema gives you:
 
 ## Approving and Rejecting Mappings
 
-When yarou isn't sure about a mapping, it flags it. You can teach it the correct answer:
+When awsibnj isn't sure about a mapping, it flags it. You can teach it the correct answer:
 
 ```js
 // "Yes, this mapping is correct"
@@ -359,7 +359,7 @@ api.approve('usr_nm', 'userName');
 api.reject('usr_nm', 'usrNm', 'userName');
 ```
 
-Once approved, yarou remembers it forever (Level 2). Next time it sees `usr_nm`, it instantly maps to `userName` with 99% confidence.
+Once approved, awsibnj remembers it forever (Level 2). Next time it sees `usr_nm`, it instantly maps to `userName` with 99% confidence.
 
 ### Where Learnings Are Stored
 
@@ -392,8 +392,8 @@ api.exportCSV('./mismatches.csv');
 
 | What | How |
 |------|-----|
-| Install | `npm install yarou` |
-| Replace Axios | `const api = require('yarou').create({ baseURL: '/api' })` |
+| Install | `npm install awsibnj` |
+| Replace Axios | `const api = require('awsibnj').create({ baseURL: '/api' })` |
 | Basic use | `transform({ snake_case: value })` → `{ camelCase: value }` |
 | With Axios | `bridge(axiosInstance)` — auto-transforms all requests & responses |
 | With Fetch | `bridgeFetch()` — same as above but with native fetch |

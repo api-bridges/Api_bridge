@@ -1,11 +1,11 @@
 /**
- * yarou v11 — Type Detection & Utility Helpers
+ * awsibnj v11 — Type Detection & Utility Helpers
  *
  * Comprehensive set of type-checking and utility functions,
  * matching Axios's utils module for complete drop-in compatibility.
  *
  * Usage:
- *   const { isPlainObject, isFunction, isString } = require('yarou');
+ *   const { isPlainObject, isFunction, isString } = require('awsibnj');
  */
 
 'use strict';
