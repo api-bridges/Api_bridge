@@ -1,5 +1,5 @@
 /**
- * nopes v15 — Interceptor Manager
+ * yarou v15 — Interceptor Manager
  *
  * Axios-compatible interceptor system with improvements:
  *   - Request interceptors

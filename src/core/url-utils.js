@@ -1,5 +1,5 @@
 /**
- * nopes v11 — URL Utilities
+ * yarou v11 — URL Utilities
  *
  * Helper functions for URL manipulation, matching Axios internals.
  *

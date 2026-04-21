@@ -1,5 +1,5 @@
 /**
- * nopes v3 — Schema Diff Engine
+ * yarou v3 — Schema Diff Engine
  *
  * Compare two API responses or schemas to detect:
  *  - Added fields

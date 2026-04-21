@@ -382,7 +382,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`maxRate` config option** — Upload/download rate throttling: `{ maxRate: [uploadBytesPerSec, downloadBytesPerSec] }`
 - **`lookup` DNS option** — Custom DNS resolution function for Node.js: `{ lookup: (hostname, opts, cb) => ... }`
 - **Enhanced error shapes** — `error.response.headers` is AxiosHeaders, `error.request` included in error objects
-- **`isAxiosError()` duck-typing** — Now checks both `.isApiBridgeError` and `.isAxiosError` properties for cross-library error detection
+- **`isAxiosError()` duck-typing** — Now checks both `.isYarouError` and `.isAxiosError` properties for cross-library error detection
 - 41 new tests (849 total)
 
 ### Changed
@@ -402,7 +402,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apiBridge.get('/api/users')`, `apiBridge.post()`, etc. — shorthand methods
 - **Shorthand methods on default export** — `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `request`, `postForm`, `putForm`, `patchForm`, `getUri`
 - **Default export properties** — `defaults`, `interceptors`, `create`, `all`, `spread`
-- **`Axios` class alias** — `apiBridge.Axios === nopesClient` for migration compatibility
+- **`Axios` class alias** — `apiBridge.Axios === yarouClient` for migration compatibility
 - **`AxiosError` class alias** — `apiBridge.AxiosError === ClientError` for migration compatibility
 - **`isAxiosError()` function** — Alias for `isClientError()`, enables `apiBridge.isAxiosError(err)`
 - **Error code constants on ClientError/AxiosError**:
@@ -417,7 +417,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`transitional` config option** — `{ silentJSONParsing, forcedJSONParsing, clarifyTimeoutError }`
 - **`signal` in defaults** — Default AbortSignal propagation
 - **Callable export has all Axios statics** — `CancelToken`, `Cancel`, `AxiosHeaders`, `HttpStatusCode`, `toFormData`, `formToJSON`, `mergeConfig`, `getAdapter`, `buildURL`, `VERSION`
-- **Module-level shorthand methods** — `require('nopes').get()`, `.post()`, etc.
+- **Module-level shorthand methods** — `require('yarou').get()`, `.post()`, etc.
 - **Module-level `interceptors`** — Shared default instance interceptors
 - **42 new tests** (808 total, up from 766)
 - **Updated TypeScript declarations** with all v12 types, interfaces, and callable export
@@ -460,8 +460,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deep Config Merging** — `mergeConfig(target, source)` utility for deep-merging configurations
 - **`all()` + `spread()`** — Concurrent request helpers (like `axios.all`, `axios.spread`)
   - `all([api.get('/a'), api.get('/b')]).then(spread((a, b) => ...))`
-- **`isClientError()` / `isApiBridgeError()`** — Error type checking (like `axios.isAxiosError`)
-  - Available as standalone function and static method `nopesClient.isClientError(err)`
+- **`isClientError()` / `isYarouError()`** — Error type checking (like `axios.isAxiosError`)
+  - Available as standalone function and static method `yarouClient.isClientError(err)`
 - **`create()` Factory** — Alias for `createClient()` (Axios `axios.create()` pattern)
 - **`defaultParamsSerializer()`** — Exported default params serializer with array support
 - **Response Shape Enhancement** — `statusText` and `config` now included in response objects
@@ -470,12 +470,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`responseEncoding`** — Response encoding configuration
 - **`maxRedirects`** — Max redirects configuration
 - **`decompress`** — Auto decompress configuration
-- **`isApiBridgeError` flag** — Attached to wrapped errors for detection
+- **`isYarouError` flag** — Attached to wrapped errors for detection
 - 100 new tests (649 total)
 
 ### Changed
 - `buildURL()` now accepts optional 4th parameter `paramsSerializer` function
-- Client error objects now include `config` and `isApiBridgeError` flag
+- Client error objects now include `config` and `isYarouError` flag
 - Updated package description for complete Axios replacement positioning
 - Added 13 new keywords: `cancel-token`, `form-data`, `axios-replacement`, `drop-in`, etc.
 

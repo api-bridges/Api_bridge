@@ -1,5 +1,5 @@
 /**
- * nopes v3 — Middleware Pipeline
+ * yarou v3 — Middleware Pipeline
  *
  * Composable before/after hooks for request and response processing.
  *

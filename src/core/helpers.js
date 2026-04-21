@@ -1,11 +1,11 @@
 /**
- * nopes v11 — Type Detection & Utility Helpers
+ * yarou v11 — Type Detection & Utility Helpers
  *
  * Comprehensive set of type-checking and utility functions,
  * matching Axios's utils module for complete drop-in compatibility.
  *
  * Usage:
- *   const { isPlainObject, isFunction, isString } = require('nopes');
+ *   const { isPlainObject, isFunction, isString } = require('yarou');
  */
 
 'use strict';

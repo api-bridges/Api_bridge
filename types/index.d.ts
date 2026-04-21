@@ -1,5 +1,5 @@
-// TypeScript Type Declarations for nopes v18
-// Type definitions for nopes 18.0.0
+// TypeScript Type Declarations for yarou v18
+// Type definitions for yarou 18.0.0
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
@@ -8,12 +8,12 @@ declare namespace ApiBridgeAI {
   // ─── Main API ────────────────────────────────────────────────────────────
 
   /**
-   * Wrap an Axios instance with nopes transformation.
+   * Wrap an Axios instance with yarou transformation.
    */
   function bridge(axiosInstance: any, options?: BridgeOptions): any;
 
   /**
-   * Wrap native fetch with nopes transformation, retry, caching, and middleware.
+   * Wrap native fetch with yarou transformation, retry, caching, and middleware.
    */
   function bridgeFetch(options?: BridgeFetchOptions): BridgeFetchInstance;
 
@@ -25,17 +25,17 @@ declare namespace ApiBridgeAI {
   /**
    * Create a reusable transformer instance.
    */
-  function createTransformer(options?: TransformOptions): nopesTransformer;
+  function createTransformer(options?: TransformOptions): yarouTransformer;
 
   /**
    * Create a new API client instance (v9+).
    */
-  function createClient(options?: ClientOptions): nopesClient;
+  function createClient(options?: ClientOptions): yarouClient;
 
   /**
    * Alias for createClient (Axios-compatible).
    */
-  function create(options?: ClientOptions): nopesClient;
+  function create(options?: ClientOptions): yarouClient;
 
   /**
    * Execute multiple requests concurrently (like axios.all).
@@ -55,7 +55,7 @@ declare namespace ApiBridgeAI {
   /**
    * Alias for isClientError.
    */
-  function isApiBridgeError(err: any): boolean;
+  function isYarouError(err: any): boolean;
 
   /**
    * Check if a value is a Cancel (cancellation reason).
@@ -940,7 +940,7 @@ declare namespace ApiBridgeAI {
 
   // ─── v11 Client Class ──────────────────────────────────────────────────
 
-  class nopesClient {
+  class yarouClient {
     constructor(options?: ClientOptions);
     baseURL: string;
     defaultHeaders: Record<string, string>;
@@ -962,7 +962,7 @@ declare namespace ApiBridgeAI {
     xsrfCookieName: string;
     xsrfHeaderName: string;
     defaults: ClientDefaults;
-    transformer: nopesTransformer;
+    transformer: yarouTransformer;
     learning: LearningEngine;
     fuzzyMatcher: FuzzyMatcher;
     typeCoercer: TypeCoercer;
@@ -1015,10 +1015,10 @@ declare namespace ApiBridgeAI {
     _wrapError(err: Error, reqConfig: any, response?: any): ClientError;
 
     static isClientError(err: any): boolean;
-    static isApiBridgeError(err: any): boolean;
+    static isYarouError(err: any): boolean;
   }
 
-  class ClientError extends ApiBridgeError {
+  class ClientError extends YarouError {
     constructor(message: string, details?: {
       status?: number;
       code?: string;
@@ -1033,7 +1033,7 @@ declare namespace ApiBridgeAI {
     config: ClientRequestConfig | null;
     response: { data: any; status: number; statusText: string; headers: AxiosHeaders | Record<string, string>; config?: ClientRequestConfig } | null;
     request: any;
-    isApiBridgeError: boolean;
+    isYarouError: boolean;
     isAxiosError: boolean;
     toJSON(): { message: string; name: string; status: number | null; code: string; details: any; config: any };
 
@@ -1214,7 +1214,7 @@ declare namespace ApiBridgeAI {
 
   // ─── Core Classes ────────────────────────────────────────────────────────
 
-  class nopesTransformer {
+  class yarouTransformer {
     constructor(options?: TransformOptions);
     transform(data: Record<string, any>, schema: Record<string, string> | null, direction: string): Record<string, any>;
     approve(source: string, target: string): void;
@@ -1494,7 +1494,7 @@ declare namespace ApiBridgeAI {
 
   // ─── Error Classes ───────────────────────────────────────────────────────
 
-  class ApiBridgeError extends Error {
+  class YarouError extends Error {
     code: string;
     details: Record<string, any>;
     timestamp: string;
@@ -1502,107 +1502,107 @@ declare namespace ApiBridgeAI {
     toJSON(): { name: string; code: string; message: string; details: any; timestamp: string };
   }
 
-  class ValidationError extends ApiBridgeError {
+  class ValidationError extends YarouError {
     constructor(message: string, field: string, expected: string, received: string);
   }
 
-  class TransformError extends ApiBridgeError {
+  class TransformError extends YarouError {
     constructor(message: string, sourceKey: string, details?: Record<string, any>);
   }
 
-  class CacheError extends ApiBridgeError {
+  class CacheError extends YarouError {
     constructor(message: string, key: string);
   }
 
-  class MiddlewareError extends ApiBridgeError {
+  class MiddlewareError extends YarouError {
     constructor(message: string, middlewareName: string, originalError?: Error);
   }
 
-  class NetworkError extends ApiBridgeError {
+  class NetworkError extends YarouError {
     constructor(message: string, url: string, attempt: number, maxRetries: number);
   }
 
-  class PluginError extends ApiBridgeError {
+  class PluginError extends YarouError {
     constructor(message: string, pluginName: string, originalError?: Error);
   }
 
-  class RateLimitError extends ApiBridgeError {
+  class RateLimitError extends YarouError {
     constructor(message: string, limit: number, retryAfterMs: number);
   }
 
-  class InferenceError extends ApiBridgeError {
+  class InferenceError extends YarouError {
     constructor(message: string, reason: string);
   }
 
-  class CircuitBreakerError extends ApiBridgeError {
+  class CircuitBreakerError extends YarouError {
     constructor(message: string, state: string, failures: number);
   }
 
-  class PipelineError extends ApiBridgeError {
+  class PipelineError extends YarouError {
     constructor(message: string, stageName: string, originalError?: Error);
   }
 
-  class WebhookError extends ApiBridgeError {
+  class WebhookError extends YarouError {
     constructor(message: string, provider: string, reason: string);
   }
 
-  class VersioningError extends ApiBridgeError {
+  class VersioningError extends YarouError {
     constructor(message: string, version: string, reason: string);
   }
 
-  class RetryError extends ApiBridgeError {
+  class RetryError extends YarouError {
     constructor(message: string, attempt: number, maxRetries: number, reason: string);
   }
 
-  class SchemaRegistryError extends ApiBridgeError {
+  class SchemaRegistryError extends YarouError {
     constructor(message: string, schemaName: string, reason: string);
   }
 
-  class DependencyGraphError extends ApiBridgeError {
+  class DependencyGraphError extends YarouError {
     constructor(message: string, nodeName: string, reason: string);
   }
 
-  class MockServerError extends ApiBridgeError {
+  class MockServerError extends YarouError {
     constructor(message: string, operation: string, reason: string);
   }
 
-  class HealthCheckError extends ApiBridgeError {
+  class HealthCheckError extends YarouError {
     constructor(message: string, endpoint: string, reason: string);
   }
 
-  class EventBusError extends ApiBridgeError {
+  class EventBusError extends YarouError {
     constructor(message: string, event: string, reason: string);
   }
 
-  class FuzzyMatchError extends ApiBridgeError {
+  class FuzzyMatchError extends YarouError {
     constructor(message: string, sourceKey: string, candidates: string[]);
   }
 
-  class TypeCoercionError extends ApiBridgeError {
+  class TypeCoercionError extends YarouError {
     constructor(message: string, field: string, sourceType: string, targetType: string);
   }
 
-  class CrypticResolverError extends ApiBridgeError {
+  class CrypticResolverError extends YarouError {
     constructor(message: string, sourceKey: string, reason: string);
   }
 
-  class FieldAliaserError extends ApiBridgeError {
+  class FieldAliaserError extends YarouError {
     constructor(message: string, field: string, reason: string);
   }
 
-  class SchemaMigrationError extends ApiBridgeError {
+  class SchemaMigrationError extends YarouError {
     constructor(message: string, fromVersion: string, toVersion: string, reason: string);
   }
 
-  class BatchOrchestratorError extends ApiBridgeError {
+  class BatchOrchestratorError extends YarouError {
     constructor(message: string, batchId: string, reason: string);
   }
 
-  class DeepMergeError extends ApiBridgeError {
+  class DeepMergeError extends YarouError {
     constructor(message: string, path: string, reason: string);
   }
 
-  class InterceptorError extends ApiBridgeError {
+  class InterceptorError extends YarouError {
     constructor(message: string, interceptorName: string, reason: string);
   }
 
@@ -1941,9 +1941,9 @@ declare namespace ApiBridgeAI {
   // ─── v12: Axios Class Aliases ─────────────────────────────────────────
 
   /**
-   * Axios class alias (same as nopesClient).
+   * Axios class alias (same as yarouClient).
    */
-  const Axios: typeof nopesClient;
+  const Axios: typeof yarouClient;
 
   /**
    * AxiosError alias (same as ClientError, with error code constants).
@@ -1982,21 +1982,21 @@ declare namespace ApiBridgeAI {
 
     defaults: ClientDefaults;
     interceptors: InterceptorManager;
-    create(options?: ClientOptions): nopesClient;
-    createClient(options?: ClientOptions): nopesClient;
+    create(options?: ClientOptions): yarouClient;
+    createClient(options?: ClientOptions): yarouClient;
 
     all<T>(promises: Promise<T>[]): Promise<T[]>;
     spread<T, R>(callback: (...args: T[]) => R): (arr: T[]) => R;
 
     isClientError(err: any): boolean;
-    isApiBridgeError(err: any): boolean;
+    isYarouError(err: any): boolean;
     isAxiosError(err: any): boolean;
     isCancel(value: any): boolean;
     isCancelToken(value: any): boolean;
 
-    Axios: typeof nopesClient;
+    Axios: typeof yarouClient;
     AxiosError: typeof ClientError;
-    nopesClient: typeof nopesClient;
+    yarouClient: typeof yarouClient;
     ClientError: typeof ClientError;
     CancelToken: typeof CancelToken;
     Cancel: typeof Cancel;

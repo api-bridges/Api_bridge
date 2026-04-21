@@ -1,5 +1,5 @@
 /**
- * nopes v5 — Structured Request Logger
+ * yarou v5 — Structured Request Logger
  *
  * Structured logging for API requests and responses:
  *  - Configurable log levels (debug, info, warn, error)

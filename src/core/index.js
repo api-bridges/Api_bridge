@@ -1,10 +1,10 @@
 /**
- * nopes — Core Module
+ * yarou — Core Module
  *
  * Core transformation engine, matching algorithms, validation, and error classes.
  */
 
-const { nopesTransformer } = require('./transformer');
+const { yarouTransformer } = require('./transformer');
 const { LearningEngine } = require('./learning');
 const { ResponseNormalizer } = require('./normalizer');
 const { SchemaValidator } = require('./validator');
@@ -20,8 +20,8 @@ const errors = require('./errors');
 
 // v9/v10 modules
 const {
-  nopesClient, ClientError, createClient, buildURL,
-  all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
+  yarouClient, ClientError, createClient, buildURL,
+  all, spread, isClientError, isYarouError, mergeConfig, defaultParamsSerializer,
   VERSION,
   // v12: Axios aliases
   Axios, AxiosError, isAxiosError,
@@ -65,7 +65,7 @@ const {
 
 module.exports = {
   // Classes
-  nopesTransformer,
+  yarouTransformer,
   LearningEngine,
   ResponseNormalizer,
   SchemaValidator,
@@ -78,7 +78,7 @@ module.exports = {
   SchemaMigrator,
 
   // v9/v10 classes
-  nopesClient,
+  yarouClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,
@@ -107,7 +107,7 @@ module.exports = {
   all,
   spread,
   isClientError,
-  isApiBridgeError,
+  isYarouError,
   mergeConfig,
   defaultParamsSerializer,
 

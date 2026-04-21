@@ -1,5 +1,5 @@
 /**
- * nopes v8 — Schema Migration Engine
+ * yarou v8 — Schema Migration Engine
  *
  * Manages schema evolution over time by defining migration rules between versions.
  * When your API's field names, types, or structure change across versions, the migrator

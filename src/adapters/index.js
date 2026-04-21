@@ -1,5 +1,5 @@
 /**
- * nopes — Adapters Module
+ * yarou — Adapters Module
  *
  * Protocol bridges, middleware, resilience patterns, and orchestration.
  */

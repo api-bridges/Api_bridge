@@ -1,5 +1,5 @@
 /**
- * nopes v8 — Conditional Transformation Rules
+ * yarou v8 — Conditional Transformation Rules
  *
  * Apply different transformation logic based on field values, context, or external conditions.
  * Enables dynamic field mapping where the same source field maps differently based on runtime state.

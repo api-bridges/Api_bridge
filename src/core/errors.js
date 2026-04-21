@@ -1,5 +1,5 @@
 /**
- * nopes v8 — Custom Error Classes
+ * yarou v8 — Custom Error Classes
  *
  * Structured error hierarchy for every failure mode:
  *  - ValidationError        — schema or type mismatch
@@ -30,10 +30,10 @@
  *  - InterceptorError       — request interceptor chain failure        (v8)
  */
 
-class ApiBridgeError extends Error {
+class YarouError extends Error {
   constructor(message, code, details = {}) {
     super(message);
-    this.name = 'ApiBridgeError';
+    this.name = 'YarouError';
     this.code = code;
     this.details = details;
     this.timestamp = new Date().toISOString();
@@ -50,28 +50,28 @@ class ApiBridgeError extends Error {
   }
 }
 
-class ValidationError extends ApiBridgeError {
+class ValidationError extends YarouError {
   constructor(message, field, expected, received) {
     super(message, 'VALIDATION_ERROR', { field, expected, received });
     this.name = 'ValidationError';
   }
 }
 
-class TransformError extends ApiBridgeError {
+class TransformError extends YarouError {
   constructor(message, sourceKey, details = {}) {
     super(message, 'TRANSFORM_ERROR', { sourceKey, ...details });
     this.name = 'TransformError';
   }
 }
 
-class CacheError extends ApiBridgeError {
+class CacheError extends YarouError {
   constructor(message, key) {
     super(message, 'CACHE_ERROR', { key });
     this.name = 'CacheError';
   }
 }
 
-class MiddlewareError extends ApiBridgeError {
+class MiddlewareError extends YarouError {
   constructor(message, middlewareName, originalError) {
     super(message, 'MIDDLEWARE_ERROR', {
       middleware: middlewareName,
@@ -81,14 +81,14 @@ class MiddlewareError extends ApiBridgeError {
   }
 }
 
-class NetworkError extends ApiBridgeError {
+class NetworkError extends YarouError {
   constructor(message, url, attempt, maxRetries) {
     super(message, 'NETWORK_ERROR', { url, attempt, maxRetries });
     this.name = 'NetworkError';
   }
 }
 
-class PluginError extends ApiBridgeError {
+class PluginError extends YarouError {
   constructor(message, pluginName, originalError) {
     super(message, 'PLUGIN_ERROR', {
       plugin: pluginName,
@@ -98,28 +98,28 @@ class PluginError extends ApiBridgeError {
   }
 }
 
-class RateLimitError extends ApiBridgeError {
+class RateLimitError extends YarouError {
   constructor(message, limit, retryAfterMs) {
     super(message, 'RATE_LIMIT_ERROR', { limit, retryAfterMs });
     this.name = 'RateLimitError';
   }
 }
 
-class InferenceError extends ApiBridgeError {
+class InferenceError extends YarouError {
   constructor(message, reason) {
     super(message, 'INFERENCE_ERROR', { reason });
     this.name = 'InferenceError';
   }
 }
 
-class CircuitBreakerError extends ApiBridgeError {
+class CircuitBreakerError extends YarouError {
   constructor(message, state, failures) {
     super(message, 'CIRCUIT_BREAKER_ERROR', { state, failures });
     this.name = 'CircuitBreakerError';
   }
 }
 
-class PipelineError extends ApiBridgeError {
+class PipelineError extends YarouError {
   constructor(message, stageName, originalError) {
     super(message, 'PIPELINE_ERROR', {
       stage: stageName,
@@ -129,112 +129,112 @@ class PipelineError extends ApiBridgeError {
   }
 }
 
-class WebhookError extends ApiBridgeError {
+class WebhookError extends YarouError {
   constructor(message, provider, reason) {
     super(message, 'WEBHOOK_ERROR', { provider, reason });
     this.name = 'WebhookError';
   }
 }
 
-class VersioningError extends ApiBridgeError {
+class VersioningError extends YarouError {
   constructor(message, version, reason) {
     super(message, 'VERSIONING_ERROR', { version, reason });
     this.name = 'VersioningError';
   }
 }
 
-class RetryError extends ApiBridgeError {
+class RetryError extends YarouError {
   constructor(message, attempt, maxRetries, reason) {
     super(message, 'RETRY_ERROR', { attempt, maxRetries, reason });
     this.name = 'RetryError';
   }
 }
 
-class SchemaRegistryError extends ApiBridgeError {
+class SchemaRegistryError extends YarouError {
   constructor(message, schemaName, reason) {
     super(message, 'SCHEMA_REGISTRY_ERROR', { schemaName, reason });
     this.name = 'SchemaRegistryError';
   }
 }
 
-class DependencyGraphError extends ApiBridgeError {
+class DependencyGraphError extends YarouError {
   constructor(message, nodeName, reason) {
     super(message, 'DEPENDENCY_GRAPH_ERROR', { nodeName, reason });
     this.name = 'DependencyGraphError';
   }
 }
 
-class MockServerError extends ApiBridgeError {
+class MockServerError extends YarouError {
   constructor(message, operation, reason) {
     super(message, 'MOCK_SERVER_ERROR', { operation, reason });
     this.name = 'MockServerError';
   }
 }
 
-class HealthCheckError extends ApiBridgeError {
+class HealthCheckError extends YarouError {
   constructor(message, endpoint, reason) {
     super(message, 'HEALTH_CHECK_ERROR', { endpoint, reason });
     this.name = 'HealthCheckError';
   }
 }
 
-class EventBusError extends ApiBridgeError {
+class EventBusError extends YarouError {
   constructor(message, event, reason) {
     super(message, 'EVENT_BUS_ERROR', { event, reason });
     this.name = 'EventBusError';
   }
 }
 
-class FuzzyMatchError extends ApiBridgeError {
+class FuzzyMatchError extends YarouError {
   constructor(message, sourceKey, candidates) {
     super(message, 'FUZZY_MATCH_ERROR', { sourceKey, candidates });
     this.name = 'FuzzyMatchError';
   }
 }
 
-class TypeCoercionError extends ApiBridgeError {
+class TypeCoercionError extends YarouError {
   constructor(message, field, sourceType, targetType) {
     super(message, 'TYPE_COERCION_ERROR', { field, sourceType, targetType });
     this.name = 'TypeCoercionError';
   }
 }
 
-class CrypticResolverError extends ApiBridgeError {
+class CrypticResolverError extends YarouError {
   constructor(message, sourceKey, reason) {
     super(message, 'CRYPTIC_RESOLVER_ERROR', { sourceKey, reason });
     this.name = 'CrypticResolverError';
   }
 }
 
-class FieldAliaserError extends ApiBridgeError {
+class FieldAliaserError extends YarouError {
   constructor(message, field, reason) {
     super(message, 'FIELD_ALIASER_ERROR', { field, reason });
     this.name = 'FieldAliaserError';
   }
 }
 
-class SchemaMigrationError extends ApiBridgeError {
+class SchemaMigrationError extends YarouError {
   constructor(message, fromVersion, toVersion, reason) {
     super(message, 'SCHEMA_MIGRATION_ERROR', { fromVersion, toVersion, reason });
     this.name = 'SchemaMigrationError';
   }
 }
 
-class BatchOrchestratorError extends ApiBridgeError {
+class BatchOrchestratorError extends YarouError {
   constructor(message, batchId, reason) {
     super(message, 'BATCH_ORCHESTRATOR_ERROR', { batchId, reason });
     this.name = 'BatchOrchestratorError';
   }
 }
 
-class DeepMergeError extends ApiBridgeError {
+class DeepMergeError extends YarouError {
   constructor(message, path, reason) {
     super(message, 'DEEP_MERGE_ERROR', { path, reason });
     this.name = 'DeepMergeError';
   }
 }
 
-class InterceptorError extends ApiBridgeError {
+class InterceptorError extends YarouError {
   constructor(message, interceptorName, reason) {
     super(message, 'INTERCEPTOR_ERROR', { interceptorName, reason });
     this.name = 'InterceptorError';
@@ -242,7 +242,7 @@ class InterceptorError extends ApiBridgeError {
 }
 
 module.exports = {
-  ApiBridgeError,
+  YarouError,
   ValidationError,
   TransformError,
   CacheError,

@@ -1,7 +1,7 @@
 /**
- * nopes — Plugin Extension Example
+ * yarou — Plugin Extension Example
  *
- * Shows how to create custom plugins to extend nopes.
+ * Shows how to create custom plugins to extend yarou.
  *
  * Run: node examples/plugin-example.js
  */

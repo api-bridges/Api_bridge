@@ -1,5 +1,5 @@
 /**
- * nopes v4 — Composable Pipeline
+ * yarou v4 — Composable Pipeline
  *
  * Functional composition for data transformation pipelines.
  * Stages execute sequentially, each receiving the output of the previous.

@@ -1,10 +1,10 @@
 /**
- * nopes v11 — HTTP Status Codes
+ * yarou v11 — HTTP Status Codes
  *
  * Complete enum of HTTP status codes, matching Axios's HttpStatusCode.
  *
  * Usage:
- *   const { HttpStatusCode } = require('nopes');
+ *   const { HttpStatusCode } = require('yarou');
  *   if (response.status === HttpStatusCode.Ok) { ... }
  *   if (response.status === HttpStatusCode.NotFound) { ... }
  */

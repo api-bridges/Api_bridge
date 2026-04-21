@@ -1,5 +1,5 @@
 /**
- * nopes v4 — Webhook Handler
+ * yarou v4 — Webhook Handler
  *
  * Normalizes and processes incoming webhook payloads from various providers.
  * Extracts event types, unwraps nested payloads, converts key naming

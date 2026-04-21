@@ -1,5 +1,5 @@
 /**
- * nopes v9 — Expectation Engine
+ * yarou v9 — Expectation Engine
  *
  * Core innovation: allows frontend to declare expected response format.
  * The engine extracts the "expect" schema, serializes it to a request header,

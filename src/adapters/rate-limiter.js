@@ -1,5 +1,5 @@
 /**
- * nopes v3 — Rate Limiter
+ * yarou v3 — Rate Limiter
  *
  * Built-in request throttling with:
  *  - Token bucket algorithm

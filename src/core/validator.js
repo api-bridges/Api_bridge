@@ -1,5 +1,5 @@
 /**
- * nopes v3 — Schema Validator
+ * yarou v3 — Schema Validator
  *
  * Validates data against a user-defined schema.
  * Reports missing fields, extra fields, type mismatches.
