@@ -1,5 +1,5 @@
 /**
- * nopes — Utils Module
+ * yarou — Utils Module
  *
  * Caching, deduplication, diffing, export, masking, metrics, and more.
  */

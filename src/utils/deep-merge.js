@@ -1,5 +1,5 @@
 /**
- * nopes v8 — Deep Merge Engine
+ * yarou v8 — Deep Merge Engine
  *
  * Intelligently deep-merge API responses with configurable conflict resolution.
  * When combining data from multiple API sources, handles nested objects, arrays,

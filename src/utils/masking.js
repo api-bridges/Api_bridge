@@ -1,5 +1,5 @@
 /**
- * nopes v3 — Data Masking Engine
+ * yarou v3 — Data Masking Engine
  *
  * Protects sensitive/PII fields by masking, redacting, or hashing them.
  * Built-in detection of common sensitive field patterns.

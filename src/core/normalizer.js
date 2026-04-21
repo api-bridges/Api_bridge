@@ -1,5 +1,5 @@
 /**
- * nopes v3 — Response Normalizer
+ * yarou v3 — Response Normalizer
  *
  * Standardises common API response shapes so your frontend
  * always gets a predictable structure, regardless of the backend.

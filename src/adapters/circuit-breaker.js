@@ -1,5 +1,5 @@
 /**
- * nopes v4 — Circuit Breaker
+ * yarou v4 — Circuit Breaker
  *
  * Standard circuit breaker pattern for fault-tolerant API calls:
  *  - CLOSED  — requests flow normally, failures are tracked

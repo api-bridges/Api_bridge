@@ -1,5 +1,5 @@
 /**
- * nopes v18
+ * yarou v18
  * Full Axios Replacement + Intelligent API mismatch detector, transformer, and learner
  *
  * v2 features:
@@ -110,7 +110,7 @@
  *  - Mutable defaults object (client.defaults.headers.common, per-method headers)
  *  - Deep config merging (defaults + instance + per-request)
  *  - all() + spread() concurrent request helpers
- *  - isClientError() / isApiBridgeError() error type checking
+ *  - isClientError() / isYarouError() error type checking
  *  - mergeConfig() utility
  *  - Default instance with shorthand methods
  *  - xsrfCookieName / xsrfHeaderName configuration
@@ -149,7 +149,7 @@
  * v12 features (True Axios Drop-in — Callable Export + Full API Surface):
  *  - Callable default export: apiBridge(config), apiBridge(url, config)
  *  - Shorthand methods on default export: apiBridge.get(), .post(), .put(), etc.
- *  - Axios class alias: apiBridge.Axios === nopesClient
+ *  - Axios class alias: apiBridge.Axios === yarouClient
  *  - AxiosError alias: apiBridge.AxiosError === ClientError with error code constants
  *  - Error code constants: ERR_NETWORK, ERR_CANCELED, ECONNABORTED, ETIMEDOUT, etc.
  *  - isAxiosError() alias for isClientError()
@@ -198,7 +198,7 @@
  *  - AxiosHeaders toJSON filter: filter output by header name array or RegExp pattern
  *  - Additional header accessors: User-Agent, Content-Encoding, Content-Disposition
  *  - resolveParamsSerializer() utility: resolve paramsSerializer config into a function
- *  - All existing nopes features preserved: transformers, fuzzy matching, learning engine, smart proxy, etc.
+ *  - All existing yarou features preserved: transformers, fuzzy matching, learning engine, smart proxy, etc.
  *  - Version 15.0.0
  *
  * v16 features (Maximum Security & Power):
@@ -215,7 +215,7 @@
  *  - Version 16.0.0
  *
  * Usage:
- *   const { createClient, bridge, bridgeFetch, transform } = require('nopes');
+ *   const { createClient, bridge, bridgeFetch, transform } = require('yarou');
  *
  *   // v9: Next-gen client
  *   const api = createClient({ baseURL: '/api', timeout: 5000 });
@@ -244,82 +244,82 @@
  *   // → { firstName: 'John' }
  *
  *   // v4: Circuit breaker
- *   const { CircuitBreaker } = require('nopes');
+ *   const { CircuitBreaker } = require('yarou');
  *   const breaker = new CircuitBreaker({ failureThreshold: 3 });
  *   const data = await breaker.execute(() => fetch('/api/users'));
  *
  *   // v4: GraphQL bridge
- *   const { GraphQLBridge } = require('nopes');
+ *   const { GraphQLBridge } = require('yarou');
  *   const gql = new GraphQLBridge({ convention: 'camelCase' });
  *   const result = gql.transformResponse(graphqlResponse);
  *
  *   // v4: Composable pipeline
- *   const { ComposablePipeline } = require('nopes');
+ *   const { ComposablePipeline } = require('yarou');
  *   const pipe = new ComposablePipeline();
  *   pipe.pipe('validate', validateFn).pipe('transform', transformFn);
  *   const result = await pipe.execute(data);
  *
  *   // v5: Retry strategy
- *   const { RetryStrategy } = require('nopes');
+ *   const { RetryStrategy } = require('yarou');
  *   const retry = new RetryStrategy({ strategy: 'exponentialJitter', maxRetries: 5 });
  *   const data = await retry.execute(() => fetch('/api/users'));
  *
  *   // v5: Event bus
- *   const { EventBus } = require('nopes');
+ *   const { EventBus } = require('yarou');
  *   const bus = new EventBus({ recordHistory: true });
  *   bus.on('api.request', (data) => console.log(data));
  *   await bus.emit('api.request', { url: '/users' });
  *
  *   // v5: Health check
- *   const { HealthCheck } = require('nopes');
+ *   const { HealthCheck } = require('yarou');
  *   const health = new HealthCheck({ failureThreshold: 3 });
  *   health.register('api', () => fetch('/health').then(r => r.ok));
  *
  *   // v5: Mock server
- *   const { MockServer } = require('nopes');
+ *   const { MockServer } = require('yarou');
  *   const mock = new MockServer();
  *   mock.register('GET', '/api/users', { body: [{ id: 1 }] });
  *
  *   // v6: Fuzzy matcher
- *   const { FuzzyMatcher } = require('nopes');
+ *   const { FuzzyMatcher } = require('yarou');
  *   const fuzzy = new FuzzyMatcher();
  *   const result = fuzzy.findBestMatch('usr_email', ['user_email', 'user_name']);
  *
  *   // v6: Cryptic resolver
- *   const { CrypticResolver } = require('nopes');
+ *   const { CrypticResolver } = require('yarou');
  *   const resolver = new CrypticResolver();
  *   const resolved = resolver.resolve('z9_ref_id', ['reference_id', 'user_id']);
  *
  *   // v6: Type coercer
- *   const { TypeCoercer } = require('nopes');
+ *   const { TypeCoercer } = require('yarou');
  *   const coercer = new TypeCoercer();
  *   const coerced = coercer.coerceValue('true', 'boolean', 'isActive');
  *
  *   // v8: Field aliaser
- *   const { FieldAliaser } = require('nopes');
+ *   const { FieldAliaser } = require('yarou');
  *   const aliaser = new FieldAliaser();
  *   aliaser.register('userId', ['user_id', 'uid', 'member_id']);
  *   const resolved = aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
  *
  *   // v8: Schema migrator
- *   const { SchemaMigrator } = require('nopes');
+ *   const { SchemaMigrator } = require('yarou');
  *   const migrator = new SchemaMigrator();
  *   migrator.define('1.0', '2.0', { rename: { user_name: 'username' } });
  *   const migrated = migrator.migrate(data, '1.0', '2.0');
  *
  *   // v8: Deep merge
- *   const { DeepMerge } = require('nopes');
+ *   const { DeepMerge } = require('yarou');
  *   const merger = new DeepMerge({ arrayStrategy: 'union' });
  *   const merged = merger.merge(apiResponse1, apiResponse2);
  *
  *   // v8: Conditional transform
- *   const { ConditionalTransform } = require('nopes');
+ *   const { ConditionalTransform } = require('yarou');
  *   const ct = new ConditionalTransform();
  *   ct.when('nullToDefault', (v) => v === null, () => 'N/A');
  */
 
 // ─── Core ─────────────────────────────────────────────────────────────────────
-const { nopesTransformer } = require('./core/transformer');
+const { yarouTransformer } = require('./core/transformer');
 const { LearningEngine } = require('./core/learning');
 const { ResponseNormalizer } = require('./core/normalizer');
 const { SchemaValidator } = require('./core/validator');
@@ -331,7 +331,7 @@ const { FieldAliaser } = require('./core/field-aliaser');
 const { ConditionalTransform } = require('./core/conditional-transform');
 const { SchemaMigrator } = require('./core/schema-migrator');
 const {
-  ApiBridgeError,
+  YarouError,
   ValidationError,
   TransformError,
   CacheError,
@@ -362,8 +362,8 @@ const {
 
 // ─── v10 Core ─────────────────────────────────────────────────────────────────
 const {
-  nopesClient, ClientError, createClient, buildURL,
-  all, spread, isClientError, isApiBridgeError, mergeConfig, defaultParamsSerializer,
+  yarouClient, ClientError, createClient, buildURL,
+  all, spread, isClientError, isYarouError, mergeConfig, defaultParamsSerializer,
   resolveParamsSerializer,
   VERSION,
   // v12: Axios aliases
@@ -456,7 +456,7 @@ const { SchemaRegistry } = require('./adapters/schema-registry');
 // ─── AXIOS BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap an axios instance with nopes v8.
+ * Wrap an axios instance with yarou v8.
  *
  * @param {object} axiosInstance
  * @param {object} options
@@ -468,7 +468,7 @@ const { SchemaRegistry } = require('./adapters/schema-registry');
  * @returns {object} The enhanced axios instance
  */
 function bridge(axiosInstance, options = {}) {
-  const transformer = new nopesTransformer(options);
+  const transformer = new yarouTransformer(options);
   const cache = new ResponseCache(options.cache || {});
   const middleware = new MiddlewarePipeline();
   const validator = new SchemaValidator(options.validator || {});
@@ -547,7 +547,7 @@ function bridge(axiosInstance, options = {}) {
 // ─── FETCH BRIDGE ─────────────────────────────────────────────────────────────
 
 /**
- * Wrap native fetch with nopes v8.
+ * Wrap native fetch with yarou v8.
  * Supports all HTTP methods, retry logic, caching, middleware, and normalization.
  *
  * @param {object} options
@@ -559,7 +559,7 @@ function bridge(axiosInstance, options = {}) {
  * @param {object}  options.validator     Validator options
  */
 function bridgeFetch(options = {}) {
-  const transformer = new nopesTransformer(options);
+  const transformer = new yarouTransformer(options);
   const cache = new ResponseCache(options.cache || {});
   const middleware = new MiddlewarePipeline();
   const validator = new SchemaValidator(options.validator || {});
@@ -704,7 +704,7 @@ function bridgeFetch(options = {}) {
  * Transform any object directly, without an HTTP client.
  */
 function transform(data, options = {}) {
-  const transformer = new nopesTransformer(options);
+  const transformer = new yarouTransformer(options);
   return transformer.transform(data, options.schema || null, options.direction || 'toFrontend');
 }
 
@@ -712,7 +712,7 @@ function transform(data, options = {}) {
  * Create a reusable transformer instance.
  */
 function createTransformer(options = {}) {
-  return new nopesTransformer(options);
+  return new yarouTransformer(options);
 }
 
 // ─── EXPORTS ──────────────────────────────────────────────────────────────────
@@ -721,13 +721,13 @@ function createTransformer(options = {}) {
 const defaultInstance = createClient();
 
 // ─── v12: Callable default export (like axios) ──────────────────────────────
-// Makes the module callable: const apiBridge = require('nopes');
+// Makes the module callable: const apiBridge = require('yarou');
 //   apiBridge('/api/users')           — GET by default
 //   apiBridge({ method: 'post', url: '/api/users', data: { name: 'John' } })
 //   apiBridge.get('/api/users')       — shorthand
 //   apiBridge.create({ baseURL: '/api' })
 //
-// This is the key feature that makes nopes a true drop-in Axios replacement.
+// This is the key feature that makes yarou a true drop-in Axios replacement.
 
 function apiBridge(configOrUrl, config) {
   if (typeof configOrUrl === 'string') {
@@ -769,7 +769,7 @@ apiBridge.spread = spread;
 
 // Error checking
 apiBridge.isClientError = isClientError;
-apiBridge.isApiBridgeError = isApiBridgeError;
+apiBridge.isYarouError = isYarouError;
 apiBridge.isAxiosError = isAxiosError;
 apiBridge.isCancel = isCancel;
 apiBridge.isCancelToken = isCancelToken;
@@ -777,7 +777,7 @@ apiBridge.isCancelToken = isCancelToken;
 // Classes & constructors
 apiBridge.Axios = Axios;
 apiBridge.AxiosError = AxiosError;
-apiBridge.nopesClient = nopesClient;
+apiBridge.yarouClient = yarouClient;
 apiBridge.ClientError = ClientError;
 apiBridge.CancelToken = CancelToken;
 apiBridge.Cancel = Cancel;
@@ -859,7 +859,7 @@ module.exports = {
   getUri: apiBridge.getUri,
 
   // Core classes
-  nopesTransformer,
+  yarouTransformer,
   LearningEngine,
   ResponseCache,
   MiddlewarePipeline,
@@ -912,7 +912,7 @@ module.exports = {
   RequestInterceptor,
 
   // v9/v10 classes
-  nopesClient,
+  yarouClient,
   ClientError,
   InterceptorManager,
   InterceptorChain,
@@ -943,7 +943,7 @@ module.exports = {
 
   // v10: Error type checks
   isClientError,
-  isApiBridgeError,
+  isYarouError,
 
   // v10: Config utilities
   mergeConfig,
@@ -1019,7 +1019,7 @@ module.exports = {
   exportSchemaSuggestions,
 
   // Error classes
-  ApiBridgeError,
+  YarouError,
   ValidationError,
   TransformError,
   CacheError,

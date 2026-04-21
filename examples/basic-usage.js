@@ -1,5 +1,5 @@
 /**
- * nopes — Basic Usage Examples
+ * yarou — Basic Usage Examples
  *
  * Run: node examples/basic-usage.js
  */

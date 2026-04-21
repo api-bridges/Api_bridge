@@ -1,5 +1,5 @@
 /**
- * nopes v4 — Request Deduplicator
+ * yarou v4 — Request Deduplicator
  *
  * Coalesces concurrent identical requests so only one actual
  * execution happens. All callers with the same key receive

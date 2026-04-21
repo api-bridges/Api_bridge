@@ -1,5 +1,5 @@
 /**
- * nopes v9 — Smart Proxy
+ * yarou v9 — Smart Proxy
  *
  * Returns response data wrapped in a Proxy that dynamically resolves
  * field names using multiple strategies:

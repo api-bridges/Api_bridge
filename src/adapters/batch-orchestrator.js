@@ -1,5 +1,5 @@
 /**
- * nopes v8 — Batch Request Orchestrator
+ * yarou v8 — Batch Request Orchestrator
  *
  * Orchestrate multiple API requests with automatic field transformation, concurrency
  * control, and result aggregation. Handles parallel/sequential batch execution with

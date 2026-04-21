@@ -1,5 +1,5 @@
 /**
- * nopes v5 — Response Streamer
+ * yarou v5 — Response Streamer
  *
  * Streaming/chunked JSON response transformer:
  *  - Process large JSON responses in chunks

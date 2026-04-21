@@ -1,5 +1,5 @@
 /**
- * nopes v17 — Advanced Security Module
+ * yarou v17 — Advanced Security Module
  *
  * Extended security utilities for protecting API requests and responses
  * with advanced patterns including CSP, certificate pinning, request signing,

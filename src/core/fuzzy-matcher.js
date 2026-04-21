@@ -1,5 +1,5 @@
 /**
- * nopes v7 — Weighted Ensemble Fuzzy Matcher
+ * yarou v7 — Weighted Ensemble Fuzzy Matcher
  *
  * Multi-strategy fuzzy matching with weighted ensemble scoring:
  *  - Levenshtein distance with normalized scoring

@@ -1,5 +1,5 @@
 /**
- * nopes v5 — Health Check Monitor
+ * yarou v5 — Health Check Monitor
  *
  * Endpoint health monitoring with:
  *  - Configurable health check probes (custom check functions)

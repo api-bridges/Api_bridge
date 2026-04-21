@@ -1,5 +1,5 @@
 /**
- * nopes v5 — Mock Server
+ * yarou v5 — Mock Server
  *
  * Built-in mock server for testing with recorded responses:
  *  - Register mock endpoints with method + path matching

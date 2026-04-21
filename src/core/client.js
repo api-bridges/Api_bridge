@@ -1,5 +1,5 @@
 /**
- * nopes v18 — HTTP Client Engine (Full Axios Replacement + All nopes Features)
+ * yarou v18 — HTTP Client Engine (Full Axios Replacement + All yarou Features)
  *
  * A next-generation API client that fully replaces Axios with intelligent
  * data alignment, schema awareness, and enhanced performance/security.
@@ -75,7 +75,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { nopesTransformer } = require('./transformer');
+const { yarouTransformer } = require('./transformer');
 const { LearningEngine } = require('./learning');
 const { FuzzyMatcher } = require('./fuzzy-matcher');
 const { TypeCoercer } = require('./type-coercer');
@@ -88,7 +88,7 @@ const {
   HEADER_NAME,
 } = require('./expectation');
 const { smartProxy } = require('./proxy');
-const { ApiBridgeError, NetworkError, ValidationError } = require('./errors');
+const { YarouError, NetworkError, ValidationError } = require('./errors');
 const { isCancel } = require('./cancel');
 const { isFormData, isURLSearchParams, isStream, isBuffer, isArrayBufferView, toFormData } = require('./form-data');
 const { getAdapter } = require('./adapters');
@@ -110,7 +110,7 @@ const VERSION = '18.0.0';
 /**
  * Standardized error object for the client.
  */
-class ClientError extends ApiBridgeError {
+class ClientError extends YarouError {
   /**
    * @param {string} message
    * @param {object} [details={}]
@@ -130,7 +130,7 @@ class ClientError extends ApiBridgeError {
     this.config = details.config || null;
     this.response = details.response || null;
     this.request = details.request || null;
-    this.isApiBridgeError = true;
+    this.isYarouError = true;
     this.isAxiosError = true;
   }
 
@@ -370,9 +370,9 @@ function mergeConfig(target, source) {
   return result;
 }
 
-// ─── nopesClient ────────────────────────────────────────────────────────
+// ─── yarouClient ────────────────────────────────────────────────────────
 
-class nopesClient {
+class yarouClient {
   /**
    * @param {object} [options={}]
    * @param {string} [options.baseURL=''] — Base URL for all requests
@@ -669,7 +669,7 @@ class nopesClient {
     };
 
     // Core engines
-    this.transformer = new nopesTransformer(options);
+    this.transformer = new yarouTransformer(options);
     this.learning = this.transformer.learning;
     this.fuzzyMatcher = new FuzzyMatcher(options.fuzzyMatcher || {});
     this.typeCoercer = new TypeCoercer({
@@ -1385,7 +1385,7 @@ class nopesClient {
       }
     }
 
-    // 5. Transform outgoing body if needed (nopes auto-align)
+    // 5. Transform outgoing body if needed (yarou auto-align)
     if (reqConfig.body && typeof reqConfig.body === 'object' &&
         !isFormData(reqConfig.body) && !isURLSearchParams(reqConfig.body) &&
         !isBuffer(reqConfig.body) && !isArrayBufferView(reqConfig.body) &&
@@ -2179,7 +2179,7 @@ class nopesClient {
       } else if (err.response && err.response.config && this._redactor) {
         err.response.config = this._redactor.redactConfig(err.response.config);
       }
-      err.isApiBridgeError = true;
+      err.isYarouError = true;
       return err;
     }
     const wrapped = new ClientError(err.message || 'Unknown error', {
@@ -2198,7 +2198,7 @@ class nopesClient {
         config: safeConfig,
       } : null,
     });
-    wrapped.isApiBridgeError = true;
+    wrapped.isYarouError = true;
     return wrapped;
   }
 
@@ -2237,35 +2237,35 @@ class nopesClient {
 // ─── Static Methods (Axios Compatibility) ─────────────────────────────────
 
 /**
- * Check if an error is an nopes client error (like axios.isAxiosError).
+ * Check if an error is an yarou client error (like axios.isAxiosError).
  * @param {*} err
  * @returns {boolean}
  */
-nopesClient.isClientError = function isClientError(err) {
-  return err instanceof ClientError || (err && (err.isApiBridgeError === true || err.isAxiosError === true));
+yarouClient.isClientError = function isClientError(err) {
+  return err instanceof ClientError || (err && (err.isYarouError === true || err.isAxiosError === true));
 };
 
 /**
- * Check if an error is an nopes error.
+ * Check if an error is an yarou error.
  * @param {*} err
  * @returns {boolean}
  */
-nopesClient.isApiBridgeError = nopesClient.isClientError;
+yarouClient.isYarouError = yarouClient.isClientError;
 
 // ─── Factory Function ───────────────────────────────────────────────────────
 
 /**
  * Create a new API client instance.
  *
- * @param {object} [options={}] — Client options (see nopesClient constructor)
- * @returns {nopesClient}
+ * @param {object} [options={}] — Client options (see yarouClient constructor)
+ * @returns {yarouClient}
  *
  * @example
  *   const api = createClient({ baseURL: "/api" });
  *   const res = await api.get("/user", { expect: { userName: "string" } });
  */
 function createClient(options = {}) {
-  return new nopesClient(options);
+  return new yarouClient(options);
 }
 
 // ─── Concurrent Request Helpers ─────────────────────────────────────────────
@@ -2296,7 +2296,7 @@ function spread(callback) {
  * @returns {boolean}
  */
 function isClientError(err) {
-  return err instanceof ClientError || (err && (err.isApiBridgeError === true || err.isAxiosError === true));
+  return err instanceof ClientError || (err && (err.isYarouError === true || err.isAxiosError === true));
 }
 
 /**
@@ -2304,12 +2304,12 @@ function isClientError(err) {
  * @param {*} err
  * @returns {boolean}
  */
-function isApiBridgeError(err) {
+function isYarouError(err) {
   return isClientError(err);
 }
 
 // ─── Axios Aliases (v12: Complete drop-in compatibility) ─────────────────
-const Axios = nopesClient;
+const Axios = yarouClient;
 const AxiosError = ClientError;
 
 /**
@@ -2322,14 +2322,14 @@ function isAxiosError(err) {
 }
 
 module.exports = {
-  nopesClient,
+  yarouClient,
   ClientError,
   createClient,
   buildURL,
   all,
   spread,
   isClientError,
-  isApiBridgeError,
+  isYarouError,
   mergeConfig,
   defaultParamsSerializer,
   resolveParamsSerializer,
