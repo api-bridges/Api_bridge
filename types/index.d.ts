@@ -1,5 +1,5 @@
 // TypeScript Type Declarations for awsibnj v18
-// Type definitions for awsibnj 18.0.0
+// Type definitions for awsibnj 18.0.1
 
 export = ApiBridgeAI;
 export as namespace ApiBridgeAI;
