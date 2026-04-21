@@ -1,50 +1,69 @@
-# How awsibnj Works
+# 🔍 How awsibnj Works — AI-Powered API Field Transformation
 
-awsibnj solves one problem: **your backend sends field names in one style, your frontend expects another.**
-
-For example, your API returns `first_name` but your React app uses `firstName`. Instead of writing manual mapping for every field, awsibnj does it automatically.
+> **awsibnj** solves one universal problem: your backend sends field names in one style, your frontend expects another — automatically, intelligently, and with no manual mapping.
 
 ---
 
-## The Core Idea
+## 📐 The Core Concept
 
 ```
-Backend Response              awsibnj              Your Frontend
-─────────────────          ──────────────          ─────────────────
-{                    →     auto-detects     →     {
-  "first_name": "John"      & converts              "firstName": "John"
-  "last_name": "Doe"                                "lastName": "Doe"
-  "is_active": true                                 "isActive": true
-}                                                 }
+  Your Backend                  awsibnj                 Your Frontend
+  ────────────────          ──────────────────          ─────────────────
+  {                   ──►   Auto-detects &        ──►  {
+    "first_name": "John"      converts naming              "firstName": "John"
+    "last_name":  "Doe"       conventions                  "lastName":  "Doe"
+    "is_active":  true        intelligently                "isActive":  true
+    "usr_nm":     "jd"        even for cryptic             "userName":  "jd"
+  }                           field names               }
 ```
 
-No config needed for simple cases. It just works.
+No config needed for simple cases. It **just works**.
 
 ---
 
-## How Mismatches Are Resolved
+## 🧠 7-Level Mismatch Resolution Pipeline
 
-When awsibnj sees a field name, it goes through **7 levels** to figure out the correct mapping. It stops at the first level that gives a confident answer.
+When awsibnj encounters a field name, it runs through **7 escalating levels** to find the best mapping. It stops at the first level that returns a confident answer.
 
-### Level 1 — Exact Match (100% confidence)
+```
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │              FIELD NAME RESOLUTION PIPELINE                         │
+ ├───────┬─────────────────────────────────┬───────────────────────────┤
+ │ LEVEL │ STRATEGY                        │ CONFIDENCE                │
+ ├───────┼─────────────────────────────────┼───────────────────────────┤
+ │  1    │ Exact Match                     │ ████████████████  100%    │
+ │  2    │ Learned Mapping                 │ ███████████████   99%     │
+ │  3    │ Schema Defined                  │ ████████████████  100%    │
+ │  4    │ Pattern Conversion              │ ███████████████   97%     │
+ │  5    │ Synonym Match                   │ █████████████     92%     │
+ │  6    │ Fuzzy + Semantic Match          │ ██████████ – ████ 70–95%  │
+ │  7    │ Best Effort / Cryptic Resolve   │ ████████           55–70% │
+ └───────┴─────────────────────────────────┴───────────────────────────┘
+```
 
-The field is already in your target convention. Nothing to do.
+### 🟢 Level 1 — Exact Match `(100% confidence)`
+
+The field is already in the target convention. Zero work done.
 
 ```
 Input:  "firstName"    Target: camelCase
-Result: "firstName"    → already correct, skip
+Result: "firstName"    ✓ already correct, skip
 ```
 
-### Level 2 — Learned Mapping (99% confidence)
+---
 
-You approved this mapping before. awsibnj remembers it.
+### 🟢 Level 2 — Learned Mapping `(99% confidence)`
+
+You approved this mapping before. awsibnj remembers it forever.
 
 ```
 Input:  "usr_nm"
-Result: "userName"     → you approved this last week, reuse it
+Result: "userName"     ✓ you approved this last week — instant recall
 ```
 
-### Level 3 — Schema Defined (100% confidence)
+---
+
+### 🟢 Level 3 — Schema Defined `(100% confidence)`
 
 You provided an explicit mapping in your schema config.
 
@@ -52,615 +71,333 @@ You provided an explicit mapping in your schema config.
 const schema = {
   userName: { column: 'usr_nm' }
 };
-// "usr_nm" → "userName" (you told it exactly what to do)
+// "usr_nm" → "userName"  (you told it exactly what to do)
 ```
 
-### Level 4 — Pattern Conversion (97% confidence)
+---
 
-Pure algorithm. It splits the field into words and reassembles in your target style.
+### 🔵 Level 4 — Pattern Conversion `(97% confidence)`
+
+Pure algorithmic conversion. Splits the field into words and reassembles in the target style.
 
 ```
-"user_name"  → split: ["user", "name"]  → camelCase: "userName"
-"firstName"  → split: ["first", "name"] → snake_case: "first_name"
+"user_name"  → tokens: ["user", "name"]  → camelCase:     "userName"
+"firstName"  → tokens: ["first", "name"] → snake_case:     "first_name"
+"UserID"     → tokens: ["user", "id"]    → kebab-case:     "user-id"
 ```
 
-This handles standard conversions between `snake_case`, `camelCase`, `PascalCase`, `kebab-case`, and `SCREAMING_SNAKE`.
+Handles: `snake_case` ↔ `camelCase` ↔ `PascalCase` ↔ `kebab-case` ↔ `SCREAMING_SNAKE`
 
-### Level 5 — Synonym Match (92% confidence)
+---
 
-awsibnj has a built-in dictionary of 160+ developer vocabulary synonym groups spanning multiple domains (person, contact, auth, status, dates, media, pricing, healthcare, analytics, infrastructure, financial, IoT, education, social). It knows that `phone`, `mobile`, `cell`, `tel`, and `contact_number` all mean the same thing.
+### 🔵 Level 5 — Synonym Match `(92% confidence)`
+
+Built-in dictionary of **160+ developer vocabulary synonym groups** across 14 domains. Knows that `phone`, `mobile`, `cell`, `tel`, and `contact_number` all mean the same thing.
+
+| Domain | Example synonyms |
+|--------|-----------------|
+| 👤 Person | `name`, `full_name`, `display_name`, `username` |
+| 📞 Contact | `phone`, `mobile`, `cell`, `tel`, `contact_number` |
+| 🔐 Auth | `password`, `passwd`, `pwd`, `secret`, `token` |
+| 📅 Dates | `created_at`, `creation_date`, `date_created`, `timestamp` |
+| 💰 Finance | `amount`, `price`, `cost`, `total`, `value` |
+| 🏥 Healthcare | `patient`, `diagnosis`, `treatment`, `prescription` |
+| 📡 IoT | `device`, `sensor`, `endpoint`, `temperature`, `battery` |
+| 🎓 Education | `student`, `course`, `grade`, `assignment`, `instructor` |
 
 ```
 Input:  "cell_number"
-Result: "phone"        → recognized as synonym for "phone"
+Result: "phone"        ✓ recognized synonym group match
 ```
 
-### Level 6 — Fuzzy + Semantic Match (70–95% confidence)
+---
 
-When a schema is provided, awsibnj compares the field against schema keys using a **weighted ensemble of 7 strategies**: Levenshtein distance, token matching, vowel-drop detection, phonetic similarity, abbreviation expansion, n-gram overlap, and substring containment.
+### 🟡 Level 6 — Fuzzy + Semantic Match `(70–95% confidence)`
 
-All strategies are combined with tuned weights and the ensemble score is compared against the best individual strategy. Multiple strategies agreeing boosts confidence further. The semantic similarity engine also expands abbreviations (`txn` → `transaction`, `dev` → `device`, etc.) before comparing tokens.
+When a schema is provided, awsibnj compares the field against schema keys using a **weighted ensemble of 7 strategies**:
+
+```
+ Strategy             Weight   Example
+ ─────────────────────────────────────────────────────────────────────
+ Levenshtein Distance  30%     "frist_name" → "first_name"  (edit dist 1)
+ Token Match           25%     "name_full"  → "full_name"   (same tokens)
+ Vowel Drop            10%     "usr_nm"     → "user_name"   (no vowels)
+ Phonetic Similarity   10%     "fone"       → "phone"       (sounds like)
+ Abbreviation Expand   15%     "txn_id"     → "transactionId" (abbrev map)
+ N-Gram Overlap        05%     "email"      → "emial"       (shared grams)
+ Substring Contain     05%     "order_id"   → "orderId"     (contained)
+ ─────────────────────────────────────────────────────────────────────
+```
+
+Multiple strategies agreeing **boosts confidence** further.
 
 ```
 Input:  "usr_email"   Schema has: "userEmail"
-Result: "userEmail"   → weighted ensemble match with 92% confidence
+Result: "userEmail"   ✓ weighted ensemble: 92% confidence
 
 Input:  "txn_id"      Schema has: "transactionId"
-Result: "transactionId" → abbreviation expansion + token match
-```
-
-### Level 7 — Best Effort with Cryptic Resolution (55–70% confidence)
-
-When nothing else matches, awsibnj attempts to resolve cryptic/arbitrary field names by:
-- Stripping cryptic prefixes (`x_`, `z9_`, etc.)
-- Stripping database prefixes (`tbl_`, `fk_`, `pk_`, `vw_`, `sp_`, `idx_`)
-- Matching by suffixes (`_id`, `_flag`, `_date`)
-- Checking fragments against known vocabulary with n-gram similarity
-- N-gram based matching for short/garbled names
-
-All Level 7 results are flagged for your review.
-
-```
-Input:  "z9_ref_id"
-Result: "referenceId"  → cryptic prefix stripped, matched against schema
-
-Input:  "tbl_user_name"
-Result: "userName"     → database prefix stripped, matched
-
-Input:  "xq_flag"
-Result: "xqFlag"       → converted but flagged for review
+Result: "transactionId" ✓ abbreviation expansion: 88% confidence
 ```
 
 ---
 
-## V8 New Capabilities
+### 🟠 Level 7 — Best Effort / Cryptic Resolve `(55–70% confidence)`
 
-### Multi-Alias Field Resolution
+When nothing else matches, awsibnj attempts to resolve cryptic or arbitrary field names:
 
-When different APIs use different names for the same concept, the FieldAliaser maps them all to a canonical name:
+| Technique | Example |
+|-----------|---------|
+| Strip cryptic prefix | `z9_ref_id` → `ref_id` → `referenceId` |
+| Strip database prefix | `tbl_user_name` → `user_name` → `userName` |
+| Suffix-based matching | `x_user_flag` → matches `is_active` via `_flag` suffix |
+| Vocabulary fragments | `x1_email_addr` → matches `emailAddress` |
 
-```js
-const { FieldAliaser } = require('awsibnj');
-const aliaser = new FieldAliaser();
-aliaser.register('userId', ['user_id', 'uid', 'member_id']);
-aliaser.resolve('uid'); // { canonical: 'userId', matched: true }
+> ⚠️ All Level 7 results are **flagged for review** via `getPending()`.
+
 ```
-
-### Schema Migration
-
-When your API's field names change across versions, the SchemaMigrator upgrades or downgrades data automatically:
-
-```js
-const { SchemaMigrator } = require('awsibnj');
-const migrator = new SchemaMigrator();
-migrator.define('1.0', '2.0', { rename: { user_name: 'username' }, add: { version: '2.0' } });
-migrator.migrate(data, '1.0', '2.0'); // Applies renames, adds, removes, transforms
-```
-
-### Batch Orchestration
-
-Execute multiple API calls with concurrency control, failure handling, and result aggregation:
-
-```js
-const { BatchOrchestrator } = require('awsibnj');
-const batch = new BatchOrchestrator({ concurrency: 5 });
-await batch.executeParallel([
-  { id: 'users', execute: () => fetchUsers() },
-  { id: 'orders', execute: () => fetchOrders() },
-]);
-```
-
-### Deep Merge
-
-Intelligently merge responses from multiple APIs with configurable conflict resolution:
-
-```js
-const { DeepMerge } = require('awsibnj');
-const merger = new DeepMerge({ arrayStrategy: 'union' });
-const combined = merger.merge(apiResponse1, apiResponse2, apiResponse3);
-```
-
-### Conditional Transforms
-
-Apply different transformations based on field values, types, or context:
-
-```js
-const { ConditionalTransform } = require('awsibnj');
-const ct = new ConditionalTransform();
-ct.when('nullToNA', (v) => v === null, () => 'N/A');
-ct.when('vipDiscount', (v, field, ctx) => ctx.isVip, (v) => v * 0.8, { fields: ['price'] });
-```
-
-### Output Formatting
-
-Format transformed data into XML, CSV, key-value pairs, tables, or custom templates:
-
-```js
-const { OutputFormatter } = require('awsibnj');
-const fmt = new OutputFormatter();
-fmt.toXML(data);   // XML output
-fmt.toCSV(data);   // CSV output
-fmt.toTable(data);  // Console table
-fmt.fromTemplate(data, 'Hello {{name}}');
-```
-
-### Request Interceptor Chain
-
-Priority-ordered, groupable interceptors for modifying requests and responses:
-
-```js
-const { RequestInterceptor } = require('awsibnj');
-const interceptor = new RequestInterceptor();
-interceptor.useRequest('addAuth', (ctx) => ({
-  ...ctx, headers: { ...ctx.headers, Authorization: 'Bearer token' }
-}), { priority: 100, group: 'auth' });
+Input:  "z9_ref_id"        Result: "referenceId"  (cryptic prefix stripped)
+Input:  "tbl_user_name"    Result: "userName"      (database prefix stripped)
+Input:  "xq_flag"          Result: "xqFlag"        ⚑ flagged — needs review
 ```
 
 ---
 
-## V18 New Capabilities
+## 🔄 Two-Way Transformation
 
-Version 18 adds the most advanced security layer — zero trust, threat intelligence, and cryptographic integrity:
+awsibnj converts **both directions** — backend → frontend and frontend → backend.
 
-### Zero Trust Engine
-
-Every request is evaluated against an accumulated trust score. Trust factors include known context, consistent IP, consistent user-agent, and non-suspicious methods. Trust decays over time with configurable rates.
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  zeroTrust: {
-    trustThreshold: 50,
-    maxTrustScore: 100,
-    decayRate: 5,
-    decayIntervalMs: 60000,
-  },
-});
-// Low trust score → ERR_ZERO_TRUST_DENIED
 ```
-
-### Threat Intelligence
-
-Real-time IP blocklist management with automatic blocking after suspicious activity threshold. URL pattern blocking and known attack pattern detection in headers (SQL injection, path traversal).
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  threatIntel: {
-    blockedIPs: ['1.2.3.4'],
-    suspiciousThreshold: 5,
-    autoBlock: true,
-  },
-});
-// Blocked IPs or detected threats → ERR_THREAT_DETECTED
-```
-
-### Secure Session Manager
-
-Cryptographic session tokens (32 bytes, hex-encoded) bound to IP and User-Agent for hijack prevention. Automatic session rotation with configurable intervals.
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  sessionManager: {
-    tokenLength: 32,
-    maxAge: 3600000,
-    bindToIP: true,
-    rotationInterval: 900000,
-  },
-});
-// Invalid/expired/hijacked sessions → ERR_SESSION_INVALID
-```
-
-### Request Integrity Chain
-
-Blockchain-inspired immutable request lineage. Every request is hashed with SHA-256:
-`hash = H(previousHash + method + url + timestamp + bodyHash)`. The full chain can be verified to detect tampering.
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  integrityChain: { algorithm: 'sha256', maxChainLength: 10000 },
-});
-// Tampered chain → ERR_INTEGRITY_VIOLATION
-```
-
-### Adaptive Rate Limiter
-
-Token bucket with dynamically adapted rates based on traffic statistics. Standard deviation-based anomaly detection flags unusual traffic patterns and adjusts rates automatically.
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  adaptiveRateLimiter: {
-    baseRate: 100,
-    windowMs: 60000,
-    anomalyThreshold: 2.0,
-  },
-});
-// Anomalous traffic → ERR_ADAPTIVE_RATE_LIMITED
-```
-
-### Security Headers Manager
-
-Auto-generates all OWASP-recommended security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin headers (COEP, COOP, CORP).
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  securityHeaders: {
-    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
-    frameOptions: 'DENY',
-  },
-});
-```
-
-### Encrypted Config Vault
-
-AES-256-GCM encrypted storage for API keys, secrets, and sensitive configuration. Supports master key rotation, fingerprinting, and backup/restore.
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  configVault: { masterKey: 'hex-encoded-32-byte-key' },
-});
-// Invalid access → ERR_VAULT_ACCESS_DENIED
-```
-
-### Mutual TLS Manager
-
-Client certificate validation with trusted CA fingerprint store, certificate revocation list management, and configurable certificate age limits.
-
-```js
-const api = createClient({
-  baseURL: 'https://api.example.com',
-  mtls: {
-    trustedCerts: ['sha256-fingerprint-1'],
-    requireClientCert: true,
-  },
-});
-// Certificate validation failure → ERR_MTLS_FAILED
+  Backend Response (snake_case)              Your Frontend Request (camelCase)
+  ──────────────────────────────             ─────────────────────────────────
+  { first_name: "John" }            ←────   POST { firstName: "John" }
+                         auto-maps           auto-reverses on outgoing
+  { firstName: "John" } ────────►            to send correct format back
 ```
 
 ---
 
-## Using awsibnj in Your Project
+## ⚡ Quick Start — 4 Integration Patterns
 
-### Install
-
-```bash
-npm install awsibnj
-```
-
-### Option 1: As Axios Replacement (v18 — Recommended)
+### Pattern 1 · Axios Drop-in Replacement *(Recommended)*
 
 ```js
 const apiBridge = require('awsibnj');
+const api = apiBridge.create({ baseURL: 'https://api.example.com' });
 
-// Create a client instance (like axios.create())
-const api = apiBridge.create({
-  baseURL: 'https://api.example.com',
-  timeout: 5000,
-  headers: { 'X-Custom': 'value' },
-});
-
-// Make requests — identical to Axios API
-const res = await api.get('/users/1');
-console.log(res.data);            // Parsed + transformed response
-console.log(res.status);          // 200
-console.log(res.statusText);      // 'OK'
-console.log(res.headers);         // AxiosHeaders (case-insensitive)
-console.log(res.config);          // Request config (with .data alias)
-console.log(res.request);         // Request object
-
-// Headers are AxiosHeaders instances (v13)
-res.headers.get('content-type');   // 'application/json'
-res.headers.has('Authorization');  // false
-res.headers.toJSON();              // Plain object
-
-// Error handling with .isAxiosError (v13)
-try {
-  await api.get('/missing');
-} catch (err) {
-  if (err.isAxiosError) {                      // ✅ Property check
-    console.log(err.code);                     // 'ERR_BAD_REQUEST'
-    console.log(err.response.status);          // 404
-    console.log(err.response.headers.get('content-type')); // AxiosHeaders
-    console.log(err.request);                  // Request object
-  }
-}
-
-// Interceptors
-api.interceptors.request.use((config) => {
-  config.headers['Authorization'] = 'Bearer token';
-  return config;
-});
-
-// Default transforms (v13 — automatic JSON serialize/deserialize)
-const api2 = apiBridge.create(); // transformRequest/Response are set by default
+const { data } = await api.get('/users/1');
+// → { firstName: "John", lastName: "Doe", isActive: true }
 ```
 
-### Option 2: With Axios (Legacy Bridge)
+### Pattern 2 · Wrap Existing Axios Instance
 
 ```js
 const axios = require('axios');
 const { bridge } = require('awsibnj');
 
 const api = bridge(axios.create({ baseURL: 'https://api.example.com' }));
-
-// Response fields are auto-converted to camelCase
 const response = await api.get('/users/1');
-console.log(response.data);
-// { firstName: "John", lastName: "Doe", isActive: true }
+// → response.data: { firstName: "John", lastName: "Doe", isActive: true }
 ```
 
-### Option 3: With Fetch
+### Pattern 3 · Native Fetch Wrapper
 
 ```js
 const { bridgeFetch } = require('awsibnj');
-
 const api = bridgeFetch();
 
 const user = await api.get('https://api.example.com/users/1');
-console.log(user);
-// { firstName: "John", lastName: "Doe", isActive: true }
+// → { firstName: "John", lastName: "Doe", isActive: true }
 ```
 
-### Option 4: Direct Transform (No HTTP)
+### Pattern 4 · Direct Transform (No HTTP)
 
 ```js
 const { transform } = require('awsibnj');
 
-const result = transform({
-  first_name: 'John',
-  last_name: 'Doe',
-  is_active: true
-});
-
-console.log(result);
-// { firstName: "John", lastName: "Doe", isActive: true }
+const result = transform({ first_name: 'John', is_active: 1, created_at: '2024-01-15' });
+// → { firstName: 'John', isActive: 1, createdAt: '2024-01-15' }
 ```
 
 ---
 
-## Two-Way Transformation
+## 🔤 5 Supported Naming Conventions
 
-awsibnj also converts **frontend → backend** when you send data.
-
-```js
-// When you POST data, it auto-converts back to snake_case for the backend
-await api.post('/users', {
-  firstName: 'John',  // sent as first_name
-  lastName: 'Doe'     // sent as last_name
-});
+```
+  Input                  camelCase    snake_case    PascalCase    kebab-case    SCREAMING_SNAKE
+  ─────────────────────  ───────────  ────────────  ────────────  ────────────  ───────────────
+  "user_first_name"   →  userFirstName  user_first_name  UserFirstName  user-first-name  USER_FIRST_NAME
+  "UserLastName"      →  userLastName   user_last_name   UserLastName   user-last-name   USER_LAST_NAME
+  "IS-ACTIVE"         →  isActive       is_active        IsActive       is-active        IS_ACTIVE
 ```
 
 ---
 
-## Enhanced Type Coercion (v7)
+## 📊 Type Coercion (Schema-Based)
 
-awsibnj v7+ automatically coerces values when a schema is provided, with support for:
+When a schema is provided, values are automatically coerced to the correct types:
 
-| Input | Target Type | Output |
-|-------|-------------|--------|
-| `"TRUE"`, `"Yes"`, `"on"` | `boolean` | `true` |
-| `"FALSE"`, `"No"`, `"off"` | `boolean` | `false` |
+| SQL / API Value | Target Type | JavaScript Result |
+|-----------------|-------------|-------------------|
+| `1`, `"true"`, `"yes"`, `"on"` | `boolean` | `true` |
+| `0`, `"false"`, `"no"`, `"off"` | `boolean` | `false` |
 | `"50%"` | `float` | `0.5` |
 | `"1,000"` | `integer` | `1000` |
 | `"15/01/2024"` | `date` | `Date` object |
-| `"red,green,blue"` | `array` | `['red','green','blue']` |
-
----
-
-## Using a Schema for Exact Control
-
-When automatic detection isn't enough, provide a schema:
+| `"TRUE"`, `"Yes"` | `boolean` | `true` (case-insensitive) |
+| `"red,green,blue"` | `array` | `['red', 'green', 'blue']` |
+| `'{"a":1}'` | `json` | `{ a: 1 }` |
 
 ```js
 const api = bridge(axios.create(), {
   schema: {
-    userName: { column: 'usr_nm', type: 'string' },
-    isActive: { column: 'is_active', type: 'boolean' },
-    createdAt: { column: 'created_at', type: 'date' }
+    userName:  { column: 'usr_nm',     type: 'string'  },
+    isActive:  { column: 'is_active',  type: 'boolean' },
+    createdAt: { column: 'created_at', type: 'date'    },
+    price:     { column: 'price',      type: 'number'  },
   }
 });
 ```
 
-The schema gives you:
-- **Exact field mapping** — `usr_nm` always becomes `userName`
-- **Type coercion** — `"1"` becomes `true` for boolean fields, date strings become Date objects
-- **Fuzzy matching** — Schema keys serve as candidates for the weighted ensemble matcher
-
 ---
 
-## Approving and Rejecting Mappings
+## 🎓 The Learning Engine
 
-When awsibnj isn't sure about a mapping, it flags it. You can teach it the correct answer:
+awsibnj learns from your corrections and gets smarter over time.
 
-```js
-// "Yes, this mapping is correct"
-api.approve('usr_nm', 'userName');
-
-// "No, that's wrong. Here's the correct one"
-api.reject('usr_nm', 'usrNm', 'userName');
+```
+  First encounter:               After you teach it:
+  ─────────────────              ───────────────────
+  "usr_nm" → ?                   api.approve('usr_nm', 'userName')
+  → "usrNm"  (60% confidence)   → Saved to .apibridge/learned.json
+                                 → "usr_nm" → "userName" (99% confidence)
+                                    for all future calls, instantly
 ```
 
-Once approved, awsibnj remembers it forever (Level 2). Next time it sees `usr_nm`, it instantly maps to `userName` with 99% confidence.
+### Teaching the Engine
 
-### Where Learnings Are Stored
+```js
+// Approve a correct mapping
+api.approve('usr_nm', 'userName');
 
-Approved mappings are saved to `.apibridge/learned.json` in your project root. This file is auto-created. You can commit it to your repo so the whole team shares the same learnings, or add it to `.gitignore` if each environment should learn independently.
+// Reject a wrong suggestion and provide the correct one
+api.reject('addr_ln', 'addrLn', 'streetAddress');
+```
+
+> 💡 Approved mappings are saved to `.apibridge/learned.json`. Commit it to share learnings team-wide, or add to `.gitignore` for per-environment learning.
 
 ---
 
-## Checking What Happened
+## 🔍 Monitoring & Observability
 
 ```js
 // See transformation stats
 console.log(api.getStats());
 // {
 //   transformer: { totalFields: 50, exactMatches: 30, autoFixed: 18, flagged: 2 },
-//   cache: { hits: 5, misses: 10 },
-//   learning: { approvedCount: 12, rejectedCount: 1 }
+//   cache:       { hits: 5, misses: 10 },
+//   learning:    { approvedCount: 12, rejectedCount: 1 }
 // }
 
-// See fields that need your review
+// Review low-confidence mappings that need your approval
 console.log(api.getPending());
 // [{ sourceKey: "xq_flag", targetKey: "xqFlag", confidence: 0.6, method: "best_effort" }]
 
-// Export all mismatches as CSV
+// Export mismatch report
 api.exportCSV('./mismatches.csv');
+api.exportJSON('./mismatches.json');
 ```
 
 ---
 
-## Summary
+## 🛡️ Security Architecture (v16–v19)
 
-| What | How |
-|------|-----|
-| Install | `npm install awsibnj` |
-| Replace Axios | `const api = require('awsibnj').create({ baseURL: '/api' })` |
-| Basic use | `transform({ snake_case: value })` → `{ camelCase: value }` |
-| With Axios | `bridge(axiosInstance)` — auto-transforms all requests & responses |
-| With Fetch | `bridgeFetch()` — same as above but with native fetch |
-| Custom mapping | Pass a `schema` object to define exact field mappings |
-| Teach it | `approve(source, target)` or `reject(source, wrong, correct)` |
-| It remembers | Learnings saved to `.apibridge/learned.json` |
-| Review flags | `getPending()` shows low-confidence mappings that need your approval |
-| Accuracy | 99%+ for standard fields, 92%+ for synonyms, 70-95% for fuzzy matches |
-| V18 modules | 80+ source modules, 27 error types + 21 security error codes, 1178 tests |
+awsibnj layers security features into every HTTP request pipeline:
 
----
-
-## V14: Enterprise-Grade Power Tools
-
-Version 14 adds six production-ready features to the HTTP client:
-
-### Auto-Retry Engine
-Configure advanced retry strategies per-client or per-request. Set custom `retryCondition` functions to decide when to retry, `retryDelay` functions for backoff control, and `onRetry` callbacks for logging/monitoring:
 ```
-retryConfig: { retries: 3, retryCondition: (err) => err.status >= 500, retryDelay: (n) => n * 1000 }
+  Incoming Request
+       │
+       ▼
+  ┌──────────────────────────────────────────────────┐
+  │  SECURITY PIPELINE (applied in order)            │
+  ├──────────────────────────────────────────────────┤
+  │  v16 │ 🛡  SSRF Guard          (blocks private IPs) │
+  │  v16 │ 🔒  Header Validator    (CRLF prevention)    │
+  │  v16 │ ⏱  Rate Limiter        (token bucket)       │
+  │  v16 │ 🔍  Replay Detection    (SHA-256 fingerprint)│
+  │  v17 │ 👤  RBAC Permissions    (role-based access)  │
+  │  v17 │ 🧹  Input Sanitizer     (XSS / SQL injection)│
+  │  v17 │ ✍️  Request Signing     (HMAC-SHA256)        │
+  │  v17 │ 🔑  Idempotency         (safe retries)       │
+  │  v18 │ 🕵️  Threat Intel        (IP reputation)      │
+  │  v18 │ 🚫  Zero Trust Engine   (trust scoring)      │
+  │  v18 │ 📈  Adaptive Rate Limiter (ML anomaly detect)│
+  │  v18 │ ⛓  Integrity Chain     (blockchain hash)    │
+  │  v18 │ 📋  Security Headers    (OWASP recommended)  │
+  │  v19 │ 🔬  Behavioral Analytics (pattern anomalies) │
+  │  v19 │ 🍯  Honeypot Manager    (canary detection)   │
+  │  v19 │ 🔐  Quantum Crypto      (post-quantum PBKDF2)│
+  │  v19 │ 🌍  Geofence Guard      (IP-region control)  │
+  ├──────────────────────────────────────────────────┤
+  │              Execute Request                     │
+  └──────────────────────────────────────────────────┘
+       │
+       ▼
+  Response Processing
 ```
 
-### Response Caching
-Built-in memory cache with TTL, maxSize eviction, method-based filtering, URL exclusion patterns, stale-while-revalidate, and custom key generation. Use `client.clearResponseCache()` to invalidate.
+---
 
-### Request Deduplication
-Identical in-flight requests are coalesced into a single network call. When two components simultaneously GET the same URL, only one fetch fires. Configurable per-method with custom key functions.
+## 📦 Version History at a Glance
 
-### Auto Token Refresh
-When a 401 (or configured status code) is received, the client automatically calls your `onRefresh` function, gets a new token, updates the header, and retries the request — all transparently. Concurrent requests are queued during refresh so only one refresh happens at a time.
-
-### Request Timing
-Enable `timing: true` to get `response.duration` (ms) and `response.timing` `{ start, end, duration }` on every response for performance monitoring and SLA tracking.
-
-### Lifecycle Hooks
-Add `onRequest`, `onResponse`, `onError`, and `onRetry` hooks for logging, analytics, error tracking, and observability. Hooks are fire-and-forget observers — they never affect the request pipeline.
+| Version | Key Additions | Tests |
+|---------|--------------|-------|
+| **v19** | Quantum crypto, behavioral analytics, honeypot, SRI, throttle guard, geofence, key rotation, event correlator | 1275 |
+| **v18** | Zero trust, threat intel, secure sessions, integrity chain, adaptive rate limiter, OWASP headers, encrypted vault, mTLS | 1178 |
+| **v17** | CSP builder, cert pinning, HMAC signing, input sanitizer, RBAC, AES-256-GCM encryption, idempotency | 1095 |
+| **v16** | SSRF guard, header validation, rate limiting, replay detection, sensitive data redaction, journey tracking | 991 |
+| **v15** | Full Axios API parity: `runWhen`, auto Content-Type, `paramsSerializer` object form, `beforeRedirect`, correlation IDs | 918 |
+| **v14** | Auto-retry engine, response caching, request dedup, auto token refresh, request timing, lifecycle hooks | 887 |
+| **v13** | AxiosHeaders in all responses, default transform chains, `.isAxiosError` property, `maxRate`, `lookup` | 849 |
+| **v9–v12** | Full HTTP client (`createClient`), Axios compatibility, interceptors, CancelToken, AxiosHeaders | 549+ |
+| **v8** | Multi-alias resolution, schema migration, batch orchestrator, conditional transforms, deep merge | ~462 |
+| **v7** | 7-strategy weighted ensemble fuzzy matching, n-gram similarity, 4 new synonym domains | ~390 |
+| **v6** | Enhanced fuzzy matcher, cryptic name resolver, schema-based type coercer | ~330 |
+| **v1–v5** | Core transformation engine, synonym matching, learning engine, plugin system, circuit breaker | ~249 |
 
 ---
 
-## V15: Full Axios API Parity
+## 📋 Quick Reference
 
-Version 15 closes the remaining Axios API gaps:
-
-### Interceptor runWhen / synchronous
-Conditional interceptor execution with `runWhen: (config) => boolean` — skip interceptors that don't apply. Synchronous mode with `synchronous: true` reduces overhead for simple handlers.
-
-### Auto Content-Type Serialization
-Plain objects are automatically converted to `URLSearchParams` or `FormData` based on the Content-Type header. No manual conversion needed.
-
-### Enhanced paramsSerializer
-Accepts Axios 1.x object form `{ encode, serialize }` in addition to the legacy function form.
-
-### beforeRedirect Callback
-Intercept and modify redirect requests before they are followed — useful for adding auth headers or logging redirects.
-
-### Request Correlation IDs
-Enable `requestId: true` to auto-generate a unique `x-request-id` header on every request for distributed tracing.
+| Task | Code |
+|------|------|
+| **Install** | `npm install awsibnj` |
+| **Axios replacement** | `require('awsibnj').create({ baseURL: '/api' })` |
+| **Wrap Axios** | `bridge(axiosInstance, { schema })` |
+| **Native fetch** | `bridgeFetch({ retries: 3 })` |
+| **Direct transform** | `transform({ snake_key: value })` |
+| **Custom mapping** | Pass `schema` object with `column` definitions |
+| **Teach a mapping** | `api.approve('source_field', 'targetField')` |
+| **Reject a wrong mapping** | `api.reject('source', 'wrong', 'correct')` |
+| **View pending review** | `api.getPending()` |
+| **Export mismatch report** | `api.exportCSV('./report.csv')` |
+| **Bulk import learnings** | `api.bulkImport({ src_key: 'targetKey' })` |
 
 ---
 
-## V16: Security Hardening
+## 📈 Accuracy Summary
 
-Version 16 adds enterprise-grade security hardening — many features enabled by default:
+| Level | Method | Confidence | Typical Use Case |
+|-------|--------|:----------:|-----------------|
+| 1 | Exact match | **100%** | Field already in target convention |
+| 2 | Learned | **99%** | Previously approved by your team |
+| 3 | Schema | **100%** | Explicit column mapping in config |
+| 4 | Pattern | **97%** | Standard `snake_case` ↔ `camelCase` |
+| 5 | Synonym | **92%** | `phone` / `mobile` / `cell` synonyms |
+| 6 | Fuzzy | **70–95%** | Abbreviations, typos, near-matches |
+| 7 | Best effort | **55–70%** | Cryptic legacy field names (flagged) |
 
-### SSRF Protection
-Blocks requests to private IPs, cloud metadata endpoints, and dangerous protocols. Enabled by default on all client instances. Configurable allowlist for trusted internal hosts.
-
-### Header Injection Prevention
-Validates all header names/values against RFC 7230. Rejects headers containing CR/LF characters to prevent CRLF injection attacks.
-
-### Client-Side Rate Limiting
-Token bucket algorithm with configurable `maxRequests` and `windowMs`. Supports per-endpoint rate limiting with separate buckets.
-
-### Response Size Guard
-Prevents memory exhaustion by enforcing `maxResponseSize` limits. Validates Content-Length before reading the response body.
-
-### Sensitive Data Redaction
-Automatically strips Authorization, Cookie, API keys, and other sensitive headers from error objects. URL query parameters containing tokens/secrets are also redacted.
-
-### Request Fingerprinting
-SHA-256 content-based fingerprinting detects replay attacks. Configure `replayDetection: 5000` to block duplicate requests within a time window.
-
-### Journey Tracking
-Enable `journeyTracking: true` to get a complete history of each request — attempts, cache hits, dedup, token refresh, redirects, and timing.
+> **Overall accuracy:** 99%+ for standard fields · 92%+ for synonyms · 70–95% for fuzzy · 55–70% for cryptic (flagged)
 
 ---
 
-## V17: Advanced Security
-
-Version 17 adds military-grade security features:
-
-### Content Security Policy
-Build standards-compliant CSP headers from configurable directives. Supports nonce generation, report-only mode, and custom directives.
-
-### Certificate Pinning
-Pin SHA-256 certificate hashes per host. Enforce or report mode. Supports subdomain pinning and dynamic pin management.
-
-### Request Signing
-HMAC-SHA256 request signing with canonical string construction. Auto-injects signature + timestamp headers for integrity verification.
-
-### Input Sanitizer
-XSS prevention (HTML escaping, script/event handler removal), SQL injection detection, and path traversal detection. Three modes: `escape`, `strip`, `reject`.
-
-### Security Audit Logger
-Tamper-proof append-only event log with SHA-256 hash chain. Supports severity levels, filtering, and automatic rotation.
-
-### Permission Policy (RBAC)
-Role-based method + endpoint access control with wildcard patterns. Configure policies per role and check authorization before each request.
-
-### Payload Encryptor
-AES-256-GCM authenticated encryption for request/response payloads. Auto-generates keys, supports key rotation, and provides key fingerprinting.
-
-### Idempotency Manager
-Automatic UUID-based idempotency key generation for POST/PUT/PATCH requests. Caches responses with configurable TTL to safely handle retries.
-
----
-
-## V18: Elite Security Architecture
-
-Version 18 adds the most advanced security layer — zero trust, threat intelligence, and cryptographic integrity:
-
-### Zero Trust Engine
-Every request is evaluated against an accumulated trust score. Trust factors include known context, consistent IP, consistent user-agent, and non-suspicious methods. Trust decays over time with configurable rates.
-
-### Threat Intelligence
-Real-time IP blocklist management with automatic blocking after suspicious activity threshold. URL pattern blocking and known attack pattern detection in headers (SQL injection, path traversal).
-
-### Secure Session Manager
-Cryptographic session tokens (32 bytes, hex-encoded) bound to IP and User-Agent for hijack prevention. Automatic session rotation with configurable intervals.
-
-### Request Integrity Chain
-Blockchain-inspired immutable request lineage. Every request is hashed with SHA-256: `hash = H(previousHash + method + url + timestamp + bodyHash)`. The full chain can be verified to detect tampering.
-
-### Adaptive Rate Limiter
-Token bucket with dynamically adapted rates based on traffic statistics. Standard deviation-based anomaly detection flags unusual traffic patterns and adjusts rates automatically.
-
-### Security Headers Manager
-Auto-generates all OWASP-recommended security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin headers (COEP, COOP, CORP).
-
-### Encrypted Config Vault
-AES-256-GCM encrypted storage for API keys, secrets, and sensitive configuration. Supports master key rotation, fingerprinting, and backup/restore.
-
-### Mutual TLS Manager
-Client certificate validation with trusted CA fingerprint store, certificate revocation list management, and configurable certificate age limits.
+*[→ Back to README](README.md) · [→ See CHANGELOG](CHANGELOG.md)*
