@@ -104,7 +104,7 @@ const { QuantumResistantCrypto, BehavioralAnalytics, HoneypotManager, Subresourc
  * Library version.
  * @type {string}
  */
-const VERSION = '18.0.2';
+const VERSION = '1.0.1';
 
 // ─── Standardized Error ─────────────────────────────────────────────────────
 

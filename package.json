@@ -1,6 +1,6 @@
 {
   "name": "awsibnj",
-  "version": "18.0.2",
+  "version": "1.0.1",
   "description": "HTTP client and Axios replacement with intelligent API field-name transformation (camelCase/snake_case/PascalCase/kebab-case), auto-retry, response caching, request deduplication, token refresh, lifecycle hooks, pluggable adapters, circuit breaker, security hardening (SSRF, CRLF, rate limiting, replay detection, input sanitization, RBAC, HMAC signing, mTLS), and 90+ modules",
   "main": "src/index.js",
   "types": "types/index.d.ts",
